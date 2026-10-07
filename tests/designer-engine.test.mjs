@@ -6,3 +6,5 @@ test("escapes text and exports editable appearance and events",()=>{let a=update
 test("rejects invalid handlers",()=>assert.equal(validateForm(updateControl(addControl([],"Button"),"button1",{eventClick:"not valid"})).ok,false));
 
 test("rejects control names that collide with Form members",()=>{for(const name of ["Text","Name","ClientSize","Controls","SuspendLayout"]){const a=updateControl(addControl([],"TextBox"),"textbox1",{name});assert.equal(validateForm(a).ok,false,name);}});
+
+test("generates selection and checked-change events",()=>{let a=updateControl(addControl([],"ComboBox"),"combobox1",{eventSelectedIndexChanged:"cmbCourse_SelectedIndexChanged"});a=updateControl(addControl(a,"CheckBox"),"checkbox1",{eventCheckedChanged:"chkTerms_CheckedChanged"});const code=designerCode(a);assert.match(code,/SelectedIndexChanged \+=/);assert.match(code,/CheckedChanged \+=/);});
