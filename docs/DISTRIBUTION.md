@@ -7,9 +7,17 @@
 - GitHub Releases: versioned Windows packages and technical release notes.
 - Android store/package: only after a genuinely device-tested Android build exists.
 
+## Current production
+
+- Canonical production host: https://code-quest-tau-woad.vercel.app/
+- Production branch: main.
+- Treat every production push as a release candidate until the exact commit passes CodeQuest CI.
+
 ## Release gate
 
 Before production, verify the exact candidate: unit/regression tests, typecheck/build, Chromium journeys, real C# execution, compiler warm-cache offline execution, PWA reload/update, mobile layout, accessibility, WinForms resize/default events/export, and native .NET 8 WinForms compilation.
+
+A Vercel READY state proves the deployment completed; it does not replace application-level browser/native validation. Do not label a release fully verified unless the exact production commit has a successful CI run.
 
 ## Vercel
 
