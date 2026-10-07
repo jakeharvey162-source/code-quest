@@ -3,3 +3,22 @@ dist/
 playwright-report/
 test-results/
 public/compiler/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials.json
+service-account*.json
+
+# Local tooling / OS
+.DS_Store
+Thumbs.db
+.vscode/settings.json
+.idea/
