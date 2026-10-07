@@ -249,3 +249,28 @@ test("numeric parsing and checking any one character do not establish an eight-d
     assert.ok(result.weak.includes("Input Validation"));
   }
 });
+
+test("the authored student-number lesson's ASCII range receives validation credit", () => {
+  for (const check of [
+    "System.Linq.Enumerable.All(number, c => c >= '0' && c <= '9')",
+    "number.All(c => c >= '0' && c <= '9')",
+  ]) {
+    assert.equal(
+      markPractical({ code: `if (number.Length == 8 && ${check}) {}` })
+        .breakdown["Input Validation"],
+      20,
+    );
+  }
+  assert.equal(
+    markPractical({
+      code: "if(number.Length == 8 && number.All(c => c >= 'a' && c <= 'z')) {}",
+    }).breakdown["Input Validation"],
+    5,
+  );
+  assert.equal(
+    markPractical({
+      code: "string fake = \"number.All(c => c >= '0' && c <= '9')\";",
+    }).breakdown["Input Validation"],
+    0,
+  );
+});

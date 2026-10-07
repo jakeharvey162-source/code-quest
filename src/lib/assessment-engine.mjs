@@ -8,20 +8,23 @@ export const practicalRubric = [
 ];
 const count = (xs, p) => xs.filter(p).length;
 // Formative static review only. This is deliberately separate from the real C# runner.
-export function reviewSource(source) {
+export function reviewSource(source, keepCharacterLiterals = false) {
   return String(source)
     .replace(
       /@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
       (token) =>
         token.startsWith("//") || token.startsWith("/*") ? " " : token,
     )
-    .replace(/@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, " ");
+    .replace(/@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, (token) =>
+      keepCharacterLiterals && token.startsWith("'") ? token : " ",
+    );
 }
 export function markPractical(input = {}) {
   const controls = (Array.isArray(input.controls) ? input.controls : []).filter(
     (c) => c && typeof c === "object",
   );
-  const code = reviewSource(input.code || "");
+  const code = reviewSource(input.code || ""),
+    characterCode = reviewSource(input.code || "", true);
   const required = Array.isArray(input.requirements?.controls)
     ? input.requirements.controls
     : ["TextBox", "Button"];
@@ -39,17 +42,23 @@ export function markPractical(input = {}) {
   );
   const length = /\.Length\s*(?:==|!=)\s*8/.test(code),
     digits =
-      /\.All\s*\(\s*(?:char|Char|System\.Char)\s*\.\s*IsDigit\s*\)/.test(
+      /\.All\s*\(\s*(?:[A-Za-z_]\w*(?:\.\w+)*\s*,\s*)?(?:char|Char|System\.Char)\s*\.\s*IsDigit\s*\)/.test(
         code,
       ) ||
       /\.All\s*\(\s*\(?\s*([A-Za-z_]\w*)\s*\)?\s*=>\s*(?:char|Char|System\.Char)\s*\.\s*IsDigit\s*\(\s*\1\s*\)\s*\)/.test(
         code,
       );
+  const asciiDigits =
+    /\bAll\s*\(\s*(?:[A-Za-z_]\w*(?:\.\w+)*\s*,\s*)?\(?\s*([A-Za-z_]\w*)\s*\)?\s*=>\s*\1\s*>=\s*'0'\s*&&\s*\1\s*<=\s*'9'\s*\)/.test(
+      characterCode,
+    );
   // Eight characters alone does not establish eight digits. Static matches are hints, not proof.
   breakdown["Input Validation"] =
     (length ? 5 : 0) +
-    (digits ? 10 : 0) +
-    ((length && digits) || /IsNullOrWhiteSpace\s*\(/.test(code) ? 5 : 0);
+    (digits || asciiDigits ? 10 : 0) +
+    ((length && (digits || asciiDigits)) || /IsNullOrWhiteSpace\s*\(/.test(code)
+      ? 5
+      : 0);
   const eventTargets = controls.filter((c) => c.type === "Button");
   breakdown["Events"] = Math.round(
     (15 *
