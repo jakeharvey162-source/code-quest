@@ -247,14 +247,11 @@ export default function FormDesigner() {
   const cur = items.find((c) => c.id === selected);
   const validation = validateForm(items);
   useEffect(() => {
-    try {
-      localStorage.setItem("cq-practical-code", practicalCode);
-    } catch {}
+    if (!writeText("cq-practical-code", practicalCode))
+      setMessage("Storage is full or blocked. Export your project to keep it.");
   }, [practicalCode]);
   useEffect(() => {
-    try {
-      localStorage.setItem("cq-form", JSON.stringify(items));
-    } catch {
+    if (!writeText("cq-form", JSON.stringify(items))) {
       setMessage("Storage is full or blocked. Export your project to keep it.");
     }
   }, [items]);
@@ -995,14 +992,21 @@ export default function FormDesigner() {
             alongside the form. Build it in Visual Studio to verify compilation
             and behaviour.
           </p>
-          <textarea
-            aria-label="Practical C# code"
-            value={practicalCode}
-            onChange={(e) => setPracticalCode(e.target.value)}
-            maxLength={50000}
-          />
+          {workspace === "design" && (
+            <textarea
+              aria-label="Practical C# code"
+              value={practicalCode}
+              onChange={(e) => setPracticalCode(e.target.value)}
+              maxLength={50000}
+            />
+          )}
           <div className="button-row">
-            <button onClick={() => setShowCode(true)}>
+            <button
+              onClick={() => {
+                setWorkspace("design");
+                setShowCode(true);
+              }}
+            >
               <Code2 size={16} />
               View generated Designer.cs
             </button>

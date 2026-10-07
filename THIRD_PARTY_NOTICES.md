@@ -18,3 +18,9 @@ CodeQuest uses pinned npm distributions of these open-source projects. Their lic
 The browser's Web Speech API provides optional device speech synthesis and recognition. Those voices/services are supplied by the browser/operating system and are not bundled speech models or a guarantee of offline recognition.
 
 WasmSharp's published JavaScript imports Comlink from a CDN. `scripts/prepare-compiler.mjs` rewrites those two imports to a copied, same-origin Comlink module; it also resolves extensionless module imports and converts the published .NET binary import placeholders into static asset URLs. The underlying runtime binaries are copied unchanged. This modification eliminates the runtime CDN dependency.
+
+## Optional cloud integrations and database testing
+
+- Supabase JavaScript client: https://github.com/supabase/supabase-js (MIT). Browser publishable keys are protected by database row-level policies.
+- ElevenLabs JavaScript SDK: https://github.com/elevenlabs/elevenlabs-js (MIT SDK; hosted voices/output have separate provider and voice-library terms).
+- PGlite: https://github.com/electric-sql/pglite (Apache-2.0); used to execute actual Postgres security-policy tests locally, not as the production database.

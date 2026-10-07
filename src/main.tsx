@@ -24,6 +24,9 @@ import type { Progress } from "./lib/progress";
 import CityMap from "./components/CityMap";
 import { VoiceControls } from "./components/VoiceControls";
 import { reloadLatestWorkspace } from "./lib/workspace-recovery";
+import AuthProvider, { useAuth } from "./components/AuthProvider";
+const Account = lazy(() => import("./components/Account"));
+const Classes = lazy(() => import("./components/Classes"));
 const Playground = lazy(() => import("./components/Playground"));
 const LessonView = lazy(() => import("./components/LessonView"));
 const FormDesigner = lazy(() => import("./components/FormDesigner"));
@@ -37,6 +40,8 @@ const navigation = [
   { id: "assessment", title: "Assessment", icon: Flag },
   { id: "progress", title: "Progress", icon: ChartNoAxesCombined },
   { id: "settings", title: "Settings", icon: SettingsIcon },
+  { id: "account", title: "Account", icon: House },
+  { id: "classes", title: "Classes", icon: BookOpen },
 ];
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
@@ -557,6 +562,10 @@ function App() {
                   update={update}
                   onNavigate={navigate}
                 />
+              ) : page === "account" ? (
+                <Account progress={progress} update={update} />
+              ) : page === "classes" ? (
+                <Classes progress={progress} onNavigate={navigate} />
               ) : page === "settings" ? (
                 <SettingsPage
                   progress={progress}
@@ -709,4 +718,12 @@ function ProgressPage({
     </section>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+function SessionApp() {
+  const { user } = useAuth();
+  return <App key={user?.id || "guest"} />;
+}
+createRoot(document.getElementById("root")!).render(
+  <AuthProvider>
+    <SessionApp />
+  </AuthProvider>,
+);

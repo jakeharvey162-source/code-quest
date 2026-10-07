@@ -1620,9 +1620,10 @@ legend {
 }
 @media (max-width: 900px) {
   .app-shell {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
   .app-sidebar {
+    min-width: 0;
     position: sticky;
     top: 0;
     width: 100%;
@@ -2093,6 +2094,7 @@ legend {
   }
   .app-sidebar nav {
     overflow-x: auto;
+    max-width: 100%;
   }
   .playground-page .editor-host,
   .playground-page .plain-editor {

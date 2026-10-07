@@ -21,7 +21,7 @@ Use Settings → Voice & accessibility → Read aloud on a real phone/desktop. C
 
 ## Included scope
 
-Single-device self-study application with authored English curriculum, local progress, browser console C# and exportable Windows forms. No cloud account, automatic translation, official exam proctoring or native Android APK is implied by this release.
+Self-study application with authored English curriculum, local/account-isolated progress, optional Supabase accounts/manual saves/history/classes, browser console C# and exportable Windows forms. Automatic lesson translation, official exam proctoring and a native Android APK are outside the verified release scope. Live cloud operation requires the dedicated project, migration, SMTP and deployment configuration.
 
 ## Verification evidence (7 October 2026)
 
@@ -37,4 +37,13 @@ Latest branch changes were reread and preserved. Upgrades migrate legacy profile
 
 41 unit/regression tests pass. All 17 Chromium browser flows pass together, including actual C# offline execution after its first download. Final GitHub CI additionally validates the richer Windows sample. The dependency audit reports zero known vulnerabilities.
 
-- [ ] Verify Tor four-level remediation and Designer double-click/resize interactions in the current release candidate.
+- [x] Local regression checks verify Tor four-level remediation, Designer double-click/resize and event-code persistence/export. Release CI separately compiles the exported Windows sample.
+## Accounts and language voices revision
+
+49 unit/security checks and TypeScript/build pass locally. Postgres tests exercise actual row-level policies with separate user roles: private saves/history, class invitation and membership, lecturer assignments, protected member identity and persistent voice quotas. Provider-mocked browser journeys cover sign-in errors, confirmation/reset guidance, account switching, cloud save/restore, lecturer assignments and voice-quota recovery. A final full browser run and GitHub CI validate the revision.
+
+Voice choices: Peter (South African English), Enrick (French), Adilson (European Portuguese), Halima (Tanzanian Swahili). No verified native isiZulu library voice was found; matching device speech reports absence clearly. ElevenLabs actual generation was rejected with zero remaining credits. Physical audio/native pronunciation, live SMTP/auth and the final public production URL remain unchecked. The Supabase organization has no available active free project slot; The production Vercel deployment is accessible and undergoing release verification. See DEPLOYMENT.md.
+
+## Workspace recovery release
+
+Service-worker updates retain prior build modules needed by open tabs. Online navigation fetches fresh HTML. A failed lazy download has a Load latest workspace action that refreshes only app-shell caches and preserves progress/drafts. WinForms includes editable Design/Form1.cs tabs, a solution explorer, default-event code navigation and an Error List. The event-code browser journey verifies persistence and exported handler bodies outside practical briefs. A controlled download failure verifies recovery with the learner profile preserved.

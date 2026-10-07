@@ -22,3 +22,8 @@ service-account*.json
 Thumbs.db
 .vscode/settings.json
 .idea/
+.env
+.env.*
+!.env.example
+.vercel/
+supabase/.temp/
