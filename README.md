@@ -1,46 +1,52 @@
-# CodeQuest — C# Adventure
+# CodeQuest
 
-African-first, globally usable game-based learning for C#, WinForms and OOP.
+**Build your understanding.** An African-rooted, globally accessible C#, WinForms and OOP learning app. No account, paid API or server is required for learning and code execution.
 
-Learning loop: **See → Predict → Build → Run → Break → Fix → Explain → Apply alone**.
+## What works
 
-Current foundation includes the bright quest map, Visual-Studio-style lab, OOP mission, progressive Tor feedback, assessment skill detection, local persistence, language/voice preferences, study reminders, automated learning-engine tests and build CI.
+- **21 authored lessons:** nine C# fundamentals, six WinForms knowledge quests and six OOP coding quests.
+- **Real C# compilation:** self-hosted WasmSharp/Roslyn runs in a Web Worker on the learner's device. Build and independent-application challenges check actual output against multiple test cases. The scratchpad compiles arbitrary console C#.
+- **Learning loop:** See → Predict → Build → Break & Fix → Apply alone; hints fade and independent application uses a new task.
+- **WinForms designer:** all eight standard controls, placement, keyboard movement, undo/redo, Properties, Events, typed control previews, collection Items, password masking and numeric bounds.
+- **Native export:** download a ZIP with a Visual Studio solution, net8.0-windows project, Program.cs, Form1.cs and generated Designer.cs. Event handlers are wired with editable bodies.
+- **Assessment arena:** 10-question practice, optional timer, scoring, explanations and result history.
+- **Progress:** earned XP, real study streaks, neighbourhood completion and milestones. Backup/restore moves progress and forms between browsers.
+- **Voice:** available device voices, reading speed, stop control, opt-in navigation commands and permission/support errors. No listening before an explicit button press.
+- **Study plan:** daily goal and downloadable calendar reminder.
+- **Installable/offline:** responsive PWA with icons and cached app shell. Compiler assets are cached after first use. No compiler download on the homepage.
+- **Accessibility:** keyboard navigation, visible focus, plain editor option, reduced-motion support and read-aloud text.
 
-The browser WinForms trainer will follow proven designer patterns: Toolbox → Canvas → Properties → Events → generated Designer.cs model. Full compiler execution remains a separate Roslyn/.NET WebAssembly adapter so lessons are not coupled to one runtime.
+## Run locally
 
-Run: `npm install && npm run check && npm run dev`.
+Node 24:
 
-## v0.3 designer slice
-- Interactive WinForms toolbox and form canvas
-- Selectable controls with editable Name/Text/X/Y properties
-- Local form persistence
-- Generated WinForms-style Designer.cs preview
-- Automated tests for add/update/remove/code-generation behavior
+```sh
+npm ci
+npm run dev
+```
 
-## v0.4 learning loop
-OOP Lab now exposes explicit See → Predict → Build → Break + Fix → Apply Alone stages, with help fading toward independent work. Passing a coding check advances the learner rather than merely awarding XP.
+Checks:
 
-## v0.5 Visual Studio-style Properties
-Designer properties now include categorized Design, Appearance, Layout, Behavior, Events and Accessibility fields: Name, Text, Font, ForeColor, BackColor, location/size, Anchor, Dock, Enabled, Visible, TabIndex, Click/TextChanged handlers and AccessibleName. Designer validation checks unique/valid names and required Button Click wiring.
+```sh
+npm run check
+npx playwright install --with-deps chromium
+npm run test:browser
+```
 
-## v0.6 readiness
-- Offline service worker with cache-first fallback after first successful load
-- Explicit CI permissions, PR/push/manual triggers and separate test/build steps
-- PWA manifest scope/start URL
+Browser tests use the production build (`npm run build` first). Build: `npm run build`; serve: `npm run preview`. Static output: `dist/`. Compiler preparation copies the pinned npm runtime, including its license, and vendors Comlink so the app needs no runtime CDN.
 
-### Release gate
-Do not merge until CI is observable and green, browser interaction tests pass, and real C# compilation adapter is integrated. Structural mission checks are teaching feedback, not a compiler.
+## Scope and honest limits
 
+Lessons are in English; choosing a voice does not translate content. Device voices and speech recognition depend on the browser/OS. Browser recognition may send microphone audio to the browser vendor. Tests can verify handlers, selected voice/rate and error states but cannot establish audibility on every user's physical speaker/microphone.
 
-## Reliability update (7 October 2026)
-- Repaired the npm lockfile and pinned dependency versions; CI now checks TypeScript as well as tests/build.
-- Control identifiers remain unique after deletion; numeric properties are clamped and handler names validated.
-- Designer preview escapes C# strings and includes font, colors, anchor/dock, accessibility, TextChanged wiring and Controls.Add.
-- Storage corruption and unavailable/quota-limited storage no longer crash the designer.
-- Each lesson stage now checks its own task; Employee application cannot pass with the Student answer. XP is awarded once per stage and progress is persisted.
-- Mobile navigation remains reachable. Reduced-motion preferences are respected.
-- Offline failures only return the HTML shell for navigation, never for a missing JavaScript asset; unrelated caches are preserved.
+The browser compiler's first run loads about 40 MB. Code is isolated from the UI in a worker with a 10-second execution timeout and Stop control. It is not a server-side execution service. Console.ReadLine interactive input and native Windows APIs are outside its scope. Native WinForms executes in the exported Windows project; preview controls do not execute C# handler logic. Add the handler's business logic in Form1.cs.
 
-Validation: 24 unit/regression tests, TypeScript check and production build passed locally. Browser regression coverage is in `tests/browser.spec.mjs` and CI (`npm run test:browser`). Local Chromium download was blocked by a corrupt download response; browser execution must be verified in CI.
+Progress is local to this browser. It is self-study progress, not tamper-proof official assessment records. Clear browser storage and it is removed; export a backup first. Assessment practice is a quiz, not an official university test. The question analyser matches topics; it does not mark arbitrary submitted code/questions. Leaving an active assessment cancels that attempt.
 
-Current limits: this is a browser teaching prototype, with structural C# checks rather than a compiler. The canvas uses selectable control representations, not native WinForms execution. Assessment input detects skills but routes to the fixed OOP lesson. Other district curricula, translation, scheduled notifications, a full C# runtime and timed assessment marking remain unfinished. The existing release gate still applies; keep the PR draft.
+## Validation
+
+CI runs unit/regression tests, TypeScript, a production build, Chromium user journeys, all 30 authored coding solutions through the real browser compiler, offline loading, phone layout and WCAG accessibility checks. A Windows job builds the exported Visual Studio solution with all toolbox controls. `docs/RELEASE_CHECKLIST.md` records the release checks and remaining device checks.
+
+## Free/open-source foundations
+
+See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for repository links and licenses: React, Vite, WasmSharp/Roslyn, CodeMirror, fflate, Lucide, Comlink, Playwright and axe-core. Lesson content, UI, district illustration, progress model and app integration are authored for CodeQuest.
