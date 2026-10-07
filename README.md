@@ -30,3 +30,17 @@ Designer properties now include categorized Design, Appearance, Layout, Behavior
 
 ### Release gate
 Do not merge until CI is observable and green, browser interaction tests pass, and real C# compilation adapter is integrated. Structural mission checks are teaching feedback, not a compiler.
+
+
+## Reliability update (7 October 2026)
+- Repaired the npm lockfile and pinned dependency versions; CI now checks TypeScript as well as tests/build.
+- Control identifiers remain unique after deletion; numeric properties are clamped and handler names validated.
+- Designer preview escapes C# strings and includes font, colors, anchor/dock, accessibility, TextChanged wiring and Controls.Add.
+- Storage corruption and unavailable/quota-limited storage no longer crash the designer.
+- Each lesson stage now checks its own task; Employee application cannot pass with the Student answer. XP is awarded once per stage and progress is persisted.
+- Mobile navigation remains reachable. Reduced-motion preferences are respected.
+- Offline failures only return the HTML shell for navigation, never for a missing JavaScript asset; unrelated caches are preserved.
+
+Validation: 24 unit/regression tests, TypeScript check and production build passed locally. Browser regression coverage is in `tests/browser.spec.mjs` and CI (`npm run test:browser`). Local Chromium download was blocked by a corrupt download response; browser execution must be verified in CI.
+
+Current limits: this is a browser teaching prototype, with structural C# checks rather than a compiler. The canvas uses selectable control representations, not native WinForms execution. Assessment input detects skills but routes to the fixed OOP lesson. Other district curricula, translation, scheduled notifications, a full C# runtime and timed assessment marking remain unfinished. The existing release gate still applies; keep the PR draft.
