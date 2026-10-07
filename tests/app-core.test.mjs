@@ -8,5 +8,7 @@ test('reserved C# names and invalid numeric ranges prevent export',()=>{assert.e
 
 test("export rejects handler collisions with fields and generated members",()=>{const controls=addControl([],"Button");assert.equal(validateForm([{...controls[0],eventClick:controls[0].name}]).ok,false);assert.equal(validateForm([{...controls[0],name:"Form1",eventClick:"Save_Click"}]).ok,false);});
 
-import {markPractical} from '../src/lib/assessment-engine.mjs';
+import {markPractical,torPracticalFeedback} from '../src/lib/assessment-engine.mjs';
 test('practical marker rewards complete work and identifies weak attempts',()=>{const controls=[{type:'TextBox',name:'txtStudentNumber',eventTextChanged:'txtStudentNumber_TextChanged'},{type:'Button',name:'btnRegister',eventClick:'btnRegister_Click'}];const strong=markPractical({controls,code:'private void btnRegister_Click(){ if (txtStudentNumber.Text.Length == 8) { MessageBox.Show("OK"); } else { MessageBox.Show("Bad"); } }',requirements:{controls:['TextBox','Button']}});const weak=markPractical({controls:[],code:'x = 1;',requirements:{controls:['TextBox','Button']}});assert.ok(strong.total>=70);assert.ok(weak.total<strong.total);assert.ok(weak.weak.includes('UI Design'));});
+
+test('Tor remediation targets the weakest practical category and escalates after repeated attempts',()=>{const result=markPractical({controls:[],code:'x = 1;',requirements:{controls:['TextBox','Button']}});const first=torPracticalFeedback(result,1),third=torPracticalFeedback(result,3);assert.equal(first.rematch,'winforms-controls');assert.equal(first.tone,'coach');assert.equal(third.tone,'spicy');assert.match(third.message,/Omo/);});
