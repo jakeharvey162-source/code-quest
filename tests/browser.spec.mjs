@@ -146,7 +146,7 @@ test("designer CRUD, properties, preview, undo and native ZIP export", async ({
   await page
     .getByRole("textbox", { name: "Click handler", exact: true })
     .fill("btnSave_Click");
-  await page.getByRole("button", { name: "Preview form", exact: true }).click();
+  await page.getByRole("button", { name: "Start / F5", exact: true }).click();
   await page
     .getByRole("textbox", { name: "txtName", exact: true })
     .fill("Lebo");
@@ -155,7 +155,7 @@ test("designer CRUD, properties, preview, undo and native ZIP export", async ({
     .last()
     .click();
   await expect(page.locator(".form-validation")).toContainText("btnSave_Click");
-  await page.getByRole("button", { name: "Back to design" }).click();
+  await page.getByRole("button", { name: "Stop debugging" }).click();
   await page
     .getByRole("combobox", { name: "Selected control" })
     .selectOption("textbox1");
@@ -679,4 +679,21 @@ test.describe("workspace download recovery", () => {
       ),
     ).toBe("Recovery learner");
   });
+});
+
+
+test("designer supports Visual Studio-style toolbox drag drop and grid placement", async ({ page }) => {
+  await page.goto("/#designer");
+  const toolboxButton = page.getByRole("button", { name: "Button", exact: true }).first();
+  const canvas = page.locator(".form-canvas");
+  await toolboxButton.dragTo(canvas, { targetPosition: { x: 240, y: 160 } });
+  await expect(page.locator(".placed-control")).toHaveCount(1);
+  const control = page.locator(".placed-control").first();
+  const left = await control.evaluate((el) => Number.parseInt(el.style.left, 10));
+  const top = await control.evaluate((el) => Number.parseInt(el.style.top, 10));
+  expect(left % 8).toBe(0);
+  expect(top % 8).toBe(0);
+  await expect(page.locator(".form-validation")).toContainText("8 px grid snap");
+  await page.getByRole("button", { name: "Start / F5", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Stop debugging", exact: true })).toBeVisible();
 });
