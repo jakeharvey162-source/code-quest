@@ -1,4 +1,98 @@
-import {useEffect,useState} from 'react';import {Play,Square,Download,RotateCcw} from 'lucide-react';import CodeEditor from './CodeEditor';import {VoiceControls} from './VoiceControls';import {runCSharp,cancelRun} from '../lib/compiler';import {download} from '../lib/download';import type {Progress} from '../lib/progress';import type {UpdateProgress} from './LessonView';
-const starter='using System;\n\nConsole.WriteLine("Hello, CodeQuest!");\n\n// Try your own C# here.\n';
-export default function Playground({progress,update}:{progress:Progress;update:UpdateProgress}){const [busy,setBusy]=useState(false),[output,setOutput]=useState('Your output will appear here.'),[ok,setOk]=useState(true);const code=progress.drafts.scratchpad??starter;useEffect(()=>()=>cancelRun(),[]);function setCode(value:string){update(p=>({...p,drafts:{...p.drafts,scratchpad:value}}));}async function run(){setBusy(true);try{const result=await runCSharp(code,setOutput);setOk(result.success);setOutput(result.success?(result.stdOut||'(Program finished with no console output)')+(result.stdErr?'\n'+result.stdErr:''):result.diagnostics.map(d=>`${d.id}: ${d.message}`).join('\n'));}catch(error){setOk(false);setOutput(error instanceof Error?error.message:'Run failed.');}finally{setBusy(false);}}
-return <section className="page playground-page"><div className="page-heading"><div><p className="eyebrow">YOUR C# WORKBENCH</p><h1>What happens if…?</h1><p>A real C# scratchpad. Try an idea, run it, and read what the compiler tells you.</p></div><button onClick={()=>download('Program.cs',code,'text/plain')}><Download size={16}/>Download C#</button></div><div className="editor-top"><span>Program.cs</span><span>LOCAL ROSLYN COMPILER</span></div><CodeEditor value={code} onChange={setCode} plain={progress.settings.editorMode==='plain'}/><div className="editor-actions"><button onClick={()=>setCode(starter)} disabled={busy}><RotateCcw size={15}/>Reset example</button>{busy?<button onClick={cancelRun}><Square size={15}/>Stop program</button>:<button className="primary" onClick={run}><Play size={15}/>Run C#</button>}</div><pre role="status" className={'run-feedback '+(ok?'success':'')}>{output}</pre><VoiceControls settings={progress.settings} text={output}/><p className="muted">Console.WriteLine output is captured. Console.ReadLine interactive input and native WinForms are not supported in the browser runtime. Your code runs on your own device; programs stop after 10 seconds. The compiler loads about 40 MB on the first run.</p></section>;}
+import { useEffect, useState } from "react";
+import { Play, Square, Download, RotateCcw } from "lucide-react";
+import CodeEditor from "./CodeEditor";
+import { VoiceControls } from "./VoiceControls";
+import { runCSharp, cancelRun } from "../lib/compiler";
+import { download } from "../lib/download";
+import type { Progress } from "../lib/progress";
+import type { UpdateProgress } from "./LessonView";
+const starter =
+  'using System;\n\nConsole.WriteLine("Hello, CodeQuest!");\n\n// Try your own C# here.\n';
+export default function Playground({
+  progress,
+  update,
+}: {
+  progress: Progress;
+  update: UpdateProgress;
+}) {
+  const [busy, setBusy] = useState(false),
+    [output, setOutput] = useState("Your output will appear here."),
+    [ok, setOk] = useState(true);
+  const code = progress.drafts.scratchpad ?? starter;
+  useEffect(() => () => cancelRun(), []);
+  function setCode(value: string) {
+    update((p) => ({ ...p, drafts: { ...p.drafts, scratchpad: value } }));
+  }
+  async function run() {
+    setBusy(true);
+    try {
+      const result = await runCSharp(code, setOutput);
+      setOk(result.success);
+      setOutput(
+        result.success
+          ? (result.stdOut || "(Program finished with no console output)") +
+              (result.stdErr ? "\n" + result.stdErr : "")
+          : result.diagnostics.map((d) => `${d.id}: ${d.message}`).join("\n"),
+      );
+    } catch (error) {
+      setOk(false);
+      setOutput(error instanceof Error ? error.message : "Run failed.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <section className="page playground-page">
+      <div className="page-heading">
+        <div>
+          <p className="eyebrow">YOUR C# WORKBENCH</p>
+          <h1>What happens if…?</h1>
+          <p>
+            A real C# scratchpad. Try an idea, run it, and read what the
+            compiler tells you.
+          </p>
+        </div>
+        <button onClick={() => download("Program.cs", code, "text/plain")}>
+          <Download size={16} />
+          Download C#
+        </button>
+      </div>
+      <div className="editor-top">
+        <span>Program.cs</span>
+        <span>LOCAL ROSLYN COMPILER</span>
+      </div>
+      <CodeEditor
+        value={code}
+        onChange={setCode}
+        plain={progress.settings.editorMode === "plain"}
+      />
+      <div className="editor-actions">
+        <button onClick={() => setCode(starter)} disabled={busy}>
+          <RotateCcw size={15} />
+          Reset example
+        </button>
+        {busy ? (
+          <button onClick={cancelRun}>
+            <Square size={15} />
+            Stop program
+          </button>
+        ) : (
+          <button className="primary" onClick={run}>
+            <Play size={15} />
+            Run C#
+          </button>
+        )}
+      </div>
+      <pre role="status" className={"run-feedback " + (ok ? "success" : "")}>
+        {output}
+      </pre>
+      <VoiceControls settings={progress.settings} text={output} />
+      <p className="muted">
+        Console.WriteLine output is captured. Console.ReadLine interactive input
+        and native WinForms are not supported in the browser runtime. Your code
+        runs on your own device; programs stop after 10 seconds. The compiler
+        loads about 40 MB on the first run.
+      </p>
+    </section>
+  );
+}

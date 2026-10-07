@@ -1,2 +1,12 @@
-import {readdir,writeFile,readFile} from 'node:fs/promises';import path from 'node:path';import crypto from 'node:crypto';
-const assets=(await readdir('dist/assets')).map(name=>'/assets/'+name);await writeFile('dist/asset-manifest.json',JSON.stringify(assets));const version=crypto.createHash('sha256').update(assets.join(',')).digest('hex').slice(0,12);const sw=await readFile('dist/sw.js','utf8');await writeFile('dist/sw.js',sw.replace('__BUILD_VERSION__',version));
+import { readdir, writeFile, readFile } from "node:fs/promises";
+import path from "node:path";
+import crypto from "node:crypto";
+const assets = (await readdir("dist/assets")).map((name) => "/assets/" + name);
+await writeFile("dist/asset-manifest.json", JSON.stringify(assets));
+const version = crypto
+  .createHash("sha256")
+  .update(assets.join(","))
+  .digest("hex")
+  .slice(0, 12);
+const sw = await readFile("dist/sw.js", "utf8");
+await writeFile("dist/sw.js", sw.replace("__BUILD_VERSION__", version));

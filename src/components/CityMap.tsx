@@ -1,1 +1,114 @@
-export default function CityMap({onSelect}:{onSelect:(track:string)=>void}){return <div className="city-map"><svg viewBox="0 0 720 450" aria-hidden="true"><defs><pattern id="map-grid" width="28" height="28" patternUnits="userSpaceOnUse"><path d="M28 0H0V28" fill="none" stroke="#b7c5a3" strokeWidth=".7"/></pattern></defs><rect width="720" height="450" fill="#d8e2bf"/><rect width="720" height="450" fill="url(#map-grid)"/><path d="M-20 380C150 300 240 420 335 288S550 190 745 100" fill="none" stroke="#9ecfc3" strokeWidth="90"/><path d="M-20 380C150 300 240 420 335 288S550 190 745 100" fill="none" stroke="#79b8ac" strokeWidth="2" strokeDasharray="8 10"/><path d="M80 105Q360 35 565 330" fill="none" stroke="#fff5d9" strokeWidth="26"/><path d="M80 105Q360 35 565 330" fill="none" stroke="#244b3a" strokeWidth="2" strokeDasharray="6 9"/><g fill="#f6e8c4" stroke="#244b3a" strokeWidth="2"><path d="M92 175V93H145V175Z"/><path d="M103 93V74H133V93Z"/><path d="M148 175V122H203V175Z"/><path d="M78 175H218V195H78Z"/><path d="M366 136V52H407V136Z"/><path d="M413 136V74H456V136Z"/><path d="M460 136V91H492V136Z"/><path d="M350 136H503V152H350Z"/><path d="M503 349V270H553V349Z"/><path d="M511 270L528 241L547 270Z"/><path d="M559 349V299H595V349Z"/><path d="M480 349H609V366H480Z"/></g><g stroke="#244b3a" strokeWidth="2"><path d="M108 107H130M108 120H130M108 133H130M159 138H191M377 68H396M377 81H396M424 91H445M424 107H445M516 292H540M516 310H540"/></g><g fill="#244b3a"><path d="M58 205V155M58 158L41 180H75Z"/><path d="M242 135V83M242 85L222 110H261Z"/><path d="M644 350V296M644 300L622 325H665Z"/><path d="M321 370V321M321 324L301 349H341Z"/></g><g fill="#ed8068" stroke="#244b3a" strokeWidth="2"><rect x="212" y="266" width="52" height="20" rx="4"/><circle cx="223" cy="287" r="5" fill="#244b3a"/><circle cx="254" cy="287" r="5" fill="#244b3a"/><path d="M220 266L227 255H249L257 266Z"/></g><g fill="#fff5d9" stroke="#244b3a" strokeWidth="2"><path d="M312 189L375 170V193L343 207Z"/><path d="M348 169V140L369 168Z"/></g><text x="35" y="414" fontFamily="monospace" fontSize="12" fill="#244b3a">YOUR WORLD, ONE QUEST AT A TIME.</text><circle cx="653" cy="46" r="20" fill="none" stroke="#244b3a"/><path d="M653 30L660 52L653 46L646 52Z" fill="#244b3a"/></svg><button className="map-pin lagos" onClick={()=>onSelect('lagos')}><span>01</span><b>Lagos</b><small>Start on Rookie Street</small></button><button className="map-pin jozi" onClick={()=>onSelect('jozi')}><span>02</span><b>Johannesburg</b><small>Build in the Makers Yard</small></button><button className="map-pin kinshasa" onClick={()=>onSelect('kinshasa')}><span>03</span><b>Kinshasa</b><small>Explore Object Kingdom</small></button></div>;}
+export default function CityMap({
+  onSelect,
+}: {
+  onSelect: (track: string) => void;
+}) {
+  return (
+    <div className="city-map">
+      <svg viewBox="0 0 720 450" aria-hidden="true">
+        <defs>
+          <pattern
+            id="map-grid"
+            width="28"
+            height="28"
+            patternUnits="userSpaceOnUse"
+          >
+            <path
+              d="M28 0H0V28"
+              fill="none"
+              stroke="#b7c5a3"
+              strokeWidth=".7"
+            />
+          </pattern>
+        </defs>
+        <rect width="720" height="450" fill="#d8e2bf" />
+        <rect width="720" height="450" fill="url(#map-grid)" />
+        <path
+          d="M-20 380C150 300 240 420 335 288S550 190 745 100"
+          fill="none"
+          stroke="#9ecfc3"
+          strokeWidth="90"
+        />
+        <path
+          d="M-20 380C150 300 240 420 335 288S550 190 745 100"
+          fill="none"
+          stroke="#79b8ac"
+          strokeWidth="2"
+          strokeDasharray="8 10"
+        />
+        <path
+          d="M80 105Q360 35 565 330"
+          fill="none"
+          stroke="#fff5d9"
+          strokeWidth="26"
+        />
+        <path
+          d="M80 105Q360 35 565 330"
+          fill="none"
+          stroke="#244b3a"
+          strokeWidth="2"
+          strokeDasharray="6 9"
+        />
+        <g fill="#f6e8c4" stroke="#244b3a" strokeWidth="2">
+          <path d="M92 175V93H145V175Z" />
+          <path d="M103 93V74H133V93Z" />
+          <path d="M148 175V122H203V175Z" />
+          <path d="M78 175H218V195H78Z" />
+          <path d="M366 136V52H407V136Z" />
+          <path d="M413 136V74H456V136Z" />
+          <path d="M460 136V91H492V136Z" />
+          <path d="M350 136H503V152H350Z" />
+          <path d="M503 349V270H553V349Z" />
+          <path d="M511 270L528 241L547 270Z" />
+          <path d="M559 349V299H595V349Z" />
+          <path d="M480 349H609V366H480Z" />
+        </g>
+        <g stroke="#244b3a" strokeWidth="2">
+          <path d="M108 107H130M108 120H130M108 133H130M159 138H191M377 68H396M377 81H396M424 91H445M424 107H445M516 292H540M516 310H540" />
+        </g>
+        <g fill="#244b3a">
+          <path d="M58 205V155M58 158L41 180H75Z" />
+          <path d="M242 135V83M242 85L222 110H261Z" />
+          <path d="M644 350V296M644 300L622 325H665Z" />
+          <path d="M321 370V321M321 324L301 349H341Z" />
+        </g>
+        <g fill="#ed8068" stroke="#244b3a" strokeWidth="2">
+          <rect x="212" y="266" width="52" height="20" rx="4" />
+          <circle cx="223" cy="287" r="5" fill="#244b3a" />
+          <circle cx="254" cy="287" r="5" fill="#244b3a" />
+          <path d="M220 266L227 255H249L257 266Z" />
+        </g>
+        <g fill="#fff5d9" stroke="#244b3a" strokeWidth="2">
+          <path d="M312 189L375 170V193L343 207Z" />
+          <path d="M348 169V140L369 168Z" />
+        </g>
+        <text
+          x="35"
+          y="414"
+          fontFamily="monospace"
+          fontSize="12"
+          fill="#244b3a"
+        >
+          YOUR WORLD, ONE QUEST AT A TIME.
+        </text>
+        <circle cx="653" cy="46" r="20" fill="none" stroke="#244b3a" />
+        <path d="M653 30L660 52L653 46L646 52Z" fill="#244b3a" />
+      </svg>
+      <button className="map-pin lagos" onClick={() => onSelect("lagos")}>
+        <span>01</span>
+        <b>Lagos</b>
+        <small>Start on Rookie Street</small>
+      </button>
+      <button className="map-pin jozi" onClick={() => onSelect("jozi")}>
+        <span>02</span>
+        <b>Johannesburg</b>
+        <small>Build in the Makers Yard</small>
+      </button>
+      <button className="map-pin kinshasa" onClick={() => onSelect("kinshasa")}>
+        <span>03</span>
+        <b>Kinshasa</b>
+        <small>Explore Object Kingdom</small>
+      </button>
+    </div>
+  );
+}

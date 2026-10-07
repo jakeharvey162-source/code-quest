@@ -30,3 +30,9 @@ Single-device self-study application with authored English curriculum, local pro
 Public deployment is blocked: Vercel returned 403 Forbidden for team_Kfsdvn1tXmeZLCVzYI7pDa66. Reconnect an account authorized for that team before creating the production project.
 
 GitHub Actions run 37600253084 compiled the exported Windows/.NET 8 solution successfully. Its stock Chromium exposed an intermediate navigation color-transition contrast issue; background interpolation was removed so foreground/background pairs remain consistent during route changes.
+
+## Production hardening revision
+
+Latest branch changes were reread and preserved. Upgrades migrate legacy profiles and form event fields, blocked storage no longer crashes practical routes, backups include practical drafts, and reset clears all learning drafts. New selection/checked event handlers and practical handler bodies are included in native exports; CI compiles that richer sample. Practical review ignores comments/quoted examples, distinguishes eight characters from digit validation, respects the learner's coach tone, and links directly to targeted lessons. Voice input languages expose matching constrained command phrases; lesson text remains English.
+
+41 unit/regression tests pass. All 17 Chromium browser flows pass together, including actual C# offline execution after its first download. Final GitHub CI additionally validates the richer Windows sample. The dependency audit reports zero known vulnerabilities.

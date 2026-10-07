@@ -1,6 +1,36 @@
-import test from 'node:test';import assert from 'node:assert/strict';import {evaluateStage} from '../src/learning-engine.mjs';import {readJSON,saveValue} from '../src/storage.mjs';
-const student='class Student { public virtual string GetRole()=>"Student"; } class BITStudent : Student { public override string GetRole()=>"BIT Student"; }';
-test('prediction requires an answer instead of starter code',()=>{assert.equal(evaluateStage(student,1).ok,false);assert.equal(evaluateStage('BIT Student',1).ok,true)});
-test('final stage rejects Student solution and accepts Employee',()=>{assert.equal(evaluateStage(student,4).ok,false);assert.equal(evaluateStage('class Employee { public virtual decimal CalculatePay()=>100; } class PermanentEmployee : Employee { public override decimal CalculatePay()=>200; }',4).ok,true)});
-test('commented out solutions do not pass',()=>assert.equal(evaluateStage('/*'+student+'*/',2).ok,false));
-test('corrupt and unavailable storage safely fall back',()=>{globalThis.localStorage={getItem:()=>'{broken',setItem:()=>{throw Error('quota')}};assert.deepEqual(readJSON('form',[]),[]);assert.equal(saveValue('key','data'),false);localStorage.getItem=()=>'{"bad":true}';assert.deepEqual(readJSON('form',[],Array.isArray),[]);delete globalThis.localStorage;assert.deepEqual(readJSON('form',[]),[])});
+import test from "node:test";
+import assert from "node:assert/strict";
+import { evaluateStage } from "../src/learning-engine.mjs";
+import { readJSON, saveValue } from "../src/storage.mjs";
+const student =
+  'class Student { public virtual string GetRole()=>"Student"; } class BITStudent : Student { public override string GetRole()=>"BIT Student"; }';
+test("prediction requires an answer instead of starter code", () => {
+  assert.equal(evaluateStage(student, 1).ok, false);
+  assert.equal(evaluateStage("BIT Student", 1).ok, true);
+});
+test("final stage rejects Student solution and accepts Employee", () => {
+  assert.equal(evaluateStage(student, 4).ok, false);
+  assert.equal(
+    evaluateStage(
+      "class Employee { public virtual decimal CalculatePay()=>100; } class PermanentEmployee : Employee { public override decimal CalculatePay()=>200; }",
+      4,
+    ).ok,
+    true,
+  );
+});
+test("commented out solutions do not pass", () =>
+  assert.equal(evaluateStage("/*" + student + "*/", 2).ok, false));
+test("corrupt and unavailable storage safely fall back", () => {
+  globalThis.localStorage = {
+    getItem: () => "{broken",
+    setItem: () => {
+      throw Error("quota");
+    },
+  };
+  assert.deepEqual(readJSON("form", []), []);
+  assert.equal(saveValue("key", "data"), false);
+  localStorage.getItem = () => '{"bad":true}';
+  assert.deepEqual(readJSON("form", [], Array.isArray), []);
+  delete globalThis.localStorage;
+  assert.deepEqual(readJSON("form", []), []);
+});

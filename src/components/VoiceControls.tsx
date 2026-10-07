@@ -1,8 +1,125 @@
-import {useEffect,useRef,useState} from 'react';import {Volume2,Mic,Square} from 'lucide-react';import {speakText,commandFor,voiceError} from '../lib/voice';import type {Settings} from '../lib/progress';
-export function useVoices(){const [voices,setVoices]=useState<SpeechSynthesisVoice[]>([]);useEffect(()=>{if(!('speechSynthesis'in window))return;const load=()=>setVoices(window.speechSynthesis.getVoices());load();window.speechSynthesis.addEventListener('voiceschanged',load);return()=>window.speechSynthesis.removeEventListener('voiceschanged',load);},[]);return voices;}
-export function VoiceControls({settings,text,onNavigate}:{settings:Settings;text:string;onNavigate?:(page:string)=>void}){
- const [status,setStatus]=useState(''),[listening,setListening]=useState(false);const recognition=useRef<any>(null);
- useEffect(()=>()=>{recognition.current?.abort();if('speechSynthesis'in window)window.speechSynthesis.cancel();},[]);
- function listen(){const browser=window as any;const Recognition=browser.SpeechRecognition||browser.webkitSpeechRecognition;if(!Recognition){setStatus('Voice commands are unavailable in this browser. Use the navigation buttons.');return;}if(!settings.voiceInput){setStatus('Enable voice commands in Settings first. Your browser may send microphone audio to its recognition service.');return;}if(listening){recognition.current?.abort();return;}const r=new Recognition();recognition.current=r;r.lang=settings.language||'en-ZA';r.continuous=false;r.interimResults=false;r.onstart=()=>{setListening(true);setStatus('Listening. Say “open lessons”, “open designer” or “stop”.');};r.onend=()=>setListening(false);r.onerror=(e:any)=>{setStatus(voiceError(e.error));setListening(false);};r.onresult=(e:any)=>{const transcript=e.results[0][0].transcript;const command=commandFor(transcript);if(command==='stop'){window.speechSynthesis?.cancel();setStatus('Reading stopped.');}else if(command){onNavigate?.(command);setStatus(`Heard: ${transcript}`);}else setStatus(`Heard “${transcript}”. Try “open lessons”, “open designer” or “open settings”.`);};try{r.start();}catch{setStatus('Voice input is already active or could not start. Try again.');}}
- return <div className="voice-controls"><div className="button-row"><button onClick={()=>speakText(text,settings.voice,settings.rate,setStatus)}><Volume2 size={16}/> Read aloud</button><button onClick={()=>{window.speechSynthesis?.cancel();recognition.current?.abort();setListening(false);setStatus('Voice stopped.');}} aria-label="Stop voice"><Square size={14}/></button>{onNavigate&&<button aria-pressed={listening} onClick={listen}><Mic size={16}/>{listening?'Stop listening':'Voice command'}</button>}</div><span role="status" className="muted voice-status">{status}</span></div>;
+import { useEffect, useRef, useState } from "react";
+import { Volume2, Mic, Square } from "lucide-react";
+import { speakText, commandFor, voiceError, voiceCommands } from "../lib/voice";
+import type { Settings } from "../lib/progress";
+export function useVoices() {
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  useEffect(() => {
+    if (!("speechSynthesis" in window)) return;
+    const load = () => setVoices(window.speechSynthesis.getVoices());
+    load();
+    window.speechSynthesis.addEventListener("voiceschanged", load);
+    return () =>
+      window.speechSynthesis.removeEventListener("voiceschanged", load);
+  }, []);
+  return voices;
+}
+export function VoiceControls({
+  settings,
+  text,
+  onNavigate,
+}: {
+  settings: Settings;
+  text: string;
+  onNavigate?: (page: string) => void;
+}) {
+  const commands = voiceCommands[settings.language] || voiceCommands["en-ZA"];
+  const examples = `${commands.learn} · ${commands.designer} · ${commands.settings} · ${commands.stop}`;
+  const [status, setStatus] = useState(""),
+    [listening, setListening] = useState(false);
+  const recognition = useRef<any>(null);
+  useEffect(
+    () => () => {
+      recognition.current?.abort();
+      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+    },
+    [],
+  );
+  function listen() {
+    const browser = window as any;
+    const Recognition =
+      browser.SpeechRecognition || browser.webkitSpeechRecognition;
+    if (!Recognition) {
+      setStatus(
+        "Voice commands are unavailable in this browser. Use the navigation buttons.",
+      );
+      return;
+    }
+    if (!settings.voiceInput) {
+      setStatus(
+        "Enable voice commands in Settings first. Your browser may send microphone audio to its recognition service.",
+      );
+      return;
+    }
+    if (listening) {
+      recognition.current?.abort();
+      return;
+    }
+    const r = new Recognition();
+    recognition.current = r;
+    r.lang = settings.language || "en-ZA";
+    r.continuous = false;
+    r.interimResults = false;
+    r.onstart = () => {
+      setListening(true);
+      setStatus(`Listening. Commands: ${examples}`);
+    };
+    r.onend = () => setListening(false);
+    r.onerror = (e: any) => {
+      setStatus(voiceError(e.error));
+      setListening(false);
+    };
+    r.onresult = (e: any) => {
+      const transcript = e.results[0][0].transcript;
+      const command = commandFor(transcript);
+      if (command === "stop") {
+        window.speechSynthesis?.cancel();
+        setStatus("Reading stopped.");
+      } else if (command) {
+        onNavigate?.(command);
+        setStatus(`Heard: ${transcript}`);
+      } else setStatus(`Heard “${transcript}”. Commands: ${examples}.`);
+    };
+    try {
+      r.start();
+    } catch {
+      setStatus("Voice input is already active or could not start. Try again.");
+    }
+  }
+  return (
+    <div className="voice-controls">
+      <div className="button-row">
+        <button
+          onClick={() =>
+            speakText(text, settings.voice, settings.rate, setStatus)
+          }
+        >
+          <Volume2 size={16} /> Read aloud
+        </button>
+        <button
+          onClick={() => {
+            window.speechSynthesis?.cancel();
+            recognition.current?.abort();
+            setListening(false);
+            setStatus("Voice stopped.");
+          }}
+          aria-label="Stop voice"
+        >
+          <Square size={14} />
+        </button>
+        {onNavigate && (
+          <button aria-pressed={listening} onClick={listen}>
+            <Mic size={16} />
+            {listening ? "Stop listening" : "Voice command"}
+          </button>
+        )}
+      </div>
+      {onNavigate && settings.voiceInput && (
+        <span className="muted voice-help">Commands: {examples}</span>
+      )}
+      <span role="status" className="muted voice-status">
+        {status}
+      </span>
+    </div>
+  );
 }
