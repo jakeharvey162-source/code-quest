@@ -1,13 +1,28 @@
+let owner = "";
+export function setDataOwner(userId: string | null) {
+  owner = userId || "";
+}
+export function dataKey(key: string) {
+  return owner ? `${key}:${owner}` : key;
+}
+export function removeText(key: string) {
+  try {
+    localStorage.removeItem(dataKey(key));
+    return true;
+  } catch {
+    return false;
+  }
+}
 export function readText(key: string, fallback = "") {
   try {
-    return localStorage.getItem(key) ?? fallback;
+    return localStorage.getItem(dataKey(key)) ?? fallback;
   } catch {
     return fallback;
   }
 }
 export function writeText(key: string, value: string) {
   try {
-    localStorage.setItem(key, value);
+    localStorage.setItem(dataKey(key), value);
     return true;
   } catch {
     return false;

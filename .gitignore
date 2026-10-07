@@ -3,3 +3,8 @@ dist/
 playwright-report/
 test-results/
 public/compiler/
+.env
+.env.*
+!.env.example
+.vercel/
+supabase/.temp/

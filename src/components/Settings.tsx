@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { Download, Upload, Volume2, Calendar, Trash2 } from "lucide-react";
 import { VoiceControls, useVoices } from "./VoiceControls";
+import { tutorVoices, voiceSamples } from "../lib/voice-catalog.mjs";
 import { download } from "../lib/download";
-import { readText, readBrief } from "../lib/local-data";
+import { readText, readBrief, writeText, removeText } from "../lib/local-data";
 import { migrateProgress, freshProgress } from "../lib/progress";
 import type { Progress, Settings as SettingsType } from "../lib/progress";
 import type { UpdateProgress } from "./LessonView";
@@ -26,7 +27,7 @@ export default function Settings({
   function backup() {
     let controls: Control[] = [];
     try {
-      const value = JSON.parse(localStorage.getItem("cq-form") || "[]");
+      const value = JSON.parse(readText("cq-form", "[]"));
       controls = normalizeControls(value) || [];
     } catch {}
     download(
@@ -66,9 +67,12 @@ export default function Settings({
             value.practicalCode.length > 50000))
       )
         throw new Error("This is not a valid CodeQuest backup.");
-      localStorage.setItem("cq-form", JSON.stringify(controls));
-      localStorage.setItem("cq-practical-code", value.practicalCode || "");
-      localStorage.setItem(
+      if (
+        !writeText("cq-form", JSON.stringify(controls)) ||
+        !writeText("cq-practical-code", value.practicalCode || "")
+      )
+        throw new Error("Your browser could not save the restored draft.");
+      writeText(
         "cq-practical-brief",
         JSON.stringify(value.practicalBrief || null),
       );
@@ -189,13 +193,37 @@ export default function Settings({
             lesson text.
           </p>
           <label>
+            Read-aloud service
+            <select
+              aria-label="Read-aloud service"
+              value={s.voiceProvider}
+              onChange={(e) =>
+                change({
+                  voiceProvider: e.target
+                    .value as SettingsType["voiceProvider"],
+                })
+              }
+            >
+              <option value="device">Device voices — no API charge</option>
+              <option value="elevenlabs">
+                ElevenLabs — limited cloud allowance
+              </option>
+            </select>
+          </label>
+          <p className="muted">
+            ElevenLabs choice: {tutorVoices[s.language].name}. Cloud reading
+            requires a connected account and a server API key. Device reading
+            stays available when cloud reading cannot run. Cloud reading sends
+            the text being read to ElevenLabs.
+          </p>
+          <label>
             Device voice
             <select
               aria-label="Device voice"
               value={s.voice}
               onChange={(e) => change({ voice: e.target.value })}
             >
-              <option value="">Device default</option>
+              <option value="">Automatic language match (free)</option>
               {voices.map((v) => (
                 <option key={v.voiceURI} value={v.name}>
                   {v.name} ({v.lang})
@@ -224,8 +252,13 @@ export default function Settings({
           </label>
           <VoiceControls
             settings={s}
-            text={`Hello ${s.name || "learner"}. I’m Tor. Let’s build something you understand.`}
+            text={voiceSamples[s.language]}
+            language={s.language}
           />
+          <p className="muted">
+            Voice preview: {tutorVoices[s.language].accent}. English lessons use
+            an English voice. The preview uses the selected language.
+          </p>
           <label className="check-label">
             <input
               type="checkbox"
@@ -322,7 +355,7 @@ export default function Settings({
                       "cq-practical-code",
                       "cq-practical-brief",
                     ])
-                      localStorage.removeItem(key);
+                      removeText(key);
                   } catch {}
                   update(() => freshProgress());
                   setReset(false);

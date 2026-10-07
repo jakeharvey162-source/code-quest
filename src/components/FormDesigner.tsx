@@ -244,14 +244,11 @@ export default function FormDesigner() {
   const cur = items.find((c) => c.id === selected);
   const validation = validateForm(items);
   useEffect(() => {
-    try {
-      localStorage.setItem("cq-practical-code", practicalCode);
-    } catch {}
+    if (!writeText("cq-practical-code", practicalCode))
+      setMessage("Storage is full or blocked. Export your project to keep it.");
   }, [practicalCode]);
   useEffect(() => {
-    try {
-      localStorage.setItem("cq-form", JSON.stringify(items));
-    } catch {
+    if (!writeText("cq-form", JSON.stringify(items))) {
       setMessage("Storage is full or blocked. Export your project to keep it.");
     }
   }, [items]);

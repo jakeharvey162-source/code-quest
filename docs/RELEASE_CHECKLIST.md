@@ -21,7 +21,7 @@ Use Settings → Voice & accessibility → Read aloud on a real phone/desktop. C
 
 ## Included scope
 
-Single-device self-study application with authored English curriculum, local progress, browser console C# and exportable Windows forms. No cloud account, automatic translation, official exam proctoring or native Android APK is implied by this release.
+Self-study application with authored English curriculum, local/account-isolated progress, optional Supabase accounts/manual saves/history/classes, browser console C# and exportable Windows forms. Automatic lesson translation, official exam proctoring and a native Android APK are outside the verified release scope. Live cloud operation requires the dedicated project, migration, SMTP and deployment configuration.
 
 ## Verification evidence (7 October 2026)
 
@@ -36,3 +36,9 @@ GitHub Actions run 37600253084 compiled the exported Windows/.NET 8 solution suc
 Latest branch changes were reread and preserved. Upgrades migrate legacy profiles and form event fields, blocked storage no longer crashes practical routes, backups include practical drafts, and reset clears all learning drafts. New selection/checked event handlers and practical handler bodies are included in native exports; CI compiles that richer sample. Practical review ignores comments/quoted examples, distinguishes eight characters from digit validation, respects the learner's coach tone, and links directly to targeted lessons. Voice input languages expose matching constrained command phrases; lesson text remains English.
 
 41 unit/regression tests pass. All 17 Chromium browser flows pass together, including actual C# offline execution after its first download. Final GitHub CI additionally validates the richer Windows sample. The dependency audit reports zero known vulnerabilities.
+
+## Accounts and language voices revision
+
+49 unit/security checks and TypeScript/build pass locally. Postgres tests exercise actual row-level policies with separate user roles: private saves/history, class invitation and membership, lecturer assignments, protected member identity and persistent voice quotas. Provider-mocked browser journeys cover sign-in errors, confirmation/reset guidance, account switching, cloud save/restore, lecturer assignments and voice-quota recovery. A final full browser run and GitHub CI validate the revision.
+
+Voice choices: Peter (South African English), Enrick (French), Adilson (European Portuguese), Halima (Tanzanian Swahili). No verified native isiZulu library voice was found; matching device speech reports absence clearly. ElevenLabs actual generation was rejected with zero remaining credits. Physical audio/native pronunciation, live SMTP/auth and the final public production URL remain unchecked. The Supabase organization has no available active free project slot; Vercel currently exposes no accessible deployment teams. See DEPLOYMENT.md.

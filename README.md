@@ -11,7 +11,9 @@
 - **Native export:** download a ZIP with a Visual Studio solution, net8.0-windows project, Program.cs, Form1.cs and generated Designer.cs. Click, TextChanged, SelectedIndexChanged and CheckedChanged handlers are generated. Practical handler drafts are included in the exported Form1.cs.
 - **Assessment arena:** 10-question practice, optional timer, scoring, explanations and result history. Registration briefs hand off to the designer, then a clearly labelled static rubric review suggests targeted lessons. Static review excludes comments/strings and does not verify runtime behaviour.
 - **Progress:** earned XP, real study streaks, neighbourhood completion and milestones. Backup/restore moves progress, forms and practical drafts between browsers; previous version-1 saves migrate without losing work.
-- **Voice:** available device voices, reading speed, stop control, opt-in navigation commands, displayed English/isiZulu/French/Portuguese/Swahili command phrases and permission/support errors. No listening before an explicit button press.
+- **Voice:** automatic language-matched device speech, localized previews, reading speed, Stop and opt-in navigation commands. Optional authenticated ElevenLabs reading uses a server-only key, curated language voices and persistent quotas. Missing voices and exhausted allowances produce actionable messages. No listening before an explicit button press.
+- **Accounts and history:** optional Supabase email/password auth, confirmation/reset, account-isolated local profiles, manual cloud save/restore with conflict protection and save history.
+- **Lecturer classes:** create/join classes, invite codes, quest assignments and opt-in sharing of completion/XP; private learner drafts remain private under database row-level policies.
 - **Study plan:** daily goal and downloadable calendar reminder.
 - **Installable/offline:** responsive PWA with icons and cached app shell. Compiler assets are cached after first use. No compiler download on the homepage.
 - **Accessibility:** keyboard navigation, visible focus, plain editor option, reduced-motion support and read-aloud text.
@@ -41,7 +43,7 @@ Lessons are in English; choosing a voice does not translate content. Device voic
 
 The browser compiler's first run loads about 40 MB. Code is isolated from the UI in a worker with a 10-second execution timeout and Stop control. It is not a server-side execution service. Console.ReadLine interactive input and native Windows APIs are outside its scope. Native WinForms executes in the exported Windows project; preview controls do not execute C# handler logic. Add the handler's business logic in Form1.cs.
 
-Progress is local to this browser. It is self-study progress, not tamper-proof official assessment records. Clear browser storage and it is removed; export a backup first. Assessment practice is a quiz, not an official university test. The question analyser matches topics; it does not mark arbitrary submitted code/questions. Practical rubric scores describe static pattern coverage, not compiler correctness or official marks. Leaving an active assessment cancels that attempt.
+Guest progress is local to this browser. Signed-in profiles are separate and can be explicitly saved to/restored from Supabase when configured. It is self-study progress, not tamper-proof official assessment records. Clear browser storage and it is removed; export a backup first. Assessment practice is a quiz, not an official university test. The question analyser matches topics; it does not mark arbitrary submitted code/questions. Practical rubric scores describe static pattern coverage, not compiler correctness or official marks. Leaving an active assessment cancels that attempt.
 
 ## Validation
 
@@ -50,3 +52,9 @@ CI runs unit/regression tests, TypeScript, a production build, Chromium user jou
 ## Free/open-source foundations
 
 See [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for repository links and licenses: React, Vite, WasmSharp/Roslyn, CodeMirror, fflate, Lucide, Comlink, Playwright and axe-core. Lesson content, UI, district illustration, progress model and app integration are authored for CodeQuest.
+
+## Accounts, voices and deployment
+
+See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Vercel setup, database migration, environment variables, mail configuration, sharing and current connection blockers. See `.env.example`; keep real keys out of GitHub. Account/browser flows are tested against mocked provider responses and actual Postgres policy tests run locally with PGlite; live SMTP/Supabase/ElevenLabs deployment checks still require connected services.
+
+`npm run test:cloud` builds a separate provider-mocked browser test configuration. Run it after the normal browser tests; it rebuilds `dist` with test-only Supabase settings, so run `npm run build` again before manual deployment of `dist`.

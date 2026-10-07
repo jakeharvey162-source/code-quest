@@ -304,6 +304,8 @@ test("all routes fit a phone and have no serious accessibility errors", async ({
     "progress",
     "settings",
     "playground",
+    "account",
+    "classes",
   ]) {
     await page.goto("/#" + route);
     await page.locator(".page h1").waitFor();
