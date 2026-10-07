@@ -36,3 +36,5 @@ GitHub Actions run 37600253084 compiled the exported Windows/.NET 8 solution suc
 Latest branch changes were reread and preserved. Upgrades migrate legacy profiles and form event fields, blocked storage no longer crashes practical routes, backups include practical drafts, and reset clears all learning drafts. New selection/checked event handlers and practical handler bodies are included in native exports; CI compiles that richer sample. Practical review ignores comments/quoted examples, distinguishes eight characters from digit validation, respects the learner's coach tone, and links directly to targeted lessons. Voice input languages expose matching constrained command phrases; lesson text remains English.
 
 41 unit/regression tests pass. All 17 Chromium browser flows pass together, including actual C# offline execution after its first download. Final GitHub CI additionally validates the richer Windows sample. The dependency audit reports zero known vulnerabilities.
+
+- [ ] Verify Tor four-level remediation and Designer double-click/resize interactions in the current release candidate.
