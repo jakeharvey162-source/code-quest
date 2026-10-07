@@ -404,7 +404,7 @@ export default function FormDesigner() {
             }}
           >
             {preview ? <MousePointer2 size={16} /> : <Play size={16} />}{" "}
-            {preview ? "Back to design" : "Preview form"}
+            {preview ? "Stop debugging" : "Start / F5"}
           </button>
           <button
             aria-pressed={showCode}
@@ -438,11 +438,18 @@ export default function FormDesigner() {
       <div className="designer-grid">
         <aside className="toolbox">
           <h2>Toolbox</h2>
-          <p className="muted">Click to add a control</p>
+          <p className="muted">Drag onto the form or double-click to add</p>
           {toolbox.map((type) => (
             <button
               key={type}
               disabled={preview || items.length >= 100}
+              draggable={!preview}
+              onDragStart={(e) => e.dataTransfer.setData("application/x-codequest-control", type)}
+              onDoubleClick={() => {
+                const next = addControl(items, type);
+                commit(next);
+                setSelected(next[next.length - 1].id);
+              }}
               onClick={() => {
                 const next = addControl(items, type);
                 commit(next);
@@ -528,7 +535,26 @@ export default function FormDesigner() {
                 <div className="form-title">
                   My CodeQuest Form <span>─　□　×</span>
                 </div>
-                <div className="form-canvas" aria-label="Form design canvas">
+                <div
+                  className="form-canvas"
+                  aria-label="Form design canvas"
+                  onDragOver={(e) => { if (!preview) e.preventDefault(); }}
+                  onDrop={(e) => {
+                    if (preview || items.length >= 100) return;
+                    e.preventDefault();
+                    const type = e.dataTransfer.getData("application/x-codequest-control");
+                    if (!toolbox.includes(type)) return;
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const next = addControl(items, type);
+                    const added = next[next.length - 1];
+                    const x = Math.max(0, Math.min(560, Math.round((e.clientX - rect.left) / 8) * 8));
+                    const y = Math.max(0, Math.min(360, Math.round((e.clientY - rect.top) / 8) * 8));
+                    const positioned = updateControl(next, added.id, { x, y });
+                    commit(positioned);
+                    setSelected(added.id);
+                    setMessage(`${type} added at ${x}, ${y}. Visual Studio-style 8 px grid snap applied.`);
+                  }}
+                >
                   {items.length === 0 && (
                     <div className="canvas-empty">
                       <MousePointer2 size={28} />
@@ -588,6 +614,12 @@ export default function FormDesigner() {
                         }
                         onKeyDown={(e) => {
                           if (preview) return;
+                          if (e.key === "F5") {
+                            e.preventDefault();
+                            setPreview(true);
+                            setMessage("Running Form1 — press Stop debugging to return to the designer.");
+                            return;
+                          }
                           if (e.key === "Enter" || e.key === " ") {
                             e.preventDefault();
                             setSelected(c.id);
@@ -606,16 +638,16 @@ export default function FormDesigner() {
                                 x:
                                   c.x +
                                   (e.key === "ArrowRight"
-                                    ? 5
+                                    ? e.ctrlKey ? 1 : 8
                                     : e.key === "ArrowLeft"
-                                      ? -5
+                                      ? e.ctrlKey ? -1 : -8
                                       : 0),
                                 y:
                                   c.y +
                                   (e.key === "ArrowDown"
-                                    ? 5
+                                    ? e.ctrlKey ? 1 : 8
                                     : e.key === "ArrowUp"
-                                      ? -5
+                                      ? e.ctrlKey ? -1 : -8
                                       : 0),
                               }),
                             );
