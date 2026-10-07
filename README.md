@@ -19,3 +19,6 @@ Run: `npm install && npm run check && npm run dev`.
 
 ## v0.4 learning loop
 OOP Lab now exposes explicit See → Predict → Build → Break + Fix → Apply Alone stages, with help fading toward independent work. Passing a coding check advances the learner rather than merely awarding XP.
+
+## v0.5 Visual Studio-style Properties
+Designer properties now include categorized Design, Appearance, Layout, Behavior, Events and Accessibility fields: Name, Text, Font, ForeColor, BackColor, location/size, Anchor, Dock, Enabled, Visible, TabIndex, Click/TextChanged handlers and AccessibleName. Designer validation checks unique/valid names and required Button Click wiring.
