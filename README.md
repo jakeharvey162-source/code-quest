@@ -22,3 +22,11 @@ OOP Lab now exposes explicit See → Predict → Build → Break + Fix → Apply
 
 ## v0.5 Visual Studio-style Properties
 Designer properties now include categorized Design, Appearance, Layout, Behavior, Events and Accessibility fields: Name, Text, Font, ForeColor, BackColor, location/size, Anchor, Dock, Enabled, Visible, TabIndex, Click/TextChanged handlers and AccessibleName. Designer validation checks unique/valid names and required Button Click wiring.
+
+## v0.6 readiness
+- Offline service worker with cache-first fallback after first successful load
+- Explicit CI permissions, PR/push/manual triggers and separate test/build steps
+- PWA manifest scope/start URL
+
+### Release gate
+Do not merge until CI is observable and green, browser interaction tests pass, and real C# compilation adapter is integrated. Structural mission checks are teaching feedback, not a compiler.
