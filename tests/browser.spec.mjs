@@ -252,30 +252,26 @@ test("backup restore, invalid file rejection and corrupt progress recovery", asy
   const d = page.waitForEvent("download");
   await page.getByRole("button", { name: "Export backup" }).click();
   expect((await d).suggestedFilename()).toBe("CodeQuest-backup.json");
-  await page
-    .getByLabel("Restore backup", { exact: true })
-    .setInputFiles({
-      name: "invalid.json",
-      mimeType: "application/json",
-      buffer: Buffer.from('{"format":"fake"}'),
-    });
+  await page.getByLabel("Restore backup", { exact: true }).setInputFiles({
+    name: "invalid.json",
+    mimeType: "application/json",
+    buffer: Buffer.from('{"format":"fake"}'),
+  });
   await expect(page.locator(".settings-status")).toContainText("not a valid");
-  await page
-    .getByLabel("Restore backup", { exact: true })
-    .setInputFiles({
-      name: "backup.json",
-      mimeType: "application/json",
-      buffer: Buffer.from(
-        JSON.stringify({
-          format: "codequest-backup-v1",
-          progress: {
-            ...freshProgress(),
-            settings: { ...freshProgress().settings, name: "Lebo" },
-          },
-          controls: [],
-        }),
-      ),
-    });
+  await page.getByLabel("Restore backup", { exact: true }).setInputFiles({
+    name: "backup.json",
+    mimeType: "application/json",
+    buffer: Buffer.from(
+      JSON.stringify({
+        format: "codequest-backup-v1",
+        progress: {
+          ...freshProgress(),
+          settings: { ...freshProgress().settings, name: "Lebo" },
+        },
+        controls: [],
+      }),
+    ),
+  });
   await expect(page.getByLabel("Your name", { exact: true })).toHaveValue(
     "Lebo",
   );
@@ -575,6 +571,112 @@ test("C# runtime works offline after its first controlled download", async ({
   await context.setOffline(false);
 });
 
-test("designer double-click creates a default WinForms event handler",async({page})=>{await page.goto("/#designer");await page.getByRole("button",{name:"Button",exact:true}).click();await page.getByRole("textbox",{name:"Control Name"}).fill("btnLogin");await page.locator(".placed-control").last().dblclick();await expect(page.getByRole("textbox",{name:"Click handler"})).toHaveValue("btnLogin_Click");await expect(page.locator(".form-validation")).toContainText("Created btnLogin_Click");});
+test("designer double-click creates a default WinForms event handler", async ({
+  page,
+}) => {
+  await page.goto("/#designer");
+  await page.getByRole("button", { name: "Button", exact: true }).click();
+  await page.getByRole("textbox", { name: "Control Name" }).fill("btnLogin");
+  await page.locator(".placed-control").last().dblclick();
+  await expect(
+    page.getByRole("textbox", { name: "Click handler" }),
+  ).toHaveValue("btnLogin_Click");
+  await expect(page.locator(".form-validation")).toContainText(
+    "Opened btnLogin_Click",
+  );
+});
 
-test("designer resize handle changes size and undo restores it",async({page})=>{await page.goto("/#designer");await page.getByRole("button",{name:"Button",exact:true}).click();const control=page.locator(".placed-control").last();const before=await control.boundingBox();const handle=page.getByRole("button",{name:/Resize button1/});const box=await handle.boundingBox();if(!before||!box)throw new Error("resize geometry unavailable");await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();await page.mouse.move(box.x+box.width/2+40,box.y+box.height/2+25);await page.mouse.up();const after=await control.boundingBox();expect(after.width).toBeGreaterThan(before.width);expect(after.height).toBeGreaterThan(before.height);await page.getByRole("button",{name:"Undo",exact:true}).click();const restored=await control.boundingBox();expect(Math.round(restored.width)).toBe(Math.round(before.width));expect(Math.round(restored.height)).toBe(Math.round(before.height));});
+test("designer resize handle changes size and undo restores it", async ({
+  page,
+}) => {
+  await page.goto("/#designer");
+  await page.getByRole("button", { name: "Button", exact: true }).click();
+  const control = page.locator(".placed-control").last();
+  const before = await control.boundingBox();
+  const handle = page.getByRole("button", { name: /Resize button1/ });
+  const box = await handle.boundingBox();
+  if (!before || !box) throw new Error("resize geometry unavailable");
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(
+    box.x + box.width / 2 + 40,
+    box.y + box.height / 2 + 25,
+  );
+  await page.mouse.up();
+  const after = await control.boundingBox();
+  expect(after.width).toBeGreaterThan(before.width);
+  expect(after.height).toBeGreaterThan(before.height);
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  const restored = await control.boundingBox();
+  expect(Math.round(restored.width)).toBe(Math.round(before.width));
+  expect(Math.round(restored.height)).toBe(Math.round(before.height));
+});
+
+test("designer event code persists and is included in exports without an assessment brief", async ({
+  page,
+}) => {
+  await page.goto("/#designer");
+  await page.getByRole("button", { name: "Button", exact: true }).click();
+  await page.getByRole("textbox", { name: "Control Name" }).fill("btnHello");
+  await page.locator(".placed-control").last().dblclick();
+  await expect(
+    page.getByRole("textbox", { name: "Form1.cs event code" }),
+  ).toContainText("btnHello_Click");
+  await page
+    .getByRole("textbox", { name: "Form1.cs event code" })
+    .fill(
+      'private void btnHello_Click(object sender, EventArgs e) { MessageBox.Show("Saved handler"); }',
+    );
+  await page.reload();
+  await page
+    .locator(".workspace-tabs")
+    .getByRole("button", { name: "Form1.cs", exact: true })
+    .click();
+  await expect(
+    page.getByRole("textbox", { name: "Form1.cs event code" }),
+  ).toContainText("Saved handler");
+  const downloadPromise = page.waitForEvent("download");
+  await page.getByRole("button", { name: "Export Windows project" }).click();
+  const file = await downloadPromise;
+  const { readFile } = await import("node:fs/promises");
+  const { unzipSync, strFromU8 } = await import("fflate");
+  const zip = unzipSync(await readFile(await file.path()));
+  expect(strFromU8(zip["Form1.cs"])).toContain("Saved handler");
+});
+
+test.describe("workspace download recovery", () => {
+  test.use({ serviceWorkers: "block" });
+  test("a failed lazy module can be refreshed without losing learner progress", async ({
+    page,
+  }) => {
+    let blocked = true;
+    await page.route("**/assets/FormDesigner-*.js", (route) =>
+      blocked ? route.abort("failed") : route.continue(),
+    );
+    await page.addInitScript(
+      (state) => {
+        if (!localStorage.getItem("cq-progress-v1"))
+          localStorage.setItem("cq-progress-v1", JSON.stringify(state));
+      },
+      {
+        ...freshProgress(),
+        settings: { ...freshProgress().settings, name: "Recovery learner" },
+      },
+    );
+    await page.goto("/");
+    await page.getByRole("button", { name: "WinForms", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Let’s get you back on track." }),
+    ).toBeVisible();
+    blocked = false;
+    await page.getByRole("button", { name: "Load latest workspace" }).click();
+    await expect(
+      page.getByRole("heading", { name: "Make something useful." }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => JSON.parse(localStorage.getItem("cq-progress-v1")).settings.name,
+      ),
+    ).toBe("Recovery learner");
+  });
+});

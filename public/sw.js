@@ -27,9 +27,9 @@ self.addEventListener("message", (event) => {
 self.addEventListener("activate", (event) =>
   event.waitUntil(
     (async () => {
-      for (const key of await caches.keys())
-        if (key.startsWith("codequest-") && key !== SHELL && key !== RUNTIME)
-          await caches.delete(key);
+      // Open tabs can still reference the previous build's lazy modules.
+      // Retain shell caches so activation never strands those tabs mid-lesson.
+      // The explicit workspace recovery clears shells without deleting learner data.
       await self.clients.claim();
     })(),
   ),
@@ -38,12 +38,24 @@ self.addEventListener("fetch", (event) => {
   const request = event.request,
     url = new URL(request.url);
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith("/api/")) return;
   event.respondWith(
     (async () => {
       const isCompiler = url.pathname.startsWith("/compiler/");
       const cache = await caches.open(isCompiler ? RUNTIME : SHELL);
+      if (request.mode === "navigate") {
+        try {
+          const fresh = await fetch(request);
+          if (fresh.ok) return fresh;
+        } catch {}
+        return (await cache.match("/index.html")) || Response.error();
+      }
       const cached = await cache.match(request, { ignoreVary: true });
       if (cached) return cached;
+      if (url.pathname.startsWith("/assets/")) {
+        const previous = await caches.match(request, { ignoreVary: true });
+        if (previous) return previous;
+      }
       try {
         const response = await fetch(request);
         if (response.ok) await cache.put(request, response.clone());

@@ -2139,3 +2139,12 @@ body{background:radial-gradient(circle at 78% 8%,rgba(239,185,52,.11),transparen
 button.primary{box-shadow:0 4px 0 #10251b}button.primary:active{transform:translateY(2px);box-shadow:0 2px 0 #10251b}
 @media(max-width:760px){.app-header{backdrop-filter:none}.lesson-coach{position:static}.district:hover,.lesson-row:hover{transform:none}}
 .reduce-motion .district,.reduce-motion .lesson-row,.reduce-motion .map-pin{transition:none!important;transform:none!important}
+
+.workspace-tabs { display:flex; align-items:center; gap:8px; flex-wrap:wrap; padding:10px 14px; background:#e8ede8; border:1px solid var(--border); border-bottom:0; border-radius:10px 10px 0 0; }
+.workspace-tabs button[aria-pressed="true"] { background:#1a3b2e; color:white; }
+.workspace-tabs span { margin-left:auto; font-size:11px; color:#365044; }
+.form-code-workspace .editor-host { height:420px; min-width:0; }
+.form-code-workspace { min-width:0; }
+.designer-error-list { margin-top:16px; padding:14px; border:1px solid #c7d3c9; border-radius:10px; background:#f6f8f4; }
+.designer-error-list summary { cursor:pointer; font-weight:600; }
+@media(max-width:650px) { .workspace-tabs span { width:100%; margin:0; } .form-code-workspace .editor-host { height:360px; } }
