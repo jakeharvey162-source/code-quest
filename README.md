@@ -1,26 +1,11 @@
 # CodeQuest — C# Adventure
 
-A bright African-first, globally usable learning game for C#, WinForms and OOP.
+African-first, globally usable game-based learning for C#, WinForms and OOP.
 
-## Working foundation
-- Quest map inspired by African cities
-- C# Code Lab with OOP boss mission
-- Inheritance, polymorphism, abstraction/interface curriculum map
-- Progressive Tor feedback and opt-in roast personality
-- Local progress/code persistence
-- Assessment question skill detection
-- Language preference and browser speech output
-- Study date + notification opt-in
-- Responsive UI
+Learning loop: **See → Predict → Build → Run → Break → Fix → Explain → Apply alone**.
 
-## Architecture
-The current checker is deterministic so learning missions work without an AI API. The compiler boundary is intentionally modular; full browser-side Roslyn/.NET WebAssembly execution is the next engine layer. WinForms will be taught through a purpose-built designer/simulator because native Windows Forms is Windows-specific.
+Current foundation includes the bright quest map, Visual-Studio-style lab, OOP mission, progressive Tor feedback, assessment skill detection, local persistence, language/voice preferences, study reminders, automated learning-engine tests and build CI.
 
-## Run
-```bash
-npm install
-npm run build
-npm run dev
-```
+The browser WinForms trainer will follow proven designer patterns: Toolbox → Canvas → Properties → Events → generated Designer.cs model. Full compiler execution remains a separate Roslyn/.NET WebAssembly adapter so lessons are not coupled to one runtime.
 
-Development branch: `dev/codequest-foundation`.
+Run: `npm install && npm run check && npm run dev`.
