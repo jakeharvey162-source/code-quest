@@ -574,3 +574,5 @@ test("C# runtime works offline after its first controlled download", async ({
   );
   await context.setOffline(false);
 });
+
+test("designer double-click creates a default WinForms event handler",async({page})=>{await page.goto("/#designer");await page.getByRole("button",{name:"Button",exact:true}).click();await page.getByRole("textbox",{name:"Control Name"}).fill("btnLogin");await page.locator(".placed-control").last().dblclick();await expect(page.getByRole("textbox",{name:"Click handler"})).toHaveValue("btnLogin_Click");await expect(page.locator(".form-validation")).toContainText("Created btnLogin_Click");});

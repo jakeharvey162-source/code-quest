@@ -297,6 +297,8 @@ export default function FormDesigner() {
       setMessage(error instanceof Error ? error.message : "Export failed.");
     }
   }
+  function defaultEvent(c:Control){if(c.type==='Button')return ['eventClick',c.name+'_Click'] as const;if(c.type==='TextBox')return ['eventTextChanged',c.name+'_TextChanged'] as const;if(['ComboBox','ListBox'].includes(c.type))return ['eventSelectedIndexChanged',c.name+'_SelectedIndexChanged'] as const;if(['CheckBox','RadioButton'].includes(c.type))return ['eventCheckedChanged',c.name+'_CheckedChanged'] as const;return null;}
+  function createDefaultHandler(c:Control){const pair=defaultEvent(c);if(!pair){setMessage('This control has no default event in the simulator yet.');return;}const [key,name]=pair;commit(updateControl(items,c.id,{[key]:name}));setSelected(c.id);setMessage('Created '+name+'. Add the C# logic in Practical C# or the exported Form1.cs.');}
   function event(name: string) {
     setMessage(
       name
@@ -459,6 +461,7 @@ export default function FormDesigner() {
                     tabIndex={!preview ? 0 : undefined}
                     aria-label={!preview ? `Select ${c.name}` : undefined}
                     onClick={() => !preview && setSelected(c.id)}
+                    onDoubleClick={()=>!preview&&createDefaultHandler(c)}
                     onKeyDown={(e) => {
                       if (preview) return;
                       if (e.key === "Enter" || e.key === " ") {
@@ -541,16 +544,14 @@ export default function FormDesigner() {
                     >
                       <ControlView c={c} preview={preview} onEvent={event} />
                     </div>
-                    {!preview && selected === c.id && (
-                      <span className="control-tag">{c.name}</span>
-                    )}
+                    {!preview && selected === c.id && <><span className="control-tag">{c.name}</span><button type="button" className="resize-handle" aria-label={"Resize "+c.name} onPointerDown={e=>{e.stopPropagation();e.preventDefault();const startX=e.clientX,startY=e.clientY,startW=c.width,startH=c.height,before=items;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);const move=(ev:PointerEvent)=>setItems(updateControl(before,c.id,{width:Math.min(640-c.x,Math.max(24,startW+ev.clientX-startX)),height:Math.min(420-c.y,Math.max(20,startH+ev.clientY-startY))}));const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);setUndo(u=>[...u,before].slice(-50));setRedo([]);};window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true});}}>↘</button></>}
                   </div>
                 );
               })}
             </div>
           </div>
           <p className="muted canvas-note">
-            Design: drag controls or use arrow keys. Preview: try text fields
+            Design: drag controls, use arrow keys, resize the selected control, or double-click a control to create its default event. Preview: try text fields
             and selections. C# event logic runs in the exported Windows project.
           </p>
           {showCode && (

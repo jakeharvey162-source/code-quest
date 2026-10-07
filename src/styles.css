@@ -2119,3 +2119,5 @@ legend {
   outline: 4px solid currentColor !important;
   outline-offset: 3px;
 }
+
+.resize-handle{position:absolute;right:-9px;bottom:-9px;width:22px;height:22px;padding:0;min-width:0;border-radius:50%;cursor:nwse-resize;z-index:5;font-size:12px;line-height:20px}
