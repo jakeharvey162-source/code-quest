@@ -27,9 +27,13 @@ self.addEventListener("message", (event) => {
 self.addEventListener("activate", (event) =>
   event.waitUntil(
     (async () => {
-      // Open tabs can still reference the previous build's lazy modules.
-      // Retain shell caches so activation never strands those tabs mid-lesson.
-      // The explicit workspace recovery clears shells without deleting learner data.
+      const keys = await caches.keys();
+      const shells = keys.filter((key) => key.startsWith("codequest-shell-"));
+      await Promise.all(
+        shells
+          .filter((key) => key !== SHELL)
+          .map((key) => caches.delete(key)),
+      );
       await self.clients.claim();
     })(),
   ),
