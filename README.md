@@ -9,3 +9,10 @@ Current foundation includes the bright quest map, Visual-Studio-style lab, OOP m
 The browser WinForms trainer will follow proven designer patterns: Toolbox → Canvas → Properties → Events → generated Designer.cs model. Full compiler execution remains a separate Roslyn/.NET WebAssembly adapter so lessons are not coupled to one runtime.
 
 Run: `npm install && npm run check && npm run dev`.
+
+## v0.3 designer slice
+- Interactive WinForms toolbox and form canvas
+- Selectable controls with editable Name/Text/X/Y properties
+- Local form persistence
+- Generated WinForms-style Designer.cs preview
+- Automated tests for add/update/remove/code-generation behavior

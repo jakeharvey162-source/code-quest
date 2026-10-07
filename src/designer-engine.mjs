@@ -1,0 +1,5 @@
+export const toolbox=["Label","TextBox","Button","ComboBox","ListBox","RadioButton","CheckBox","NumericUpDown"];
+export function addControl(list,type){const n=list.filter(x=>x.type===type).length+1;return[...list,{id:type.toLowerCase()+n,type,name:type.toLowerCase()+n,text:type,x:30+(n-1)*12,y:30+(n-1)*12,width:type==="TextBox"?180:110,height:34}]}
+export function updateControl(list,id,patch){return list.map(x=>x.id===id?{...x,...patch}:x)}
+export function removeControl(list,id){return list.filter(x=>x.id!==id)}
+export function designerCode(list){return list.map(c=>`this.${c.name} = new System.Windows.Forms.${c.type}();\nthis.${c.name}.Location = new System.Drawing.Point(${c.x}, ${c.y});\nthis.${c.name}.Name = "${c.name}";\nthis.${c.name}.Size = new System.Drawing.Size(${c.width}, ${c.height});\nthis.${c.name}.Text = "${c.text}";`).join("\n\n")}
