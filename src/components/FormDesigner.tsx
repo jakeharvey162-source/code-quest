@@ -21,6 +21,8 @@ import {
 import { projectZip } from "../lib/project-export.mjs";
 import { download } from "../lib/download";
 import { readText, writeText, readBrief } from "../lib/local-data";
+import CodeEditor from "./CodeEditor";
+import { reviewSource } from "../lib/assessment-engine.mjs";
 export type Control = {
   id: string;
   type: string;
@@ -230,6 +232,7 @@ export default function FormDesigner() {
     [selected, setSelected] = useState(""),
     [preview, setPreview] = useState(false),
     [showCode, setShowCode] = useState(false),
+    [workspace, setWorkspace] = useState<"design" | "code">("design"),
     [message, setMessage] = useState(""),
     [undo, setUndo] = useState<Control[][]>([]),
     [redo, setRedo] = useState<Control[][]>([]);
@@ -286,7 +289,7 @@ export default function FormDesigner() {
       download(
         "CodeQuestForms.zip",
         projectZip(items, {
-          handlerCode: readBrief() ? practicalCode : "",
+          handlerCode: practicalCode,
         }) as unknown as BlobPart,
         "application/zip",
       );
@@ -297,8 +300,53 @@ export default function FormDesigner() {
       setMessage(error instanceof Error ? error.message : "Export failed.");
     }
   }
-  function defaultEvent(c:Control){if(c.type==='Button')return ['eventClick',c.name+'_Click'] as const;if(c.type==='TextBox')return ['eventTextChanged',c.name+'_TextChanged'] as const;if(['ComboBox','ListBox'].includes(c.type))return ['eventSelectedIndexChanged',c.name+'_SelectedIndexChanged'] as const;if(['CheckBox','RadioButton'].includes(c.type))return ['eventCheckedChanged',c.name+'_CheckedChanged'] as const;return null;}
-  function createDefaultHandler(c:Control){const pair=defaultEvent(c);if(!pair){setMessage('This control has no default event in the simulator yet.');return;}const [key,name]=pair;commit(updateControl(items,c.id,{[key]:name}));setSelected(c.id);setMessage('Created '+name+'. Add the C# logic in Practical C# or the exported Form1.cs.');}
+  function defaultEvent(c: Control) {
+    if (c.type === "Button") return ["eventClick", c.name + "_Click"] as const;
+    if (c.type === "TextBox")
+      return ["eventTextChanged", c.name + "_TextChanged"] as const;
+    if (["ComboBox", "ListBox"].includes(c.type))
+      return [
+        "eventSelectedIndexChanged",
+        c.name + "_SelectedIndexChanged",
+      ] as const;
+    if (["CheckBox", "RadioButton"].includes(c.type))
+      return ["eventCheckedChanged", c.name + "_CheckedChanged"] as const;
+    return null;
+  }
+  function openHandler(name: string) {
+    if (!/^[A-Za-z_]\w*$/.test(name)) {
+      setMessage("Use a valid C# handler name first.");
+      return;
+    }
+    const declared = new Set(
+      [
+        ...reviewSource(practicalCode).matchAll(
+          /\bvoid\s+([A-Za-z_]\w*)\s*\(/g,
+        ),
+      ].map((match) => match[1]),
+    );
+    if (!declared.has(name))
+      setPracticalCode(
+        (code) =>
+          `${code.trim()}\n\nprivate void ${name}(object sender, EventArgs e)\n{\n    // Add your event logic here.\n}\n`,
+      );
+    setWorkspace("code");
+    setPreview(false);
+    setMessage(
+      `Opened ${name} in Form1.cs. Your code is included in the Windows export.`,
+    );
+  }
+  function createDefaultHandler(c: Control) {
+    const pair = defaultEvent(c);
+    if (!pair) {
+      setMessage("This control has no default event in the simulator yet.");
+      return;
+    }
+    const [key, name] = pair;
+    commit(updateControl(items, c.id, { [key]: c[key] || name }));
+    setSelected(c.id);
+    openHandler(c[key] || name);
+  }
   function event(name: string) {
     setMessage(
       name
@@ -350,14 +398,20 @@ export default function FormDesigner() {
           <button
             className={preview ? "selected-button" : ""}
             aria-pressed={preview}
-            onClick={() => setPreview(!preview)}
+            onClick={() => {
+              setWorkspace("design");
+              setPreview(!preview);
+            }}
           >
             {preview ? <MousePointer2 size={16} /> : <Play size={16} />}{" "}
             {preview ? "Back to design" : "Preview form"}
           </button>
           <button
             aria-pressed={showCode}
-            onClick={() => setShowCode(!showCode)}
+            onClick={() => {
+              setWorkspace("design");
+              setShowCode(!showCode);
+            }}
           >
             <Code2 size={16} /> Designer.cs
           </button>
@@ -365,6 +419,21 @@ export default function FormDesigner() {
         <span className="muted">
           {items.length} controls · saved on this device
         </span>
+      </div>
+      <div className="workspace-tabs" aria-label="WinForms workspace files">
+        <button
+          aria-pressed={workspace === "design"}
+          onClick={() => setWorkspace("design")}
+        >
+          Form1.cs [Design]
+        </button>
+        <button
+          aria-pressed={workspace === "code"}
+          onClick={() => setWorkspace("code")}
+        >
+          Form1.cs
+        </button>
+        <span>CodeQuestForms · .NET 8 / Windows</span>
       </div>
       <div className="designer-grid">
         <aside className="toolbox">
@@ -391,173 +460,296 @@ export default function FormDesigner() {
               button. Use meaningful control names.
             </p>
           </div>
+          <h2>Solution Explorer</h2>
+          <p className="muted">CodeQuestForms.sln</p>
+          <button onClick={() => setWorkspace("design")}>
+            Form1.cs [Design]
+          </button>
+          <button onClick={() => setWorkspace("code")}>Form1.cs</button>
+          <button
+            onClick={() => {
+              setWorkspace("design");
+              setShowCode(true);
+            }}
+          >
+            Form1.Designer.cs
+          </button>
         </aside>
         <div className="canvas-column">
-          <div className="canvas-caption">
-            <span>Form1.cs [{preview ? "Preview" : "Design"}]</span>
-            <span>640 × 420</span>
-          </div>
-          <label className="selection-label">
-            Selected control
-            <select
-              value={selected}
-              onChange={(e) => setSelected(e.target.value)}
-              aria-label="Selected control"
-            >
-              <option value="">Choose a control</option>
-              {items.map((c) => (
-                <option value={c.id} key={c.id}>
-                  {c.name}
-                  {!c.visible ? " (hidden)" : ""}
-                </option>
-              ))}
-            </select>
-          </label>
-          <div
-            className="canvas-scroll"
-            tabIndex={0}
-            aria-label="Scrollable form canvas"
-          >
-            <div className="form-title">
-              My CodeQuest Form <span>─　□　×</span>
-            </div>
-            <div className="form-canvas" aria-label="Form design canvas">
-              {items.length === 0 && (
-                <div className="canvas-empty">
-                  <MousePointer2 size={28} />
-                  <b>Your idea starts here</b>
-                  <p>Add a TextBox, Label or Button from the toolbox.</p>
+          {workspace === "code" ? (
+            <section className="form-code-workspace">
+              <div className="canvas-caption">
+                <span>Form1.cs · event handlers</span>
+                <span>C#</span>
+              </div>
+              <p className="muted">
+                These methods go inside the exported Form1 class. Controls and
+                InitializeComponent are generated in Form1.Designer.cs. Use the
+                Design tab to edit the form.
+              </p>
+              <CodeEditor
+                value={practicalCode}
+                onChange={setPracticalCode}
+                label="Form1.cs event code"
+              />
+              <p className="muted">
+                Build and run this Windows project in Visual Studio to verify
+                native event behaviour. Browser Preview tests control
+                interaction and wiring.
+              </p>
+            </section>
+          ) : (
+            <>
+              <div className="canvas-caption">
+                <span>Form1.cs [{preview ? "Preview" : "Design"}]</span>
+                <span>640 × 420</span>
+              </div>
+              <label className="selection-label">
+                Selected control
+                <select
+                  value={selected}
+                  onChange={(e) => setSelected(e.target.value)}
+                  aria-label="Selected control"
+                >
+                  <option value="">Choose a control</option>
+                  {items.map((c) => (
+                    <option value={c.id} key={c.id}>
+                      {c.name}
+                      {!c.visible ? " (hidden)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div
+                className="canvas-scroll"
+                tabIndex={0}
+                aria-label="Scrollable form canvas"
+              >
+                <div className="form-title">
+                  My CodeQuest Form <span>─　□　×</span>
                 </div>
-              )}
-              {items.map((c) => {
-                let layout: React.CSSProperties = {
-                  left: c.x,
-                  top: c.y,
-                  width: c.width,
-                  height: c.height,
-                };
-                if (preview) {
-                  if (!c.visible) return null;
-                  if (c.dock === "Fill") layout = { inset: 0 };
-                  else if (c.dock === "Top")
-                    layout = { top: 0, left: 0, right: 0, height: c.height };
-                  else if (c.dock === "Bottom")
-                    layout = { bottom: 0, left: 0, right: 0, height: c.height };
-                  else if (c.dock === "Left")
-                    layout = { top: 0, bottom: 0, left: 0, width: c.width };
-                  else if (c.dock === "Right")
-                    layout = { top: 0, bottom: 0, right: 0, width: c.width };
-                }
-                return (
-                  <div
-                    key={`${c.id}-${preview}`}
-                    className={
-                      "placed-control " +
-                      (!preview && selected === c.id ? "is-selected" : "") +
-                      (!c.visible ? " is-hidden" : "")
-                    }
-                    style={layout}
-                    role={!preview ? "button" : undefined}
-                    tabIndex={!preview ? 0 : undefined}
-                    aria-label={!preview ? `Select ${c.name}` : undefined}
-                    onClick={() => !preview && setSelected(c.id)}
-                    onDoubleClick={()=>!preview&&createDefaultHandler(c)}
-                    onKeyDown={(e) => {
-                      if (preview) return;
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
-                        setSelected(c.id);
-                      }
-                      if (
-                        [
-                          "ArrowLeft",
-                          "ArrowRight",
-                          "ArrowUp",
-                          "ArrowDown",
-                        ].includes(e.key)
-                      ) {
-                        e.preventDefault();
-                        commit(
-                          updateControl(items, c.id, {
-                            x:
-                              c.x +
-                              (e.key === "ArrowRight"
-                                ? 5
-                                : e.key === "ArrowLeft"
-                                  ? -5
-                                  : 0),
-                            y:
-                              c.y +
-                              (e.key === "ArrowDown"
-                                ? 5
-                                : e.key === "ArrowUp"
-                                  ? -5
-                                  : 0),
-                          }),
-                        );
-                      }
-                    }}
-                    onPointerDown={(e) => {
-                      if (preview) return;
-                      e.preventDefault();
-                      setSelected(c.id);
-                      e.currentTarget.setPointerCapture(e.pointerId);
-                      drag.current = {
-                        id: c.id,
-                        x: c.x,
-                        y: c.y,
-                        startX: e.clientX,
-                        startY: e.clientY,
-                        before: items,
-                      };
-                    }}
-                    onPointerMove={(e) => {
-                      const d = drag.current;
-                      if (!d || d.id !== c.id) return;
-                      setItems(
-                        updateControl(d.before, c.id, {
-                          x: Math.min(
-                            640 - c.width,
-                            Math.max(0, d.x + e.clientX - d.startX),
-                          ),
-                          y: Math.min(
-                            420 - c.height,
-                            Math.max(0, d.y + e.clientY - d.startY),
-                          ),
-                        }),
-                      );
-                    }}
-                    onPointerUp={() => {
-                      if (drag.current) {
-                        setUndo((u) => [...u, drag.current!.before].slice(-50));
-                        setRedo([]);
-                        drag.current = null;
-                      }
-                    }}
-                    onPointerCancel={() => {
-                      drag.current = null;
-                    }}
-                  >
-                    <div
-                      className={preview ? "" : "design-surface"}
-                      aria-hidden={!preview}
-                    >
-                      <ControlView c={c} preview={preview} onEvent={event} />
+                <div className="form-canvas" aria-label="Form design canvas">
+                  {items.length === 0 && (
+                    <div className="canvas-empty">
+                      <MousePointer2 size={28} />
+                      <b>Your idea starts here</b>
+                      <p>Add a TextBox, Label or Button from the toolbox.</p>
                     </div>
-                    {!preview && selected === c.id && <><span className="control-tag">{c.name}</span><button type="button" className="resize-handle" aria-label={"Resize "+c.name} onPointerDown={e=>{e.stopPropagation();e.preventDefault();const startX=e.clientX,startY=e.clientY,startW=c.width,startH=c.height,before=items;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);const move=(ev:PointerEvent)=>setItems(updateControl(before,c.id,{width:Math.min(640-c.x,Math.max(24,startW+ev.clientX-startX)),height:Math.min(420-c.y,Math.max(20,startH+ev.clientY-startY))}));const up=()=>{window.removeEventListener('pointermove',move);window.removeEventListener('pointerup',up);setUndo(u=>[...u,before].slice(-50));setRedo([]);};window.addEventListener('pointermove',move);window.addEventListener('pointerup',up,{once:true});}}>↘</button></>}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-          <p className="muted canvas-note">
-            Design: drag controls, use arrow keys, resize the selected control, or double-click a control to create its default event. Preview: try text fields
-            and selections. C# event logic runs in the exported Windows project.
-          </p>
-          {showCode && (
-            <pre className="code-preview" aria-label="Generated designer code">
-              {designerCode(items) || "// Add a control to generate C#."}
-            </pre>
+                  )}
+                  {items.map((c) => {
+                    let layout: React.CSSProperties = {
+                      left: c.x,
+                      top: c.y,
+                      width: c.width,
+                      height: c.height,
+                    };
+                    if (preview) {
+                      if (!c.visible) return null;
+                      if (c.dock === "Fill") layout = { inset: 0 };
+                      else if (c.dock === "Top")
+                        layout = {
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: c.height,
+                        };
+                      else if (c.dock === "Bottom")
+                        layout = {
+                          bottom: 0,
+                          left: 0,
+                          right: 0,
+                          height: c.height,
+                        };
+                      else if (c.dock === "Left")
+                        layout = { top: 0, bottom: 0, left: 0, width: c.width };
+                      else if (c.dock === "Right")
+                        layout = {
+                          top: 0,
+                          bottom: 0,
+                          right: 0,
+                          width: c.width,
+                        };
+                    }
+                    return (
+                      <div
+                        key={`${c.id}-${preview}`}
+                        className={
+                          "placed-control " +
+                          (!preview && selected === c.id ? "is-selected" : "") +
+                          (!c.visible ? " is-hidden" : "")
+                        }
+                        style={layout}
+                        role={!preview ? "button" : undefined}
+                        tabIndex={!preview ? 0 : undefined}
+                        aria-label={!preview ? `Select ${c.name}` : undefined}
+                        onClick={() => !preview && setSelected(c.id)}
+                        onDoubleClick={() =>
+                          !preview && createDefaultHandler(c)
+                        }
+                        onKeyDown={(e) => {
+                          if (preview) return;
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setSelected(c.id);
+                          }
+                          if (
+                            [
+                              "ArrowLeft",
+                              "ArrowRight",
+                              "ArrowUp",
+                              "ArrowDown",
+                            ].includes(e.key)
+                          ) {
+                            e.preventDefault();
+                            commit(
+                              updateControl(items, c.id, {
+                                x:
+                                  c.x +
+                                  (e.key === "ArrowRight"
+                                    ? 5
+                                    : e.key === "ArrowLeft"
+                                      ? -5
+                                      : 0),
+                                y:
+                                  c.y +
+                                  (e.key === "ArrowDown"
+                                    ? 5
+                                    : e.key === "ArrowUp"
+                                      ? -5
+                                      : 0),
+                              }),
+                            );
+                          }
+                        }}
+                        onPointerDown={(e) => {
+                          if (preview) return;
+                          e.preventDefault();
+                          setSelected(c.id);
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                          drag.current = {
+                            id: c.id,
+                            x: c.x,
+                            y: c.y,
+                            startX: e.clientX,
+                            startY: e.clientY,
+                            before: items,
+                          };
+                        }}
+                        onPointerMove={(e) => {
+                          const d = drag.current;
+                          if (!d || d.id !== c.id) return;
+                          setItems(
+                            updateControl(d.before, c.id, {
+                              x: Math.min(
+                                640 - c.width,
+                                Math.max(0, d.x + e.clientX - d.startX),
+                              ),
+                              y: Math.min(
+                                420 - c.height,
+                                Math.max(0, d.y + e.clientY - d.startY),
+                              ),
+                            }),
+                          );
+                        }}
+                        onPointerUp={() => {
+                          if (drag.current) {
+                            setUndo((u) =>
+                              [...u, drag.current!.before].slice(-50),
+                            );
+                            setRedo([]);
+                            drag.current = null;
+                          }
+                        }}
+                        onPointerCancel={() => {
+                          drag.current = null;
+                        }}
+                      >
+                        <div
+                          className={preview ? "" : "design-surface"}
+                          aria-hidden={!preview}
+                        >
+                          <ControlView
+                            c={c}
+                            preview={preview}
+                            onEvent={event}
+                          />
+                        </div>
+                        {!preview && selected === c.id && (
+                          <>
+                            <span className="control-tag">{c.name}</span>
+                            <button
+                              type="button"
+                              className="resize-handle"
+                              aria-label={"Resize " + c.name}
+                              onPointerDown={(e) => {
+                                e.stopPropagation();
+                                e.preventDefault();
+                                const startX = e.clientX,
+                                  startY = e.clientY,
+                                  startW = c.width,
+                                  startH = c.height,
+                                  before = items;
+                                (
+                                  e.currentTarget as HTMLElement
+                                ).setPointerCapture(e.pointerId);
+                                const move = (ev: PointerEvent) =>
+                                  setItems(
+                                    updateControl(before, c.id, {
+                                      width: Math.min(
+                                        640 - c.x,
+                                        Math.max(
+                                          24,
+                                          startW + ev.clientX - startX,
+                                        ),
+                                      ),
+                                      height: Math.min(
+                                        420 - c.y,
+                                        Math.max(
+                                          20,
+                                          startH + ev.clientY - startY,
+                                        ),
+                                      ),
+                                    }),
+                                  );
+                                const up = () => {
+                                  window.removeEventListener(
+                                    "pointermove",
+                                    move,
+                                  );
+                                  window.removeEventListener("pointerup", up);
+                                  setUndo((u) => [...u, before].slice(-50));
+                                  setRedo([]);
+                                };
+                                window.addEventListener("pointermove", move);
+                                window.addEventListener("pointerup", up, {
+                                  once: true,
+                                });
+                              }}
+                            >
+                              ↘
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              <p className="muted canvas-note">
+                Design: drag controls, use arrow keys, resize the selected
+                control, or double-click a control to create its default event.
+                Preview: try text fields and selections. C# event logic runs in
+                the exported Windows project.
+              </p>
+              {showCode && (
+                <pre
+                  className="code-preview"
+                  aria-label="Generated designer code"
+                >
+                  {designerCode(items) || "// Add a control to generate C#."}
+                </pre>
+              )}
+            </>
           )}
         </div>
         <aside className="properties-panel">
@@ -727,6 +919,14 @@ export default function FormDesigner() {
                   ))}
               </Field>
               <Field title="Events">
+                {defaultEvent(cur) && (
+                  <button
+                    type="button"
+                    onClick={() => createDefaultHandler(cur)}
+                  >
+                    Open default event code
+                  </button>
+                )}
                 <label>
                   Click
                   <input
@@ -835,6 +1035,24 @@ export default function FormDesigner() {
               ? "Properties and handlers are valid. Ready to export."
               : validation.issues.join(" "))}
       </div>
+      <details
+        className="designer-error-list"
+        open={!validation.ok && items.length > 0}
+      >
+        <summary>Error List · {validation.issues.length} design issues</summary>
+        {validation.issues.length ? (
+          <ul>
+            {validation.issues.map((issue: string, index: number) => (
+              <li key={index}>{issue}</li>
+            ))}
+          </ul>
+        ) : (
+          <p>
+            No design validation issues. Native compilation is checked when
+            building the exported solution.
+          </p>
+        )}
+      </details>
     </section>
   );
 }

@@ -23,6 +23,7 @@ import { loadProgress, saveProgress, xpFor, streakFor } from "./lib/progress";
 import type { Progress } from "./lib/progress";
 import CityMap from "./components/CityMap";
 import { VoiceControls } from "./components/VoiceControls";
+import { reloadLatestWorkspace } from "./lib/workspace-recovery";
 const Playground = lazy(() => import("./components/Playground"));
 const LessonView = lazy(() => import("./components/LessonView"));
 const FormDesigner = lazy(() => import("./components/FormDesigner"));
@@ -39,11 +40,17 @@ const navigation = [
 ];
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
-  { failed: boolean }
+  { failed: boolean; detail: string }
 > {
-  state = { failed: false };
-  static getDerivedStateFromError() {
-    return { failed: true };
+  state = { failed: false, detail: "" };
+  static getDerivedStateFromError(error: unknown) {
+    return {
+      failed: true,
+      detail:
+        error instanceof Error
+          ? error.message
+          : "The workspace failed to open.",
+    };
   }
   render() {
     if (this.state.failed)
@@ -54,7 +61,26 @@ class ErrorBoundary extends Component<
             Something could not load. Your saved progress remains on this
             device.
           </p>
-          <button onClick={() => location.reload()}>Reload CodeQuest</button>
+          <button
+            onClick={() =>
+              reloadLatestWorkspace().catch((error) =>
+                this.setState({ detail: error.message }),
+              )
+            }
+          >
+            Load latest workspace
+          </button>
+          <button
+            onClick={() => {
+              location.hash = "home";
+            }}
+          >
+            Return to World
+          </button>
+          <details>
+            <summary>Technical details</summary>
+            <p role="status">{this.state.detail}</p>
+          </details>
           <a
             href="https://github.com/jakeharvey162-source/code-quest/issues"
             target="_blank"
