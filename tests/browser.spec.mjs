@@ -697,3 +697,55 @@ test("designer supports Visual Studio-style toolbox drag drop and grid placement
   await page.getByRole("button", { name: "Start / F5", exact: true }).click();
   await expect(page.getByRole("button", { name: "Stop debugging", exact: true })).toBeVisible();
 });
+
+
+test.describe("automatic stale workspace recovery", () => {
+  test.use({ serviceWorkers: "block" });
+  test("lazy WinForms chunk failure triggers one automatic recovery and keeps progress", async ({ page }) => {
+    let failedOnce = false;
+    await page.route("**/assets/FormDesigner-*.js", async (route) => {
+      if (!failedOnce) {
+        failedOnce = true;
+        await route.abort("failed");
+      } else {
+        await route.continue();
+      }
+    });
+    await page.addInitScript(() => {
+      localStorage.setItem(
+        "cq-progress-v1",
+        JSON.stringify({
+          version: 1,
+          completed: [],
+          steps: {},
+          drafts: {},
+          activity: [],
+          assessments: [],
+          settings: {
+            name: "Student QA",
+            tone: "friendly",
+            voiceRate: 1,
+            voiceName: "",
+            voiceCommands: false,
+            language: "en-ZA",
+            reducedMotion: false,
+            highContrast: false
+          }
+        }),
+      );
+    });
+    await page.goto("/");
+    await page.getByRole("button", { name: "WinForms", exact: true }).click();
+    await expect.poll(async () =>
+      page.evaluate(() => location.hash)
+    ).toBe("#designer");
+    await expect(
+      page.getByRole("heading", { name: "Make something useful." }),
+    ).toBeVisible();
+    expect(
+      await page.evaluate(
+        () => JSON.parse(localStorage.getItem("cq-progress-v1")).settings.name,
+      ),
+    ).toBe("Student QA");
+  });
+});
