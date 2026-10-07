@@ -40,9 +40,9 @@ const navigation = [
 ];
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
-  { failed: boolean; detail: string }
+  { failed: boolean; detail: string; recovering: boolean }
 > {
-  state = { failed: false, detail: "" };
+  state = { failed: false, detail: "", recovering: false };
   static getDerivedStateFromError(error: unknown) {
     return {
       failed: true,
@@ -52,23 +52,44 @@ class ErrorBoundary extends Component<
           : "The workspace failed to open.",
     };
   }
+  componentDidCatch(error: unknown) {
+    const message = error instanceof Error ? error.message : String(error);
+    const chunkFailure = /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk/i.test(message);
+    if (!chunkFailure || !navigator.onLine) return;
+    const key = "cq-auto-workspace-recovery";
+    if (sessionStorage.getItem(key) === "1") return;
+    sessionStorage.setItem(key, "1");
+    this.setState({ recovering: true });
+    reloadLatestWorkspace().catch((recoveryError) =>
+      this.setState({
+        recovering: false,
+        detail:
+          recoveryError instanceof Error
+            ? recoveryError.message
+            : "Automatic recovery failed.",
+      }),
+    );
+  }
   render() {
     if (this.state.failed)
       return (
         <section className="page">
           <h1>Let’s get you back on track.</h1>
           <p>
-            Something could not load. Your saved progress remains on this
-            device.
+            {this.state.recovering
+              ? "CodeQuest found an outdated workspace and is refreshing it automatically. Your saved progress stays on this device."
+              : "Something could not load. Your saved progress remains on this device."}
           </p>
           <button
-            onClick={() =>
+            disabled={this.state.recovering}
+            onClick={() => {
+              this.setState({ recovering: true });
               reloadLatestWorkspace().catch((error) =>
-                this.setState({ detail: error.message }),
-              )
-            }
+                this.setState({ recovering: false, detail: error.message }),
+              );
+            }}
           >
-            Load latest workspace
+            {this.state.recovering ? "Refreshing workspace…" : "Load latest workspace"}
           </button>
           <button
             onClick={() => {
@@ -90,6 +111,8 @@ class ErrorBoundary extends Component<
           </a>
         </section>
       );
+    if (sessionStorage.getItem("cq-auto-workspace-recovery") === "1")
+      sessionStorage.removeItem("cq-auto-workspace-recovery");
     return this.props.children;
   }
 }
