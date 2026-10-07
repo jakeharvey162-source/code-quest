@@ -387,7 +387,7 @@ test("practical flows from brief to designer code and back to marker", async ({
   await page
     .getByRole("textbox", { name: "Practical C# code" })
     .fill(
-      'private void btnRegister_Click(object sender, EventArgs e) { if (txtStudentNumber.Text.Length == 8) { MessageBox.Show("OK"); } else { MessageBox.Show("Bad"); } }',
+      'private void btnRegister_Click(object sender, EventArgs e) { if (txtStudentNumber.Text.Length == 8 && txtStudentNumber.Text.All(char.IsDigit)) { MessageBox.Show("OK"); } else { MessageBox.Show("Bad"); } }',
     );
   await page
     .getByRole("button", { name: "Submit practical for marking" })
@@ -399,6 +399,9 @@ test("practical flows from brief to designer code and back to marker", async ({
   await page.getByRole("button", { name: "Mark my practical" }).click();
   await expect(page.locator("#practical-marker")).toContainText("%");
   await expect(page.locator("#practical-marker")).toContainText("UI Design");
+  await expect(page.locator("#practical-marker")).toContainText(
+    "100% rubric coverage",
+  );
 });
 
 test("designer previews selection and checked-change event wiring", async ({
