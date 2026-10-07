@@ -1,22 +1,48 @@
 name: CodeQuest CI
 on:
+  push:
+    branches: [main, dev/codequest-foundation]
   pull_request:
     branches: [main]
-  push:
-    branches: [main]
   workflow_dispatch:
+concurrency:
+  group: codequest-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 permissions:
   contents: read
 jobs:
   test-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:browser
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-evidence
+          path: |
+            test-results
+            playwright-report
+  native-export:
+    runs-on: windows-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
       - run: npm ci
-      - run: npm test
-      - run: npm run build
+      - run: node scripts/export-sample.mjs
+      - run: dotnet build test-results/native-project/CodeQuestForms.sln -c Release

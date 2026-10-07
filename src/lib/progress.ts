@@ -1,0 +1,165 @@
+export type Settings = {
+  name: string;
+  voice: string;
+  rate: number;
+  coach: "Teacher" | "Friendly" | "Spicy";
+  voiceInput: boolean;
+  dailyMinutes: number;
+  assessmentDate: string;
+  editorMode: "editor" | "plain";
+  language: "en-ZA" | "zu-ZA" | "fr-FR" | "pt-PT" | "sw-KE";
+  reducedMotion: boolean;
+  highContrast: boolean;
+};
+export type Progress = {
+  version: 1;
+  completed: string[];
+  steps: Record<string, string[]>;
+  drafts: Record<string, string>;
+  activity: string[];
+  assessments: { date: string; score: number; total: number }[];
+  settings: Settings;
+};
+export const freshProgress = (): Progress => ({
+  version: 1,
+  completed: [],
+  steps: {},
+  drafts: {},
+  activity: [],
+  assessments: [],
+  settings: {
+    name: "",
+    voice: "",
+    rate: 1,
+    coach: "Friendly",
+    voiceInput: false,
+    dailyMinutes: 20,
+    assessmentDate: "",
+    editorMode: "editor",
+    language: "en-ZA",
+    reducedMotion: false,
+    highContrast: false,
+  },
+});
+const plain = (v: unknown): v is Record<string, unknown> =>
+  !!v && typeof v === "object" && !Array.isArray(v);
+export function validateProgress(value: unknown): value is Progress {
+  if (
+    !plain(value) ||
+    value.version !== 1 ||
+    !Array.isArray(value.completed) ||
+    !value.completed.every((x) => typeof x === "string" && x.length < 80) ||
+    !plain(value.steps) ||
+    !plain(value.drafts) ||
+    !Array.isArray(value.activity) ||
+    !value.activity.every(
+      (x) => typeof x === "string" && /^\d{4}-\d{2}-\d{2}$/.test(x),
+    ) ||
+    !Array.isArray(value.assessments) ||
+    !plain(value.settings)
+  )
+    return false;
+  if (
+    !Object.values(value.steps).every(
+      (v) =>
+        Array.isArray(v) &&
+        v.every((s) => typeof s === "string" && s.length < 80),
+    ) ||
+    !Object.values(value.drafts).every(
+      (v) => typeof v === "string" && v.length <= 50000,
+    )
+  )
+    return false;
+  const s = value.settings;
+  return (
+    typeof s.name === "string" &&
+    s.name.length <= 60 &&
+    typeof s.voice === "string" &&
+    typeof s.rate === "number" &&
+    s.rate >= 0.5 &&
+    s.rate <= 2 &&
+    ["Teacher", "Friendly", "Spicy"].includes(String(s.coach)) &&
+    typeof s.voiceInput === "boolean" &&
+    typeof s.dailyMinutes === "number" &&
+    s.dailyMinutes >= 5 &&
+    s.dailyMinutes <= 120 &&
+    typeof s.assessmentDate === "string" &&
+    ["editor", "plain"].includes(String(s.editorMode)) &&
+    ["en-ZA", "zu-ZA", "fr-FR", "pt-PT", "sw-KE"].includes(
+      String(s.language),
+    ) &&
+    typeof s.reducedMotion === "boolean" &&
+    typeof s.highContrast === "boolean" &&
+    value.assessments.every(
+      (a) =>
+        plain(a) &&
+        typeof a.date === "string" &&
+        typeof a.score === "number" &&
+        typeof a.total === "number" &&
+        a.score >= 0 &&
+        a.total > 0 &&
+        a.score <= a.total,
+    )
+  );
+}
+export function migrateProgress(value: unknown): Progress | null {
+  if (!plain(value) || !plain(value.settings)) return null;
+  const settings = { ...freshProgress().settings, ...value.settings };
+  const candidate = { ...value, settings };
+  return validateProgress(candidate) ? candidate : null;
+}
+export function loadProgress(): Progress {
+  try {
+    const value = JSON.parse(localStorage.getItem("cq-progress-v1") || "null");
+    return migrateProgress(value) || freshProgress();
+  } catch {
+    return freshProgress();
+  }
+}
+export function saveProgress(value: Progress) {
+  try {
+    localStorage.setItem("cq-progress-v1", JSON.stringify(value));
+    return true;
+  } catch {
+    return false;
+  }
+}
+export function localDay(date = new Date()) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+export function completeStep(
+  progress: Progress,
+  lesson: string,
+  step: string,
+  final = false,
+): Progress {
+  const steps = [...new Set([...(progress.steps[lesson] || []), step])];
+  return {
+    ...progress,
+    steps: { ...progress.steps, [lesson]: steps },
+    completed: final
+      ? [...new Set([...progress.completed, lesson])]
+      : progress.completed,
+    activity: [...new Set([...progress.activity, localDay()])].slice(-365),
+  };
+}
+export function xpFor(progress: Progress) {
+  return (
+    Object.values(progress.steps).reduce(
+      (sum, steps) => sum + new Set(steps).size * 20,
+      0,
+    ) +
+    new Set(progress.completed).size * 60
+  );
+}
+export function streakFor(activity: string[], today = new Date()) {
+  const days = new Set(activity);
+  const day = new Date(today);
+  if (!days.has(localDay(day))) day.setDate(day.getDate() - 1);
+  let count = 0;
+  while (days.has(localDay(day))) {
+    count++;
+    day.setDate(day.getDate() - 1);
+  }
+  return count;
+}
