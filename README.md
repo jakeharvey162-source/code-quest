@@ -16,3 +16,6 @@ Run: `npm install && npm run check && npm run dev`.
 - Local form persistence
 - Generated WinForms-style Designer.cs preview
 - Automated tests for add/update/remove/code-generation behavior
+
+## v0.4 learning loop
+OOP Lab now exposes explicit See → Predict → Build → Break + Fix → Apply Alone stages, with help fading toward independent work. Passing a coding check advances the learner rather than merely awarding XP.
