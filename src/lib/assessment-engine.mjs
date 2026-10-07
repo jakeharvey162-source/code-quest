@@ -95,41 +95,13 @@ export function markPractical(input = {}) {
   };
 }
 
-export function torPracticalFeedback(
-  result,
-  attempt = 1,
-  preference = "Friendly",
-) {
-  const area = result?.weak?.[0];
-  if (!area)
-    return {
-      tone: "celebrate",
-      message:
-        "Strong work. Your form and code cover the practical foundations.",
-      rematch: null,
-    };
-  const hints = {
-    "UI Design":
-      "Check the brief against the controls on your form. Is every required control actually there?",
-    "Control Naming":
-      "Use meaningful prefixes such as txt, btn, cmb, lst, nud, rb, chk and lbl.",
-    "Input Validation":
-      "Trace invalid input first. For a student number, check the required length before accepting it.",
-    Events:
-      "A control cannot react until the correct event is wired to a handler.",
-    "C# Logic":
-      "Follow the decision path line by line. What should happen for valid input, and what should happen otherwise?",
-    "Code Quality":
-      "Make names communicate purpose and keep the handler readable.",
-  };
-  const spice =
-    attempt >= 3 && preference === "Spicy"
-      ? " Omo 😭 the compiler cannot read your mind — show it the rule clearly."
-      : "";
-  return {
-    tone: attempt >= 3 && preference === "Spicy" ? "spicy" : "coach",
-    message: hints[area] + spice,
-    rematch:
-      result.recommendations?.find((r) => r.area === area)?.lesson || null,
-  };
+export function torPracticalFeedback(result,attempt=1,preference="Friendly"){
+ const area=result?.weak?.[0];if(!area)return{tone:"celebrate",level:0,message:"Sharp! 🎉 Your form covers the practical foundations. Explain why your validation works before you move on.",rematch:null};
+ const concept={"UI Design":"Compare the brief with the controls actually on the form.","Control Naming":"Use meaningful WinForms prefixes so another developer can understand each control.","Input Validation":"An 8-character value is not automatically an 8-digit student number.","Events":"The event must be wired and its handler must exist in your C#.","C# Logic":"Trace both the valid and invalid paths through your handler.","Code Quality":"Readable names and small, clear blocks make bugs easier to spot."}[area];
+ const clue={"UI Design":"List every required control, then tick them off one by one.","Control Naming":"Think txtStudentNumber, btnRegister, cmbCourse — type + purpose.","Input Validation":"You need both a length check and a digit check such as All(char.IsDigit) or TryParse.","Events":"Match the Designer event name to a void handler with the same name.","C# Logic":"Your handler needs a decision and clear feedback for both outcomes.","Code Quality":"Check access modifiers, meaningful names, and balanced braces."}[area];
+ const worked={"UI Design":"Example pattern: Label + TextBox + Button, each with a purpose and accessible name.","Control Naming":"Example: TextBox → txtStudentNumber; Button → btnRegister.","Input Validation":"Pattern: value.Length == 8 && value.All(char.IsDigit). Adapt it yourself.","Events":"Pattern: btnRegister.Click → btnRegister_Click(object sender, EventArgs e).","C# Logic":"Pattern: if (valid) { success } else { helpful error }. Write your own messages.","Code Quality":"Keep validation readable: name the controls clearly and avoid hiding everything in one giant expression."}[area];
+ const level=Math.min(4,Math.max(1,attempt));let message=level===1?concept:level===2?concept+" "+clue:level===3?concept+" "+clue:worked;
+ if(level>=3&&preference==="Spicy")message="Omo 😭 "+message+" Tor is not letting this bug collect rent in your code.";
+ if(preference==="Teacher")message="Teacher mode: "+message;
+ return{tone:level>=3&&preference==="Spicy"?"spicy":"coach",level,message,rematch:result.recommendations?.find(r=>r.area===area)?.lesson||null};
 }

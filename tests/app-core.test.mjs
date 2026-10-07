@@ -199,3 +199,5 @@ test("native export declares new event methods and keeps the practical handler b
     1,
   );
 });
+
+test("Tor remediation escalates from concept to worked pattern without dumping a full answer",()=>{const result=markPractical({controls:[],code:"x = 1;",requirements:{controls:["TextBox","Button"]}});const a=torPracticalFeedback(result,1,"Friendly"),b=torPracticalFeedback(result,2,"Friendly"),c=torPracticalFeedback(result,3,"Spicy"),d=torPracticalFeedback(result,4,"Teacher");assert.equal(a.level,1);assert.equal(b.level,2);assert.match(c.message,/Omo/);assert.equal(d.level,4);assert.ok(d.message.length>20);assert.equal(a.rematch,"controls");});
