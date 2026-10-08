@@ -1,3 +1,4 @@
+import { selectDeviceVoice } from "./voice-catalog.mjs";
 export function voiceError(error: string) {
   return (
     (
@@ -101,6 +102,7 @@ export function speakText(
   voiceName: string,
   rate: number,
   onStatus: (s: string) => void,
+  language = "en-ZA",
 ) {
   if (
     !("speechSynthesis" in window) ||
@@ -113,11 +115,19 @@ export function speakText(
   }
   window.speechSynthesis.cancel();
   const utterance = new SpeechSynthesisUtterance(text.slice(0, 5000));
-  const selected = window.speechSynthesis
-    .getVoices()
-    .find((v) => v.name === voiceName);
+  const selected = selectDeviceVoice(
+    window.speechSynthesis.getVoices(),
+    language,
+    voiceName,
+  );
+  if (!selected && language.split("-")[0] !== "en") {
+    onStatus(
+      `No ${language} voice is installed on this device. Install a matching speech voice in your device settings.`,
+    );
+    return false;
+  }
   if (selected) utterance.voice = selected;
-  utterance.lang = selected?.lang || "en-ZA";
+  utterance.lang = selected?.lang || language;
   utterance.rate = rate;
   utterance.onstart = () => onStatus("Speaking…");
   utterance.onend = () => onStatus("Finished reading.");

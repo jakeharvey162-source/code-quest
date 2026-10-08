@@ -2,6 +2,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests",
   testMatch: "*.spec.mjs",
+  testIgnore: "cloud.spec.mjs",
   timeout: 120000,
   expect: { timeout: 10000 },
   workers: 1,

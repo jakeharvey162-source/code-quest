@@ -1,40 +1,36 @@
 # Release checklist
 
-## Automated gates
+## Automated release gates
 
-- [x] Clean npm ci, unit/regression tests and TypeScript pass.
-- [x] Production static build includes self-hosted compiler, PWA icons and shell asset manifest.
-- [x] Thirty coding solutions compile and produce the authored expected outputs using Roslyn in Chromium.
-- [x] User completes all five lesson stages; invalid C# yields real errors; XP is not awarded twice.
-- [x] Scratchpad runs, infinite loop is stopped and subsequent execution recovers.
-- [x] Form designer CRUD, properties, preview, undo, export and persistence pass.
-- [x] Exported solution builds on Windows with .NET 8.
-- [x] Assessment scoring/history, backup restore and corrupt storage recovery pass.
-- [x] Voice-selection, reading-speed, cancellation and denied-microphone handling pass.
-- [x] Phone navigation/layout and automated WCAG serious/critical checks pass.
-- [x] App shell and lazy pages load offline after first install.
-- [ ] Live production URL serves the app, worker, runtime and PWA assets.
+- [x] Unit/security checks, TypeScript and production build pass locally.
+- [x] Self-hosted compiler, PWA icons and app-shell asset manifest are included.
+- [x] Authored C# challenge solutions compile and produce their expected outputs using Roslyn in Chromium.
+- [x] Five-stage learning, failed-code feedback, replay protection, compiler timeout and recovery are covered.
+- [x] WinForms CRUD, pointer toolbox drag/drop, one-control double-click placement, F5/Shift+F5, resize, undo/redo, event navigation, editable C# tabs, persistence and ZIP export are covered.
+- [x] Practical marking recognises Tor's All(char.IsDigit) pattern and the authored ASCII digit-range example; parsing a number alone does not establish an eight-digit identifier.
+- [x] Assessment/history, backup restore, corrupt/blocked storage and legacy save migration are covered.
+- [x] Phone navigation/layout and automated serious/critical WCAG checks are covered across all nine routes.
+- [x] Offline app loading and C# execution after the first runtime download are covered.
+- [x] Controlled transient and persistent lazy-module failures recover without deleting learner progress or looping; blocked session storage leaves manual recovery usable. Service-worker activation retains modules needed by old tabs.
+- [x] Actual Postgres role/RLS tests isolate account saves and enforce class ownership, opt-in progress sharing and persistent voice quotas.
+- [x] Provider-mocked journeys cover account switching, cloud saves/restore, confirmation/reset, lecturer/learner classes, exhausted voice allowances and unreachable expired sessions.
+- [ ] The exact release candidate must pass GitHub CI, including Windows/.NET 8 export compilation, before merging.
+- [ ] Verify the deployment commit and repeat a public-browser smoke test after merging.
 
-## Device acceptance
+## Evidence and limits
 
-Use Settings → Voice & accessibility → Read aloud on a real phone/desktop. Confirm audible playback, selected voice and speed, cancellation, microphone permission recovery and recognition accuracy. Headless automation cannot verify physical audio or every vendor voice service. Check exported native forms visually in Visual Studio on Windows; compilation is not a substitute for native GUI interaction.
+The local integrated build passes 54 unit/security checks, TypeScript and the production build. The full browser run passes 25 journeys, and seven provider-mocked cloud journeys pass. Focused practical checks pass after the final marking correction. The production dependency audit reports no known vulnerabilities. GitHub CI repeats unit/build/browser/cloud checks and compiles the Windows export; use the run for the exact candidate commit as the release gate.
+
+The production project is https://code-quest-tau-woad.vercel.app/ and tracks main. Live browser testing has exercised actual C# execution, the app-update flow, designer/event-code editing, export initiation, practical handoff and voice-error recovery. The user's original error was not reproduced in a fresh browser; a controlled failed workspace download is covered by the recovery regression. Vercel READY is deployment evidence, not proof that every feature works. Production error-log access is blocked by the connected team's permissions.
+
+## Device acceptance and cloud setup
+
+- [ ] Confirm audible playback, native pronunciation, reading speed, cancellation and microphone recognition on physical devices. Browser API tests do not verify physical audio. The remote browser has no usable installed speech voice.
+- [ ] Create/connect a dedicated CodeQuest Supabase project, apply the migration and configure production SMTP. The connected organization has used its active free project slots; no other application's database was reused.
+- [ ] Verify confirmation/reset emails, two real account profiles, cloud persistence and class membership on the configured deployment.
+- [ ] Verify real ElevenLabs playback after credits become available. Connected-account generation was rejected for zero credits. No verified native isiZulu library voice is claimed.
+- [ ] Inspect and run exported native forms on Windows. CI compilation does not verify native GUI interaction.
 
 ## Included scope
 
-Single-device self-study application with authored English curriculum, local progress, browser console C# and exportable Windows forms. No cloud account, automatic translation, official exam proctoring or native Android APK is implied by this release.
-
-## Verification evidence (7 October 2026)
-
-31 unit/regression tests, TypeScript and production build pass. All nine Chromium user-flow tests pass, including 30 actual C# solutions, five-stage lesson completion, replay protection, compiler timeout/recovery, designer ZIP export, assessment/history, backup recovery, voice API lifecycle/permission handling, all seven mobile routes with no serious/critical axe findings, and offline shell/lazy-page loading. Voice automation uses controlled browser API doubles; physical audio is a device acceptance gate.
-
-Public deployment is blocked: Vercel returned 403 Forbidden for team_Kfsdvn1tXmeZLCVzYI7pDa66. Reconnect an account authorized for that team before creating the production project.
-
-GitHub Actions run 37600253084 compiled the exported Windows/.NET 8 solution successfully. Its stock Chromium exposed an intermediate navigation color-transition contrast issue; background interpolation was removed so foreground/background pairs remain consistent during route changes.
-
-## Production hardening revision
-
-Latest branch changes were reread and preserved. Upgrades migrate legacy profiles and form event fields, blocked storage no longer crashes practical routes, backups include practical drafts, and reset clears all learning drafts. New selection/checked event handlers and practical handler bodies are included in native exports; CI compiles that richer sample. Practical review ignores comments/quoted examples, distinguishes eight characters from digit validation, respects the learner's coach tone, and links directly to targeted lessons. Voice input languages expose matching constrained command phrases; lesson text remains English.
-
-41 unit/regression tests pass. All 17 Chromium browser flows pass together, including actual C# offline execution after its first download. Final GitHub CI additionally validates the richer Windows sample. The dependency audit reports zero known vulnerabilities.
-
-- [ ] Verify Tor four-level remediation and Designer double-click/resize interactions in the current release candidate.
+Self-study with authored English curriculum, local/account-isolated progress, optional accounts/manual saves/history/classes, browser console C# and exportable Windows forms. Language-matched voice previews do not translate the course. Native Android installers, complete course translation and official exam proctoring are not part of the verified release. See DEPLOYMENT.md for configuration and DISTRIBUTION.md for sharing.

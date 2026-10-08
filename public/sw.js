@@ -27,13 +27,8 @@ self.addEventListener("message", (event) => {
 self.addEventListener("activate", (event) =>
   event.waitUntil(
     (async () => {
-      const keys = await caches.keys();
-      const shells = keys.filter((key) => key.startsWith("codequest-shell-"));
-      await Promise.all(
-        shells
-          .filter((key) => key !== SHELL)
-          .map((key) => caches.delete(key)),
-      );
+      // Open tabs can still reference lazy modules from the previous build.
+      // Navigations use fresh HTML; explicit recovery clears obsolete shells.
       await self.clients.claim();
     })(),
   ),

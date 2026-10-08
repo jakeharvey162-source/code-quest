@@ -244,17 +244,17 @@ export default function FormDesigner() {
     startY: number;
     before: Control[];
   } | null>(null);
+  const formCanvas = useRef<HTMLDivElement>(null);
+  const toolboxDrag = useRef<{ type: string; x: number; y: number } | null>(null);
+  const ignoreToolboxClick = useRef(false);
   const cur = items.find((c) => c.id === selected);
   const validation = validateForm(items);
   useEffect(() => {
-    try {
-      localStorage.setItem("cq-practical-code", practicalCode);
-    } catch {}
+    if (!writeText("cq-practical-code", practicalCode))
+      setMessage("Storage is full or blocked. Export your project to keep it.");
   }, [practicalCode]);
   useEffect(() => {
-    try {
-      localStorage.setItem("cq-form", JSON.stringify(items));
-    } catch {
+    if (!writeText("cq-form", JSON.stringify(items))) {
       setMessage("Storage is full or blocked. Export your project to keep it.");
     }
   }, [items]);
@@ -356,7 +356,20 @@ export default function FormDesigner() {
   }
   const practical = readBrief();
   return (
-    <section className="page designer-page">
+    <section
+      className="page designer-page"
+      onKeyDownCapture={(event) => {
+        if (event.key === "F5") {
+          event.preventDefault();
+          event.stopPropagation();
+          setWorkspace("design");
+          setPreview(!event.shiftKey);
+          setMessage(event.shiftKey
+            ? "Stopped Form1 — back in the designer."
+            : "Running Form1 — browser preview checks controls; C# event logic runs in the exported Windows project.");
+        }
+      }}
+    >
       {practical && (
         <div className="form-validation">
           <CheckCircle2 size={17} />
@@ -443,14 +456,35 @@ export default function FormDesigner() {
             <button
               key={type}
               disabled={preview || items.length >= 100}
-              draggable={!preview}
-              onDragStart={(e) => e.dataTransfer.setData("application/x-codequest-control", type)}
-              onDoubleClick={() => {
-                const next = addControl(items, type);
-                commit(next);
-                setSelected(next[next.length - 1].id);
+              style={{ touchAction: "none" }}
+              onPointerDown={(event) => {
+                if (preview || event.button !== 0) return;
+                ignoreToolboxClick.current = false;
+                toolboxDrag.current = { type, x: event.clientX, y: event.clientY };
+                event.currentTarget.setPointerCapture(event.pointerId);
               }}
-              onClick={() => {
+              onPointerCancel={() => { toolboxDrag.current = null; }}
+              onPointerUp={(event) => {
+                const start = toolboxDrag.current;
+                toolboxDrag.current = null;
+                if (!start || preview || items.length >= 100) return;
+                if (Math.hypot(event.clientX - start.x, event.clientY - start.y) < 5) return;
+                ignoreToolboxClick.current = true;
+                const rect = formCanvas.current?.getBoundingClientRect();
+                if (!rect || event.clientX < rect.left || event.clientX > rect.right ||
+                    event.clientY < rect.top || event.clientY > rect.bottom) return;
+                const next = addControl(items, start.type);
+                const added = next[next.length - 1];
+                const x = Math.max(0, Math.min(640 - added.width, Math.round((event.clientX - rect.left) / 8) * 8));
+                const y = Math.max(0, Math.min(420 - added.height, Math.round((event.clientY - rect.top) / 8) * 8));
+                commit(updateControl(next, added.id, { x, y }));
+                setSelected(added.id);
+                setMessage(`${start.type} added at ${x}, ${y}. Visual Studio-style 8 px grid snap applied.`);
+              }}
+              onClick={(event) => {
+                // The first click already adds the control; a double-click
+                // must not add two more controls.
+                if (event.detail > 1 || (event.detail > 0 && ignoreToolboxClick.current)) return;
                 const next = addControl(items, type);
                 commit(next);
                 setSelected(next[next.length - 1].id);
@@ -536,24 +570,10 @@ export default function FormDesigner() {
                   My CodeQuest Form <span>─　□　×</span>
                 </div>
                 <div
+                  ref={formCanvas}
                   className="form-canvas"
                   aria-label="Form design canvas"
-                  onDragOver={(e) => { if (!preview) e.preventDefault(); }}
-                  onDrop={(e) => {
-                    if (preview || items.length >= 100) return;
-                    e.preventDefault();
-                    const type = e.dataTransfer.getData("application/x-codequest-control");
-                    if (!toolbox.includes(type)) return;
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const next = addControl(items, type);
-                    const added = next[next.length - 1];
-                    const x = Math.max(0, Math.min(560, Math.round((e.clientX - rect.left) / 8) * 8));
-                    const y = Math.max(0, Math.min(360, Math.round((e.clientY - rect.top) / 8) * 8));
-                    const positioned = updateControl(next, added.id, { x, y });
-                    commit(positioned);
-                    setSelected(added.id);
-                    setMessage(`${type} added at ${x}, ${y}. Visual Studio-style 8 px grid snap applied.`);
-                  }}
+
                 >
                   {items.length === 0 && (
                     <div className="canvas-empty">
@@ -1027,14 +1047,21 @@ export default function FormDesigner() {
             alongside the form. Build it in Visual Studio to verify compilation
             and behaviour.
           </p>
-          <textarea
-            aria-label="Practical C# code"
-            value={practicalCode}
-            onChange={(e) => setPracticalCode(e.target.value)}
-            maxLength={50000}
-          />
+          {workspace === "design" && (
+            <textarea
+              aria-label="Practical C# code"
+              value={practicalCode}
+              onChange={(e) => setPracticalCode(e.target.value)}
+              maxLength={50000}
+            />
+          )}
           <div className="button-row">
-            <button onClick={() => setShowCode(true)}>
+            <button
+              onClick={() => {
+                setWorkspace("design");
+                setShowCode(true);
+              }}
+            >
               <Code2 size={16} />
               View generated Designer.cs
             </button>

@@ -200,4 +200,77 @@ test("native export declares new event methods and keeps the practical handler b
   );
 });
 
-test("Tor remediation escalates from concept to worked pattern without dumping a full answer",()=>{const result=markPractical({controls:[],code:"x = 1;",requirements:{controls:["TextBox","Button"]}});const a=torPracticalFeedback(result,1,"Friendly"),b=torPracticalFeedback(result,2,"Friendly"),c=torPracticalFeedback(result,3,"Spicy"),d=torPracticalFeedback(result,4,"Teacher");assert.equal(a.level,1);assert.equal(b.level,2);assert.match(c.message,/Omo/);assert.equal(d.level,4);assert.ok(d.message.length>20);assert.equal(a.rematch,"controls");});
+test("Tor remediation escalates from concept to worked pattern without dumping a full answer", () => {
+  const result = markPractical({
+    controls: [],
+    code: "x = 1;",
+    requirements: { controls: ["TextBox", "Button"] },
+  });
+  const a = torPracticalFeedback(result, 1, "Friendly"),
+    b = torPracticalFeedback(result, 2, "Friendly"),
+    c = torPracticalFeedback(result, 3, "Spicy"),
+    d = torPracticalFeedback(result, 4, "Teacher");
+  assert.equal(a.level, 1);
+  assert.equal(b.level, 2);
+  assert.match(c.message, /Omo/);
+  assert.equal(d.level, 4);
+  assert.ok(d.message.length > 20);
+  assert.equal(a.rematch, "controls");
+});
+
+test("Tor's All(char.IsDigit) example earns digit-validation credit", () => {
+  for (const predicate of [
+    "char.IsDigit",
+    "System.Char.IsDigit",
+    "c => char.IsDigit(c)",
+  ]) {
+    const result = markPractical({
+      code: `if (number.Length == 8 && number.All(${predicate})) {}`,
+    });
+    assert.equal(result.breakdown["Input Validation"], 20, predicate);
+    assert.ok(!result.weak.includes("Input Validation"));
+  }
+  const fake = markPractical({
+    code: "if (number.Length == 8) {} // number.All(char.IsDigit)",
+  });
+  assert.equal(fake.breakdown["Input Validation"], 5);
+});
+
+test("numeric parsing and checking any one character do not establish an eight-digit identifier", () => {
+  for (const check of [
+    "int.TryParse(number, out int value)",
+    "number.Any(char.IsDigit)",
+    "char.IsDigit(number[0])",
+  ]) {
+    const result = markPractical({
+      code: `if (number.Length == 8 && ${check}) {}`,
+    });
+    assert.equal(result.breakdown["Input Validation"], 5, check);
+    assert.ok(result.weak.includes("Input Validation"));
+  }
+});
+
+test("the authored student-number lesson's ASCII range receives validation credit", () => {
+  for (const check of [
+    "System.Linq.Enumerable.All(number, c => c >= '0' && c <= '9')",
+    "number.All(c => c >= '0' && c <= '9')",
+  ]) {
+    assert.equal(
+      markPractical({ code: `if (number.Length == 8 && ${check}) {}` })
+        .breakdown["Input Validation"],
+      20,
+    );
+  }
+  assert.equal(
+    markPractical({
+      code: "if(number.Length == 8 && number.All(c => c >= 'a' && c <= 'z')) {}",
+    }).breakdown["Input Validation"],
+    5,
+  );
+  assert.equal(
+    markPractical({
+      code: "string fake = \"number.All(c => c >= '0' && c <= '9')\";",
+    }).breakdown["Input Validation"],
+    0,
+  );
+});
