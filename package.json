@@ -12,14 +12,17 @@
     "test:browser": "playwright test",
     "predev": "node scripts/prepare-compiler.mjs",
     "prebuild": "node scripts/prepare-compiler.mjs",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test:cloud": "playwright test --config playwright.cloud.config.mjs"
   },
   "dependencies": {
     "@codemirror/language": "6.12.4",
     "@codemirror/legacy-modes": "6.5.4",
     "@codemirror/state": "6.7.6",
     "@codemirror/view": "6.43.13",
+    "@elevenlabs/elevenlabs-js": "2.71.0",
     "@lezer/highlight": "1.2.5",
+    "@supabase/supabase-js": "2.117.3",
     "@wasmsharp/core": "0.10.2",
     "codemirror": "6.0.2",
     "fflate": "0.8.3",
@@ -31,6 +34,7 @@
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",
+    "@electric-sql/pglite": "0.5.8",
     "@playwright/test": "1.63.0",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",

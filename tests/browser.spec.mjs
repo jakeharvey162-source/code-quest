@@ -300,6 +300,8 @@ test("all routes fit a phone and have no serious accessibility errors", async ({
     "progress",
     "settings",
     "playground",
+    "account",
+    "classes",
   ]) {
     await page.goto("/#" + route);
     await page.locator(".page h1").waitFor();
@@ -385,7 +387,7 @@ test("practical flows from brief to designer code and back to marker", async ({
   await page
     .getByRole("textbox", { name: "Practical C# code" })
     .fill(
-      'private void btnRegister_Click(object sender, EventArgs e) { if (txtStudentNumber.Text.Length == 8) { MessageBox.Show("OK"); } else { MessageBox.Show("Bad"); } }',
+      'private void btnRegister_Click(object sender, EventArgs e) { if (txtStudentNumber.Text.Length == 8 && txtStudentNumber.Text.All(char.IsDigit)) { MessageBox.Show("OK"); } else { MessageBox.Show("Bad"); } }',
     );
   await page
     .getByRole("button", { name: "Submit practical for marking" })
@@ -397,6 +399,9 @@ test("practical flows from brief to designer code and back to marker", async ({
   await page.getByRole("button", { name: "Mark my practical" }).click();
   await expect(page.locator("#practical-marker")).toContainText("%");
   await expect(page.locator("#practical-marker")).toContainText("UI Design");
+  await expect(page.locator("#practical-marker")).toContainText(
+    "100% rubric coverage",
+  );
 });
 
 test("designer previews selection and checked-change event wiring", async ({
@@ -417,7 +422,7 @@ test("designer previews selection and checked-change event wiring", async ({
   await page
     .getByRole("textbox", { name: "CheckedChanged handler" })
     .fill("chkTerms_CheckedChanged");
-  await page.getByRole("button", { name: "Preview form" }).click();
+  await page.getByRole("button", { name: "Start / F5", exact: true }).click();
   await page
     .getByRole("combobox", { name: "cmbCourse" })
     .selectOption({ label: "BCom" });
@@ -668,6 +673,7 @@ test.describe("workspace download recovery", () => {
     await expect(
       page.getByRole("heading", { name: "Let’s get you back on track." }),
     ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Load latest workspace" })).toBeEnabled();
     blocked = false;
     await page.getByRole("button", { name: "Load latest workspace" }).click();
     await expect(
@@ -683,6 +689,7 @@ test.describe("workspace download recovery", () => {
 
 
 test("designer supports Visual Studio-style toolbox drag drop and grid placement", async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto("/#designer");
   const toolboxButton = page.getByRole("button", { name: "Button", exact: true }).first();
   const canvas = page.locator(".form-canvas");
@@ -694,8 +701,15 @@ test("designer supports Visual Studio-style toolbox drag drop and grid placement
   expect(left % 8).toBe(0);
   expect(top % 8).toBe(0);
   await expect(page.locator(".form-validation")).toContainText("8 px grid snap");
+  await page.getByRole("button", { name: "TextBox", exact: true }).dblclick();
+  await expect(page.locator(".placed-control")).toHaveCount(2);
   await page.getByRole("button", { name: "Start / F5", exact: true }).click();
   await expect(page.getByRole("button", { name: "Stop debugging", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Stop debugging", exact: true }).press("Shift+F5");
+  await expect(page.getByRole("button", { name: "Start / F5", exact: true })).toBeVisible();
+  await page.getByRole("textbox", { name: "Control Text" }).press("F5");
+  await expect(page.getByRole("button", { name: "Stop debugging", exact: true })).toBeVisible();
+  await expect(page.locator(".form-validation")).toContainText("C# event logic runs in the exported Windows project");
 });
 
 
@@ -711,28 +725,12 @@ test.describe("automatic stale workspace recovery", () => {
         await route.continue();
       }
     });
-    await page.addInitScript(() => {
-      localStorage.setItem(
-        "cq-progress-v1",
-        JSON.stringify({
-          version: 1,
-          completed: [],
-          steps: {},
-          drafts: {},
-          activity: [],
-          assessments: [],
-          settings: {
-            name: "Student QA",
-            tone: "friendly",
-            voiceRate: 1,
-            voiceName: "",
-            voiceCommands: false,
-            language: "en-ZA",
-            reducedMotion: false,
-            highContrast: false
-          }
-        }),
-      );
+    await page.addInitScript((state) => {
+      if (!localStorage.getItem("cq-progress-v1"))
+        localStorage.setItem("cq-progress-v1", JSON.stringify(state));
+    }, {
+      ...freshProgress(),
+      settings: { ...freshProgress().settings, name: "Student QA" },
     });
     await page.goto("/");
     await page.getByRole("button", { name: "WinForms", exact: true }).click();
@@ -747,5 +745,42 @@ test.describe("automatic stale workspace recovery", () => {
         () => JSON.parse(localStorage.getItem("cq-progress-v1")).settings.name,
       ),
     ).toBe("Student QA");
+  });
+});
+
+test.describe("persistent workspace failures", () => {
+  test.use({ serviceWorkers: "block" });
+  test("a persistent download failure retries once and leaves manual recovery usable", async ({ page }) => {
+    let blocked = true;
+    let requests = 0;
+    await page.route("**/assets/FormDesigner-*.js", (route) => {
+      requests++;
+      return blocked ? route.abort("failed") : route.continue();
+    });
+    await page.goto("/#designer");
+    const retry = page.getByRole("button", { name: "Load latest workspace", exact: true });
+    await expect(retry).toBeEnabled();
+    expect(requests).toBe(2);
+    await page.getByRole("button", { name: "Return to World", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /Make it yours/ })).toBeVisible();
+    expect(requests).toBe(2);
+    await page.getByRole("button", { name: "WinForms", exact: true }).click();
+    await expect(retry).toBeEnabled();
+    blocked = false;
+    await retry.click();
+    await expect(page.getByRole("heading", { name: "Make something useful." })).toBeVisible();
+  });
+
+  test("unavailable session storage leaves the failure screen and navigation usable", async ({ page }) => {
+    await page.addInitScript(() => {
+      Object.defineProperty(window, "sessionStorage", {
+        get() { throw new DOMException("Storage is blocked", "SecurityError"); },
+      });
+    });
+    await page.route("**/assets/FormDesigner-*.js", (route) => route.abort("failed"));
+    await page.goto("/#designer");
+    await expect(page.getByRole("button", { name: "Load latest workspace", exact: true })).toBeEnabled();
+    await page.getByRole("button", { name: "Return to World", exact: true }).click();
+    await expect(page.getByRole("heading", { name: /Make it yours/ })).toBeVisible();
   });
 });

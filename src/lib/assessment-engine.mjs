@@ -8,20 +8,23 @@ export const practicalRubric = [
 ];
 const count = (xs, p) => xs.filter(p).length;
 // Formative static review only. This is deliberately separate from the real C# runner.
-export function reviewSource(source) {
+export function reviewSource(source, keepCharacterLiterals = false) {
   return String(source)
     .replace(
       /@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\/\/[^\n]*|\/\*[\s\S]*?\*\//g,
       (token) =>
         token.startsWith("//") || token.startsWith("/*") ? " " : token,
     )
-    .replace(/@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, " ");
+    .replace(/@"(?:""|[^"])*"|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'/g, (token) =>
+      keepCharacterLiterals && token.startsWith("'") ? token : " ",
+    );
 }
 export function markPractical(input = {}) {
   const controls = (Array.isArray(input.controls) ? input.controls : []).filter(
     (c) => c && typeof c === "object",
   );
-  const code = reviewSource(input.code || "");
+  const code = reviewSource(input.code || ""),
+    characterCode = reviewSource(input.code || "", true);
   const required = Array.isArray(input.requirements?.controls)
     ? input.requirements.controls
     : ["TextBox", "Button"];
@@ -39,13 +42,23 @@ export function markPractical(input = {}) {
   );
   const length = /\.Length\s*(?:==|!=)\s*8/.test(code),
     digits =
-      /\b(?:char\.)?IsDigit\s*\(/.test(code) ||
-      /\b(?:int|long|ulong)\.TryParse\s*\(/.test(code);
+      /\.All\s*\(\s*(?:[A-Za-z_]\w*(?:\.\w+)*\s*,\s*)?(?:char|Char|System\.Char)\s*\.\s*IsDigit\s*\)/.test(
+        code,
+      ) ||
+      /\.All\s*\(\s*\(?\s*([A-Za-z_]\w*)\s*\)?\s*=>\s*(?:char|Char|System\.Char)\s*\.\s*IsDigit\s*\(\s*\1\s*\)\s*\)/.test(
+        code,
+      );
+  const asciiDigits =
+    /\bAll\s*\(\s*(?:[A-Za-z_]\w*(?:\.\w+)*\s*,\s*)?\(?\s*([A-Za-z_]\w*)\s*\)?\s*=>\s*\1\s*>=\s*'0'\s*&&\s*\1\s*<=\s*'9'\s*\)/.test(
+      characterCode,
+    );
   // Eight characters alone does not establish eight digits. Static matches are hints, not proof.
   breakdown["Input Validation"] =
     (length ? 5 : 0) +
-    (digits ? 10 : 0) +
-    (/IsNullOrWhiteSpace\s*\(/.test(code) ? 5 : 0);
+    (digits || asciiDigits ? 10 : 0) +
+    ((length && (digits || asciiDigits)) || /IsNullOrWhiteSpace\s*\(/.test(code)
+      ? 5
+      : 0);
   const eventTargets = controls.filter((c) => c.type === "Button");
   breakdown["Events"] = Math.round(
     (15 *
@@ -95,13 +108,78 @@ export function markPractical(input = {}) {
   };
 }
 
-export function torPracticalFeedback(result,attempt=1,preference="Friendly"){
- const area=result?.weak?.[0];if(!area)return{tone:"celebrate",level:0,message:"Sharp! 🎉 Your form covers the practical foundations. Explain why your validation works before you move on.",rematch:null};
- const concept={"UI Design":"Compare the brief with the controls actually on the form.","Control Naming":"Use meaningful WinForms prefixes so another developer can understand each control.","Input Validation":"An 8-character value is not automatically an 8-digit student number.","Events":"The event must be wired and its handler must exist in your C#.","C# Logic":"Trace both the valid and invalid paths through your handler.","Code Quality":"Readable names and small, clear blocks make bugs easier to spot."}[area];
- const clue={"UI Design":"List every required control, then tick them off one by one.","Control Naming":"Think txtStudentNumber, btnRegister, cmbCourse — type + purpose.","Input Validation":"You need both a length check and a digit check such as All(char.IsDigit) or TryParse.","Events":"Match the Designer event name to a void handler with the same name.","C# Logic":"Your handler needs a decision and clear feedback for both outcomes.","Code Quality":"Check access modifiers, meaningful names, and balanced braces."}[area];
- const worked={"UI Design":"Example pattern: Label + TextBox + Button, each with a purpose and accessible name.","Control Naming":"Example: TextBox → txtStudentNumber; Button → btnRegister.","Input Validation":"Pattern: value.Length == 8 && value.All(char.IsDigit). Adapt it yourself.","Events":"Pattern: btnRegister.Click → btnRegister_Click(object sender, EventArgs e).","C# Logic":"Pattern: if (valid) { success } else { helpful error }. Write your own messages.","Code Quality":"Keep validation readable: name the controls clearly and avoid hiding everything in one giant expression."}[area];
- const level=Math.min(4,Math.max(1,attempt));let message=level===1?concept:level===2?concept+" "+clue:level===3?concept+" "+clue:worked;
- if(level>=3&&preference==="Spicy")message="Omo 😭 "+message+" Tor is not letting this bug collect rent in your code.";
- if(preference==="Teacher")message="Teacher mode: "+message;
- return{tone:level>=3&&preference==="Spicy"?"spicy":"coach",level,message,rematch:result.recommendations?.find(r=>r.area===area)?.lesson||null};
+export function torPracticalFeedback(
+  result,
+  attempt = 1,
+  preference = "Friendly",
+) {
+  const area = result?.weak?.[0];
+  if (!area)
+    return {
+      tone: "celebrate",
+      level: 0,
+      message:
+        "Sharp! 🎉 Your form covers the practical foundations. Explain why your validation works before you move on.",
+      rematch: null,
+    };
+  const concept = {
+    "UI Design": "Compare the brief with the controls actually on the form.",
+    "Control Naming":
+      "Use meaningful WinForms prefixes so another developer can understand each control.",
+    "Input Validation":
+      "An 8-character value is not automatically an 8-digit student number.",
+    Events: "The event must be wired and its handler must exist in your C#.",
+    "C# Logic": "Trace both the valid and invalid paths through your handler.",
+    "Code Quality":
+      "Readable names and small, clear blocks make bugs easier to spot.",
+  }[area];
+  const clue = {
+    "UI Design": "List every required control, then tick them off one by one.",
+    "Control Naming":
+      "Think txtStudentNumber, btnRegister, cmbCourse — type + purpose.",
+    "Input Validation":
+      "Check length and every character, for example All(char.IsDigit). TryParse alone also accepts signs or whitespace.",
+    Events:
+      "Match the Designer event name to a void handler with the same name.",
+    "C# Logic":
+      "Your handler needs a decision and clear feedback for both outcomes.",
+    "Code Quality":
+      "Check access modifiers, meaningful names, and balanced braces.",
+  }[area];
+  const worked = {
+    "UI Design":
+      "Example pattern: Label + TextBox + Button, each with a purpose and accessible name.",
+    "Control Naming":
+      "Example: TextBox → txtStudentNumber; Button → btnRegister.",
+    "Input Validation":
+      "Pattern: value.Length == 8 && value.All(char.IsDigit). Adapt it yourself.",
+    Events:
+      "Pattern: btnRegister.Click → btnRegister_Click(object sender, EventArgs e).",
+    "C# Logic":
+      "Pattern: if (valid) { success } else { helpful error }. Write your own messages.",
+    "Code Quality":
+      "Keep validation readable: name the controls clearly and avoid hiding everything in one giant expression.",
+  }[area];
+  const level = Math.min(4, Math.max(1, attempt));
+  let message =
+    level === 1
+      ? concept
+      : level === 2
+        ? concept + " " + clue
+        : level === 3
+          ? concept + " " + clue
+          : worked;
+  if (level >= 3 && preference === "Spicy")
+    message =
+      "Omo 😭 " +
+      message +
+      " Tor is not letting this bug collect rent in your code.";
+  if (preference === "Teacher") message = "Teacher mode: " + message;
+  return {
+    tone: level >= 3 && preference === "Spicy" ? "spicy" : "coach",
+    level,
+    message,
+    rematch:
+      result.recommendations?.find((r) => r.area === area)?.lesson || null,
+  };
 }

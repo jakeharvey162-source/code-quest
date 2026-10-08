@@ -1,6 +1,8 @@
+import { readText, writeText } from "./local-data.ts";
 export type Settings = {
   name: string;
   voice: string;
+  voiceProvider: "device" | "elevenlabs";
   rate: number;
   coach: "Teacher" | "Friendly" | "Spicy";
   voiceInput: boolean;
@@ -30,6 +32,7 @@ export const freshProgress = (): Progress => ({
   settings: {
     name: "",
     voice: "",
+    voiceProvider: "device",
     rate: 1,
     coach: "Friendly",
     voiceInput: false,
@@ -75,6 +78,7 @@ export function validateProgress(value: unknown): value is Progress {
     typeof s.name === "string" &&
     s.name.length <= 60 &&
     typeof s.voice === "string" &&
+    ["device", "elevenlabs"].includes(String(s.voiceProvider)) &&
     typeof s.rate === "number" &&
     s.rate >= 0.5 &&
     s.rate <= 2 &&
@@ -110,7 +114,7 @@ export function migrateProgress(value: unknown): Progress | null {
 }
 export function loadProgress(): Progress {
   try {
-    const value = JSON.parse(localStorage.getItem("cq-progress-v1") || "null");
+    const value = JSON.parse(readText("cq-progress-v1", "null"));
     return migrateProgress(value) || freshProgress();
   } catch {
     return freshProgress();
@@ -118,8 +122,7 @@ export function loadProgress(): Progress {
 }
 export function saveProgress(value: Progress) {
   try {
-    localStorage.setItem("cq-progress-v1", JSON.stringify(value));
-    return true;
+    return writeText("cq-progress-v1", JSON.stringify(value));
   } catch {
     return false;
   }
