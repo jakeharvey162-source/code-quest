@@ -56,13 +56,17 @@ export function VoiceControls({
       );
       return;
     }
+    if (!supabase) {
+      setStatus(
+        "Cloud voices are not configured on this deployment. Choose Device voices in Settings; no account is needed for device reading.",
+      );
+      return;
+    }
     const controller = new AbortController();
     request.current = controller;
     try {
       setStatus("Preparing ElevenLabs read-aloud…");
-      const session = supabase
-        ? (await supabase.auth.getSession()).data.session
-        : null;
+      const session = (await supabase.auth.getSession()).data.session;
       if (controller.signal.aborted) return;
       if (!session)
         throw new Error(

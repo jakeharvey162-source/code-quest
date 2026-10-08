@@ -226,6 +226,12 @@ test("voice selection, read-aloud, stop, permission error and navigation hooks",
     };
   });
   await page.goto("/#settings");
+  await page.getByRole("combobox", { name: "Read-aloud service" }).selectOption("elevenlabs");
+  await page.getByRole("button", { name: "Read aloud", exact: true }).click();
+  await expect(page.locator(".voice-status")).toContainText("Cloud voices are not configured on this deployment");
+  expect(await page.evaluate(() => window.__spoken)).toHaveLength(0);
+  await page.getByRole("button", { name: "Stop voice", exact: true }).click();
+  await page.getByRole("combobox", { name: "Read-aloud service" }).selectOption("device");
   await page
     .getByRole("combobox", { name: "Device voice" })
     .selectOption("Test English");
