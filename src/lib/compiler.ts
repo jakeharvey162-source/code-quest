@@ -28,9 +28,15 @@ export function runCSharp(
   if (code.length > 50000)
     return Promise.reject(new Error("Keep programs below 50,000 characters."));
   pending = true;
-  worker ??= new Worker(new URL("./compiler.worker.js", import.meta.url), {
-    type: "module",
-  });
+  try {
+    worker ??= new Worker(new URL("./compiler.worker.js", import.meta.url), {
+      type: "module",
+    });
+  } catch {
+    pending = false;
+    worker = undefined;
+    return Promise.reject(new Error("The C# compiler could not start in this browser. Reload the app and try again."));
+  }
   const current = worker;
   return new Promise((resolve, reject) => {
     let timer: ReturnType<typeof setTimeout>;
