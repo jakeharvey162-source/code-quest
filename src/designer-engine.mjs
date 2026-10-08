@@ -54,7 +54,7 @@ export function addControl(list, type) {
       id: type.toLowerCase() + n,
       type,
       name: type.toLowerCase() + n,
-      text: type,
+      text: ["TextBox", "ComboBox", "ListBox", "NumericUpDown"].includes(type) ? "" : type.toLowerCase() + n,
       x: 30 + (Math.floor(list.length / 4) % 3) * 200,
       y: 30 + (list.length % 4) * 95,
       width: type === "TextBox" ? 180 : 110,

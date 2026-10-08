@@ -614,7 +614,7 @@ function App() {
             </Suspense>
           </ErrorBoundary>
         </main>
-        <TorCoach page={page} settings={progress.settings} />
+        <TorCoach page={page} settings={progress.settings} onNavigate={navigate} />
         <footer className="app-footer">
           <span>CodeQuest / Built for understanding.</span>
           <span>

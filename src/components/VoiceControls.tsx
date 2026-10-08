@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Volume2, Mic, Square } from "lucide-react";
-import { speakText, commandFor, voiceError, voiceCommands } from "../lib/voice";
+import { speakText, stopSpeech, speechToken, commandFor, voiceError, voiceCommands } from "../lib/voice";
 import type { Settings } from "../lib/progress";
 import { supabase } from "../lib/supabase";
 import { tutorVoices } from "../lib/voice-catalog.mjs";
@@ -32,6 +32,7 @@ export function VoiceControls({
   const [status, setStatus] = useState(""),
     [listening, setListening] = useState(false);
   const recognition = useRef<any>(null);
+  const ownedSpeech = useRef(-1);
   const audio = useRef<HTMLAudioElement | null>(null),
     request = useRef<AbortController | null>(null),
     audioUrl = useRef("");
@@ -45,9 +46,10 @@ export function VoiceControls({
   }
   async function read() {
     stopCloud();
-    window.speechSynthesis?.cancel();
+    stopSpeech();
     if (settings.voiceProvider !== "elevenlabs") {
       speakText(text, settings.voice, settings.rate, setStatus, language);
+      ownedSpeech.current = speechToken();
       return;
     }
     if (!tutorVoices[language as keyof typeof tutorVoices]?.voiceId) {
@@ -130,7 +132,7 @@ export function VoiceControls({
     () => () => {
       recognition.current?.abort();
       stopCloud();
-      if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+      stopSpeech(ownedSpeech.current);
     },
     [],
   );
@@ -174,7 +176,7 @@ export function VoiceControls({
       const command = commandFor(transcript);
       if (command === "stop") {
         stopCloud();
-        window.speechSynthesis?.cancel();
+        stopSpeech();
         setStatus("Reading stopped.");
       } else if (command) {
         onNavigate?.(command);
@@ -195,7 +197,7 @@ export function VoiceControls({
         </button>
         <button
           onClick={() => {
-            window.speechSynthesis?.cancel();
+            stopSpeech();
             stopCloud();
             recognition.current?.abort();
             setListening(false);

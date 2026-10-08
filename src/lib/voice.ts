@@ -97,6 +97,20 @@ export function commandFor(text: string) {
   if (s === "stop speaking") return "stop";
   return null;
 }
+let speechGeneration = 0;
+let pendingVoiceLoad: (() => void) | undefined;
+let activeUtterance: SpeechSynthesisUtterance | undefined;
+export function speechToken() {
+  return speechGeneration;
+}
+export function stopSpeech(expectedToken?: number) {
+  if (expectedToken !== undefined && expectedToken !== speechGeneration) return;
+  speechGeneration++;
+  pendingVoiceLoad?.();
+  pendingVoiceLoad = undefined;
+  activeUtterance = undefined;
+  window.speechSynthesis?.cancel();
+}
 export function speakText(
   text: string,
   voiceName: string,
@@ -113,31 +127,87 @@ export function speakText(
     );
     return false;
   }
-  window.speechSynthesis.cancel();
-  const utterance = new SpeechSynthesisUtterance(text.slice(0, 5000));
-  const selected = selectDeviceVoice(
-    window.speechSynthesis.getVoices(),
-    language,
-    voiceName,
-  );
-  if (!selected && language.split("-")[0] !== "en") {
-    onStatus(
-      `No ${language} voice is installed on this device. Install a matching speech voice in your device settings.`,
-    );
-    return false;
+  stopSpeech();
+  const generation = speechGeneration;
+  const synth = window.speechSynthesis;
+  function play() {
+    if (generation !== speechGeneration) return;
+    const voices = synth.getVoices();
+    const selected = selectDeviceVoice(voices, language, voiceName);
+    if (!selected && language.split("-")[0] !== "en") {
+      onStatus(
+        `No ${language} voice is installed on this device. Install a matching speech voice in your device settings.`,
+      );
+      return;
+    }
+    function utter(voice: SpeechSynthesisVoice | null, retry: boolean) {
+      const u = new SpeechSynthesisUtterance(text.slice(0, 5000));
+      activeUtterance = u;
+      if (voice) u.voice = voice;
+      u.lang = voice?.lang || language;
+      u.rate = Number.isFinite(rate) ? Math.min(2, Math.max(0.5, rate)) : 1;
+      u.pitch = 1;
+      u.onstart = () => {
+        if (generation === speechGeneration) onStatus("Speaking…");
+      };
+      u.onend = () => {
+        if (generation === speechGeneration) {
+          activeUtterance = undefined;
+          onStatus("Finished reading.");
+        }
+      };
+      u.onerror = (e) => {
+        if (generation !== speechGeneration) return;
+        if (e.error === "canceled" || e.error === "interrupted") {
+          onStatus("Reading stopped.");
+          return;
+        }
+        const fallback = voices.find(
+          (v) =>
+            v.name !== voice?.name &&
+            v.lang.split("-")[0] === language.split("-")[0],
+        );
+        if (!retry && fallback) {
+          utter(fallback, true);
+          return;
+        }
+        activeUtterance = undefined;
+        onStatus(
+          "No working speech voice is available here. Try another voice, or Chrome/Edge with an installed English voice.",
+        );
+      };
+      onStatus("Preparing read-aloud…");
+      try {
+        synth.speak(u);
+      } catch {
+        activeUtterance = undefined;
+        onStatus(
+          "The speech service couldn't start. Try another voice or browser.",
+        );
+      }
+    }
+    utter(selected, false);
   }
-  if (selected) utterance.voice = selected;
-  utterance.lang = selected?.lang || language;
-  utterance.rate = rate;
-  utterance.onstart = () => onStatus("Speaking…");
-  utterance.onend = () => onStatus("Finished reading.");
-  utterance.onerror = (e) =>
-    onStatus(
-      e.error === "canceled" || e.error === "interrupted"
-        ? "Reading stopped."
-        : "The selected voice could not play. Try another device voice.",
-    );
-  window.speechSynthesis.speak(utterance);
-  onStatus("Preparing read-aloud…");
+  if (synth.getVoices().length) play();
+  else {
+    onStatus("Loading device voices…");
+    let timer: ReturnType<typeof setTimeout>;
+    const ready = () => {
+      if (!synth.getVoices().length) return;
+      cleanup();
+      play();
+    };
+    const cleanup = () => {
+      clearTimeout(timer);
+      synth.removeEventListener?.("voiceschanged", ready);
+      if (pendingVoiceLoad === cleanup) pendingVoiceLoad = undefined;
+    };
+    pendingVoiceLoad = cleanup;
+    synth.addEventListener?.("voiceschanged", ready);
+    timer = setTimeout(() => {
+      cleanup();
+      play();
+    }, 1000);
+  }
   return true;
 }

@@ -151,7 +151,7 @@ test("designer CRUD, properties, preview, undo and native ZIP export", async ({
     .getByRole("textbox", { name: "txtName", exact: true })
     .fill("Lebo");
   await page
-    .getByRole("button", { name: "Button", exact: true })
+    .getByRole("button", { name: "button1", exact: true })
     .last()
     .click();
   await expect(page.locator(".form-validation")).toContainText("btnSave_Click");
@@ -435,7 +435,7 @@ test("designer previews selection and checked-change event wiring", async ({
   await expect(page.locator(".form-validation")).toContainText(
     "cmbCourse_SelectedIndexChanged",
   );
-  await page.getByRole("checkbox", { name: /CheckBox/ }).check();
+  await page.getByRole("checkbox", { name: /checkbox1/ }).check();
   await expect(page.locator(".form-validation")).toContainText(
     "chkTerms_CheckedChanged",
   );

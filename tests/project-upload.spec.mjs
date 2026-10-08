@@ -51,13 +51,13 @@ test("student runs real C# button logic and sees textbox validation, label and I
   await page.addInitScript(({controls,code}) => {localStorage.setItem("cq-form",JSON.stringify(controls));localStorage.setItem("cq-practical-code",code);}, {controls,code});
   await page.goto("/#designer");
   await page.getByRole("button",{name:"Start / F5",exact:true}).click();
-  await page.locator(".form-canvas").getByRole("button",{name:"Button",exact:true}).click();
+  await page.locator(".form-canvas").getByRole("button",{name:"button1",exact:true}).click();
   await expect(page.locator(".form-validation")).toContainText("Enter your name",{timeout:15000});
   await page.getByRole("textbox",{name:"txtName",exact:true}).fill("Harvey");
-  await page.locator(".form-canvas").getByRole("button",{name:"Button",exact:true}).click();
+  await page.locator(".form-canvas").getByRole("button",{name:"button1",exact:true}).click();
   await expect(page.locator(".form-canvas")).toContainText("Hello Harvey",{timeout:90000});
   await expect(page.getByRole("textbox",{name:"txtName",exact:true})).toHaveValue("");
   await expect(page.getByRole("listbox",{name:"lstNames",exact:true})).toContainText("Harvey");
   await page.getByRole("button",{name:"Stop debugging",exact:true}).click();
-  await expect(page.locator(".form-canvas")).toContainText("Label");
+  await expect(page.locator(".form-canvas")).toContainText("label1");
 });

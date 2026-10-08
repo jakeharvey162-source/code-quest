@@ -25,6 +25,7 @@ import CodeEditor from "./CodeEditor";
 import ProjectReader from "./ProjectReader";
 import { runCSharp, cancelRun } from "../lib/compiler";
 import { formEventSource, parseFormOutput } from "../lib/form-runtime.mjs";
+import type { CoachRequest } from "../lib/coach-actions";
 import type { Settings } from "../lib/progress";
 import { reviewSource } from "../lib/assessment-engine.mjs";
 export type Control = {
@@ -319,6 +320,53 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
     }
     setItems(next);
   }
+  useEffect(() => {
+    const act = (event: Event) => {
+      const { action, respond } = (event as CustomEvent<CoachRequest>).detail;
+      const done = (text: string) => { setMessage(text); respond(text); };
+      if (action.type === "review") {
+        done(`${items.length} controls on your form. ${cur ? `Selected: ${cur.name}. Its visible Text is ${cur.text || "empty"}. ` : ""}${validation.ok ? "Your control properties and event wiring are valid." : validation.issues.slice(0, 3).join(" ")}`); return;
+      }
+      if (action.type === "start" || action.type === "stop") {
+        setWorkspace("design"); setArmedTool(""); setPreview(action.type === "start");
+        done(action.type === "start" ? "Preview started. Try your inputs and click your Button to test its C# handler." : "Preview stopped. You're back in Design."); return;
+      }
+      if (preview) { done("Stop the preview first so I can edit the form."); return; }
+      if (action.type === "undo" || action.type === "redo") {
+        const available = action.type === "undo" ? undo : redo;
+        if (!available.length) { done(`There's nothing to ${action.type}.`); return; }
+        restore(action.type); done(`${action.type === "undo" ? "Undid" : "Restored"} your last change.`); return;
+      }
+      if (action.type === "add" && action.control && toolbox.includes(action.control)) {
+        if (items.length >= 100) { done("The form already has 100 controls. Remove one before adding another."); return; }
+        let next = addControl(items, action.control);
+        const added = next[next.length - 1];
+        if (action.value !== undefined) next = updateControl(next, added.id, { text: action.value.slice(0, 250) });
+        commit(next); setSelected(added.id); setWorkspace("design");
+        done(`Added ${added.name}${action.value ? ` with the caption ${action.value}` : ""}. You can drag it into position.`); return;
+      }
+      if (action.type === "select") {
+        const found = items.find(c => c.name.toLowerCase() === action.value?.toLowerCase());
+        if (found) { setSelected(found.id); done(`Selected ${found.name}. Its visible Text is ${found.text || "empty"}.`); }
+        else done(`I couldn't find a control named ${action.value}. Check the Selected control list.`);
+        return;
+      }
+      if (!cur) { done("Select a control on the form first, then tell me what to change."); return; }
+      if (action.type === "text") { change({ text: (action.value || "").slice(0, 250) }); done(`Done. ${cur.name} now displays ${action.value}. Its C# Name stays ${cur.name}.`); }
+      else if (action.type === "name") {
+        const next = updateControl(items, cur.id, { name: action.value || "" });
+        const errors = validateForm(next).issues.filter((i: string) => /control name|names must/i.test(i));
+        if (errors.length) { done("That isn't a valid unique C# Name. Use something like lblStudentName. To change what the user sees, say set text to Student Name."); return; }
+        change({ name: action.value }); done(`Renamed the C# identifier to ${action.value}. The visible caption stays ${cur.text}.`);
+      } else if (action.type === "move") {
+        const distance = action.distance || 8;
+        change({ x: Math.max(0, Math.min(640 - cur.width, cur.x + (action.direction === "right" ? distance : action.direction === "left" ? -distance : 0))), y: Math.max(0, Math.min(420 - cur.height, cur.y + (action.direction === "down" ? distance : action.direction === "up" ? -distance : 0))) });
+        done(`Moved ${cur.name} ${action.direction} by ${distance} pixels, within the form edges.`);
+      }
+    };
+    window.addEventListener("cq-coach-action", act);
+    return () => window.removeEventListener("cq-coach-action", act);
+  }, [items, selected, preview, undo, redo]);
   function exportProject() {
     try {
       if (!items.length) {
@@ -819,7 +867,6 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                         </div>
                         {!preview && selected === c.id && (
                           <>
-                            <span className="control-tag">{c.name}</span>
                             <button
                               type="button"
                               className="resize-handle"
@@ -905,7 +952,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
               </p>
               <Field title="Design">
                 <label>
-                  (Name)
+                  (Name) · C# identifier
                   <input
                     aria-label="Control Name"
                     value={cur.name}
@@ -920,9 +967,10 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                   />
                 </label>
               </Field>
+              <p className="property-help">Text is what the user sees. (Name) is used in C# code, for example lblStudentName.</p>
               <Field title="Appearance">
                 <label>
-                  Text
+                  Text · visible caption
                   <input
                     aria-label="Control Text"
                     value={cur.text}

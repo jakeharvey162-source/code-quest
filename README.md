@@ -14,7 +14,7 @@ CodeQuest is an active release candidate. Release candidates must pass unit/regr
 - **Native export:** download a ZIP with a Visual Studio solution, net8.0-windows project, Program.cs, Form1.cs and generated Designer.cs. Click, TextChanged, SelectedIndexChanged and CheckedChanged handlers are generated. Practical handler drafts are included in the exported Form1.cs.
 - **Assessment arena:** 10-question practice, optional timer, scoring, explanations and result history. Registration briefs hand off to the designer, then a clearly labelled static rubric review suggests targeted lessons. Static review excludes comments/strings and does not verify runtime behaviour.
 - **Progress:** earned XP, real study streaks, neighbourhood completion and milestones. Backup/restore moves progress, forms and practical drafts between browsers; previous version-1 saves migrate without losing work.
-- **Voice:** automatic language-matched device speech, localized previews, reading speed, Stop and opt-in navigation commands. Optional authenticated ElevenLabs reading uses a server-only key, curated language voices and persistent quotas. Missing voices and exhausted allowances produce actionable messages. No listening before an explicit button press.
+- **Voice:** automatic language-matched device speech, localized previews, reading speed, Stop and opt-in navigation commands. Tor also offers push-to-talk workspace commands, automatic spoken replies, a device voice picker, late voice loading and a fallback when a selected voice fails. Optional authenticated ElevenLabs reading uses a server-only key, curated language voices and persistent quotas. Missing voices and exhausted allowances produce actionable messages. No listening before an explicit button press.
 - **Accounts and history:** optional Supabase email/password auth, confirmation/reset, account-isolated local profiles, manual cloud save/restore with conflict protection and save history.
 - **Lecturer classes:** create/join classes, invite codes, quest assignments and opt-in sharing of completion/XP; private learner drafts remain private under database row-level policies.
 - **Study plan:** daily goal and downloadable calendar reminder.
@@ -29,6 +29,15 @@ CodeQuest is an active release candidate. Release candidates must pass unit/regr
 - Assessment Arena provides theory practice, formative practical review and targeted remediation.
 - Tor offers Teacher/Friendly/Spicy progressive coaching rather than immediate answer dumping.
 - Offline-first PWA with keyboard navigation, reduced motion, high contrast and read-aloud support.
+
+## Talk to Tor and build a form
+Open the floating hologram, press **Talk to Tor**, and allow the microphone when your browser asks. You can also type the same requests. **Speak replies automatically** is enabled initially and can be switched off. Select an available English voice in the Tor panel; natural/neural/Google voices are preferred when the requested locale is unavailable. Actual voice quality depends on the browser and installed voices. Recognition may use the browser provider's speech service.
+
+Try: `add a label that says Student Name`, `set text to Welcome`, `rename to lblWelcome`, `select label1`, `move right 24 pixels`, `review my form`, `start preview`, `stop preview`, `undo`, `redo`, or `open Code Lab`. Form edits are reversible and run inside CodeQuest. Tor does not control Windows or run shell commands, and its topic coaching is authored rather than an unrestricted LLM conversation.
+
+In WinForms Properties, **Text** is the visible caption; **(Name)** is the C# identifier. New Labels start with `label1`, Buttons with `button1`, and TextBoxes with empty text. Renaming the identifier does not change the caption. The selected control no longer has a second name badge drawn over its caption.
+
+Behaviour references: [Microsoft: set display text](https://learn.microsoft.com/en-us/dotnet/desktop/winforms/controls/how-to-set-the-display-text), [Microsoft: add controls](https://learn.microsoft.com/en-us/dotnet/desktop/winforms/controls/how-to-add-to-a-form), [Tim Corey: WinForms in .NET 6](https://www.youtube.com/watch?v=0zLZQesgV5o), [MDN: Web Speech API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Speech_API/Using_the_Web_Speech_API).
 
 ## Stack
 React 19 · TypeScript · Vite · CodeMirror · WasmSharp/Roslyn · fflate · Playwright · axe-core · PWA/service worker · .NET 8 Windows Forms export.

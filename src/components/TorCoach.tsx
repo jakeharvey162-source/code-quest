@@ -1,7 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { Settings } from "../lib/progress";
 import { readText, writeText } from "../lib/local-data";
-import { speakText } from "../lib/voice";
+import { speakText, stopSpeech, commandFor, voiceError } from "../lib/voice";
+import {
+  coachAction,
+  cleanCoachRequest,
+  roastReply,
+} from "../lib/coach-commands.mjs";
+import { requestWorkspaceAction } from "../lib/coach-actions";
+import { useVoices } from "./VoiceControls";
 const tips: Record<string, string> = {
   designer:
     "Select a toolbox control, then click the form to place it. Double-click adds it automatically. Drag to move, edit Name and Text in Properties, and double-click a Button on the form to write its Click event. Press F5 to test.",
@@ -29,15 +36,141 @@ function answer(question: string, page: string) {
 export default function TorCoach({
   page,
   settings,
+  onNavigate,
 }: {
   page: string;
   settings: Settings;
+  onNavigate: (page: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [roast, setRoast] = useState(settings.coach === "Spicy");
   const [question, setQuestion] = useState("");
   const [reply, setReply] = useState(tips[page] || tips.learn);
   const [status, setStatus] = useState("");
+  const [autoSpeak, setAutoSpeak] = useState(
+    () => readText("cq-tor-auto-speak", "true") === "true",
+  );
+  const [listening, setListening] = useState(false);
+  const recognition = useRef<any>(null);
+  const pendingAction = useRef<AbortController | null>(null);
+  const voices = useVoices();
+  const englishVoices = voices.filter((v) =>
+    v.lang.toLowerCase().startsWith("en"),
+  );
+  const [voice, setVoice] = useState(() =>
+    readText("cq-tor-voice", settings.voice),
+  );
+  function say(text: string) {
+    speakText(text, voice, settings.rate, setStatus, "en-ZA");
+  }
+  function respond(text: string) {
+    setReply(text);
+    setStatus("");
+    if (autoSpeak) say(roast ? roastReply(text) : text);
+  }
+  async function ask(text: string) {
+    pendingAction.current?.abort();
+    const request = cleanCoachRequest(text);
+    if (!request) return;
+    const route = commandFor(request);
+    if (route === "stop") {
+      stop();
+      return;
+    }
+    if (route) {
+      onNavigate(route);
+      respond(
+        `Opening ${route === "designer" ? "WinForms" : route === "playground" ? "Code Lab" : route}. Let's work.`,
+      );
+      return;
+    }
+    const action = coachAction(request);
+    if (action) {
+      if (page !== "designer") {
+        respond(
+          "Open WinForms first, then ask me to change or review your form.",
+        );
+        return;
+      }
+      const controller = new AbortController();
+      pendingAction.current = controller;
+      const result = await requestWorkspaceAction(action, controller.signal);
+      if (controller.signal.aborted) return;
+      pendingAction.current = null;
+      respond(
+        result ||
+          "The designer is still loading. Try that command again once the form appears.",
+      );
+      return;
+    }
+    respond(answer(request, page));
+  }
+  function stop() {
+    pendingAction.current?.abort();
+    recognition.current?.abort();
+    recognition.current = null;
+    setListening(false);
+    stopSpeech();
+    setStatus("Reading stopped.");
+  }
+  function listen() {
+    if (listening) {
+      stop();
+      return;
+    }
+    const Recognition =
+      (window as any).SpeechRecognition ||
+      (window as any).webkitSpeechRecognition;
+    if (!Recognition) {
+      setStatus(
+        "Voice input isn't available here. Use Chrome or Edge, or type your request below.",
+      );
+      return;
+    }
+    stopSpeech();
+    recognition.current?.abort();
+    const r = new Recognition();
+    recognition.current = r;
+    r.lang = settings.language || "en-ZA";
+    r.continuous = false;
+    r.interimResults = false;
+    r.onstart = () => {
+      setListening(true);
+      setStatus("Listening… tell me what to do.");
+    };
+    r.onend = () => {
+      if (recognition.current === r) {
+        recognition.current = null;
+        setListening(false);
+        setStatus((current) =>
+          current.startsWith("Listening")
+            ? "I didn’t catch that. Tap Talk to Tor and try again."
+            : current,
+        );
+      }
+    };
+    r.onerror = (event: any) => {
+      if (recognition.current === r) {
+        setStatus(voiceError(event.error));
+        setListening(false);
+      }
+    };
+    r.onresult = (event: any) => {
+      if (recognition.current !== r) return;
+      const text = event.results[0][0].transcript;
+      recognition.current = null;
+      setListening(false);
+      setQuestion(text);
+      ask(text);
+    };
+    try {
+      r.start();
+    } catch {
+      recognition.current = null;
+      setListening(false);
+      setStatus("The microphone couldn't start. Try again or type below.");
+    }
+  }
   const [position, setPosition] = useState<{ x: number; y: number } | null>(
     () => {
       try {
@@ -65,6 +198,7 @@ export default function TorCoach({
     writeText("cq-tor-position", JSON.stringify(p));
   }
   useEffect(() => {
+    pendingAction.current?.abort();
     setReply(tips[page] || tips.learn);
   }, [page]);
   useEffect(() => {
@@ -78,13 +212,13 @@ export default function TorCoach({
   }, [open]);
   useEffect(
     () => () => {
-      window.speechSynthesis?.cancel();
+      pendingAction.current?.abort();
+      recognition.current?.abort();
+      stopSpeech();
     },
     [],
   );
-  const message = roast
-    ? "Your semicolon went on holiday. Bring it back, legend. " + reply
-    : reply;
+  const message = roast ? roastReply(reply) : reply;
   return (
     <aside
       ref={box}
@@ -171,8 +305,7 @@ export default function TorCoach({
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              setReply(answer(question, page));
-              setStatus("");
+              ask(question);
             }}
           >
             <label htmlFor="tor-question">Ask about C# or your form</label>
@@ -181,9 +314,17 @@ export default function TorCoach({
               value={question}
               maxLength={250}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Labels, events, validation…"
+              placeholder="Add a label that says Student Name"
             />
             <button type="submit">Explain</button>
+            <button
+              type="button"
+              className="tor-mic"
+              aria-pressed={listening}
+              onClick={listen}
+            >
+              {listening ? "Stop listening" : "Talk to Tor"}
+            </button>
           </form>
           <label className="tor-roast">
             <input
@@ -193,31 +334,54 @@ export default function TorCoach({
             />{" "}
             Roast mode
           </label>
-          <div className="tor-actions">
-            <button
-              onClick={() =>
-                speakText(
-                  message,
-                  settings.voice,
-                  settings.rate,
-                  setStatus,
-                  "en-ZA",
-                )
-              }
-            >
-              Tor, speak
-            </button>
-            <button
-              onClick={() => {
-                window.speechSynthesis?.cancel();
-                setStatus("Reading stopped.");
+          <label className="tor-roast">
+            <input
+              type="checkbox"
+              checked={autoSpeak}
+              onChange={(e) => {
+                setAutoSpeak(e.target.checked);
+                writeText("cq-tor-auto-speak", String(e.target.checked));
+                if (!e.target.checked) stopSpeech();
+              }}
+            />{" "}
+            Speak replies automatically
+          </label>
+          <label>
+            Tor voice
+            <select
+              aria-label="Tor voice"
+              value={voice}
+              onChange={(e) => {
+                setVoice(e.target.value);
+                writeText("cq-tor-voice", e.target.value);
               }}
             >
-              Stop voice
-            </button>
+              <option value="">Automatic · best available English voice</option>
+              {englishVoices.map((v) => (
+                <option key={v.voiceURI || v.name} value={v.name}>
+                  {v.name} ({v.lang})
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="tor-actions">
+            <button onClick={() => say(message)}>Tor, speak</button>
+            <button onClick={stop}>Stop voice</button>
           </div>
+          <details className="tor-command-help">
+            <summary>Things you can ask Tor to do</summary>
+            <p>
+              Add a label that says Student Name. Set text to Welcome. Rename to
+              lblWelcome. Select label1. Move right 24 pixels. Review my form.
+              Start preview. Stop preview. Undo. Open Code Lab.
+            </p>
+          </details>
           <small role="status">
-            {status || "Topic-based help · device voice"}
+            {status || "Ready · voice commands and C# coaching"}
+          </small>
+          <small className="tor-mic-note">
+            Microphone audio may be processed by your browser’s speech service.
+            Tor controls this workspace.
           </small>
         </div>
       )}

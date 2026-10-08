@@ -2174,3 +2174,7 @@ button.primary{box-shadow:0 4px 0 #10251b}button.primary:active{transform:transl
 @media (prefers-reduced-motion:reduce) { .tor-avatar svg,.tor-coach.speaking .tor-mouth { animation:none; } }
 .reduce-motion .tor-avatar svg,.reduce-motion .tor-coach.speaking .tor-mouth { animation:none; }
 @media print { .tor-coach { display:none !important; } }
+.tor-panel select { width:100%; margin:5px 0 10px; padding:7px; color:#102c38; background:#fff; border-radius:6px; }
+.tor-mic { margin-left:5px; } .tor-mic[aria-pressed=true] { background:#286957; }
+.tor-mic-note { display:block; margin-top:10px; font-size:10px; } .tor-command-help { margin:8px 0; } .tor-command-help summary { cursor:pointer; }
+.property-help { font-size:12px; line-height:1.5; padding:10px; background:#f7faf4; border:1px solid #c6d0bd; border-radius:6px; }
