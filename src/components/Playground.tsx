@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Play, Square, Download, RotateCcw } from "lucide-react";
 import CodeEditor from "./CodeEditor";
+import ProjectReader from "./ProjectReader";
 import { VoiceControls } from "./VoiceControls";
 import { runCSharp, cancelRun } from "../lib/compiler";
 import { download } from "../lib/download";
@@ -57,6 +58,7 @@ export default function Playground({
           Download C#
         </button>
       </div>
+      <ProjectReader onOpenCode={setCode} settings={progress.settings} />
       <div className="editor-top">
         <span>Program.cs</span>
         <span>LOCAL ROSLYN COMPILER</span>

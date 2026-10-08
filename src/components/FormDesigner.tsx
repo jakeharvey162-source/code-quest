@@ -22,6 +22,10 @@ import { projectZip } from "../lib/project-export.mjs";
 import { download } from "../lib/download";
 import { readText, writeText, readBrief } from "../lib/local-data";
 import CodeEditor from "./CodeEditor";
+import ProjectReader from "./ProjectReader";
+import { runCSharp, cancelRun } from "../lib/compiler";
+import { formEventSource, parseFormOutput } from "../lib/form-runtime.mjs";
+import type { Settings } from "../lib/progress";
 import { reviewSource } from "../lib/assessment-engine.mjs";
 export type Control = {
   id: string;
@@ -51,6 +55,7 @@ export type Control = {
   minimum: number;
   maximum: number;
   value: number;
+  selectedIndex?: number;
 };
 export function validControls(value: unknown): value is Control[] {
   return (
@@ -126,10 +131,12 @@ export function ControlView({
   c,
   preview = false,
   onEvent,
+  onValue,
 }: {
   c: Control;
   preview?: boolean;
   onEvent?: (name: string) => void;
+  onValue?: (patch: Partial<Control>) => void;
 }) {
   const font = /^(.+),\s*(\d+(?:\.\d+)?)pt$/.exec(c.font);
   const style = {
@@ -145,11 +152,12 @@ export function ControlView({
         <input
           style={style}
           aria-label={c.accessibleName || c.name}
+          tabIndex={preview ? c.tabIndex : -1}
           type={c.password ? "password" : "text"}
-          defaultValue={c.text === "TextBox" ? "" : c.text}
+          value={c.text === "TextBox" ? "" : c.text}
           readOnly={!preview}
           disabled={!preview || !c.enabled}
-          onChange={() => onEvent?.(c.eventTextChanged)}
+          onChange={(event) => { onValue?.({ text: event.target.value }); onEvent?.(c.eventTextChanged); }}
         />
       );
     case "Label":
@@ -159,8 +167,10 @@ export function ControlView({
         <select
           style={style}
           aria-label={c.accessibleName || c.name}
+          tabIndex={preview ? c.tabIndex : -1}
           disabled={!preview || !c.enabled}
-          onChange={() => onEvent?.(c.eventSelectedIndexChanged)}
+          value={opts[c.selectedIndex ?? 0] ?? ""}
+          onChange={(event) => { onValue?.({ selectedIndex: event.target.selectedIndex }); onEvent?.(c.eventSelectedIndexChanged); }}
         >
           {opts.length ? (
             opts.map((item, i) => <option key={i}>{item}</option>)
@@ -175,8 +185,10 @@ export function ControlView({
           style={style}
           size={4}
           aria-label={c.accessibleName || c.name}
+          tabIndex={preview ? c.tabIndex : -1}
           disabled={!preview || !c.enabled}
-          onChange={() => onEvent?.(c.eventSelectedIndexChanged)}
+          value={opts[c.selectedIndex ?? 0] ?? ""}
+          onChange={(event) => { onValue?.({ selectedIndex: event.target.selectedIndex }); onEvent?.(c.eventSelectedIndexChanged); }}
         >
           {opts.map((item, i) => (
             <option key={i}>{item}</option>
@@ -189,10 +201,11 @@ export function ControlView({
         <label style={style}>
           <input
             type={c.type === "RadioButton" ? "radio" : "checkbox"}
+            tabIndex={preview ? c.tabIndex : -1}
             name={c.type === "RadioButton" ? "preview-radio" : c.name}
-            defaultChecked={c.checked}
+            checked={c.checked}
             disabled={!preview || !c.enabled}
-            onChange={() => onEvent?.(c.eventCheckedChanged)}
+            onChange={(event) => { onValue?.({ checked: event.target.checked }); onEvent?.(c.eventCheckedChanged); }}
           />
           {c.text}
         </label>
@@ -203,17 +216,24 @@ export function ControlView({
           style={style}
           type="number"
           aria-label={c.accessibleName || c.name}
+          tabIndex={preview ? c.tabIndex : -1}
           min={c.minimum}
           max={c.maximum}
-          defaultValue={c.value}
+          value={c.value}
           readOnly={!preview}
           disabled={!preview || !c.enabled}
+          onChange={(event) => {
+            const value = Number(event.target.value);
+            if (event.target.value && Number.isFinite(value))
+              onValue?.({ value: Math.min(c.maximum, Math.max(c.minimum, value)) });
+          }}
         />
       );
     default:
       return (
         <button
           style={style}
+          tabIndex={preview ? c.tabIndex : -1}
           disabled={!preview || !c.enabled}
           onClick={() => onEvent?.(c.eventClick)}
         >
@@ -222,7 +242,7 @@ export function ControlView({
       );
   }
 }
-export default function FormDesigner() {
+export default function FormDesigner({ settings }: { settings: Settings }) {
   const [practicalCode, setPracticalCode] = useState(
       () =>
         readText("cq-practical-code") ||
@@ -234,8 +254,19 @@ export default function FormDesigner() {
     [showCode, setShowCode] = useState(false),
     [workspace, setWorkspace] = useState<"design" | "code">("design"),
     [message, setMessage] = useState(""),
+    [runtimeItems, setRuntimeItems] = useState<Control[]>([]),
+    [eventBusy, setEventBusy] = useState(false),
     [undo, setUndo] = useState<Control[][]>([]),
     [redo, setRedo] = useState<Control[][]>([]);
+  const runtimeRef = useRef<Control[]>([]);
+  const eventGeneration = useRef(0);
+  useEffect(() => {
+    eventGeneration.current++;
+    if (!preview) { cancelRun(); setEventBusy(false); return; }
+    const snapshot = items.map(c => ({ ...c, text: c.type === "TextBox" && c.text === "TextBox" ? "" : c.text, selectedIndex: c.items ? 0 : -1 }));
+    runtimeRef.current = snapshot; setRuntimeItems(snapshot);
+    return () => { eventGeneration.current++; cancelRun(); };
+  }, [preview]);
   const drag = useRef<{
     id: string;
     x: number;
@@ -347,18 +378,44 @@ export default function FormDesigner() {
     setSelected(c.id);
     openHandler(c[key] || name);
   }
-  function event(name: string) {
-    setMessage(
-      name
-        ? `Event wired to ${name}. Add the C# handler logic in the exported Form1.cs.`
-        : "No handler is wired to this event.",
-    );
+  function runtimeChange(id: string, patch: Partial<Control>) {
+    let next: Control[] = updateControl(runtimeRef.current, id, patch);
+    if (patch.checked && next.find(c => c.id === id)?.type === "RadioButton")
+      next = next.map(c => c.type === "RadioButton" && c.id !== id ? { ...c, checked: false } : c);
+    runtimeRef.current = next; setRuntimeItems(next);
+  }
+  async function event(name: string, id: string) {
+    if (!name) { setMessage("No handler is wired to this event."); return; }
+    if (!new RegExp("\\bvoid\\s+" + name + "\\s*\\(").test(reviewSource(practicalCode))) {
+      setMessage(`Event wired to ${name}. Double-click the control to create its C# handler in Form1.cs.`); return;
+    }
+    if (eventBusy) return;
+    const generation = eventGeneration.current;
+    setEventBusy(true);
+    try {
+      const result = await runCSharp(formEventSource(runtimeRef.current, practicalCode, name, id), setMessage);
+      if (generation !== eventGeneration.current) return;
+      if (!result.success) { setMessage(result.diagnostics.map(d => `${d.id}: ${d.message}`).join("\n")); return; }
+      const next = parseFormOutput(result.stdOut || "", runtimeRef.current);
+      runtimeRef.current = next.controls; setRuntimeItems(next.controls);
+      setMessage(`${name} executed. ${next.messages.join(" · ")}`);
+    } catch (error) {
+      if (generation === eventGeneration.current) setMessage(error instanceof Error ? error.message : "Event failed.");
+    } finally { if (generation === eventGeneration.current) setEventBusy(false); }
   }
   const practical = readBrief();
   return (
     <section
       className="page designer-page"
+      tabIndex={-1}
       onKeyDownCapture={(event) => {
+        const editable = (event.target as HTMLElement).closest("input, textarea, select, [contenteditable=true]");
+        if (!preview && !editable && (event.ctrlKey || event.metaKey) && ["z", "y"].includes(event.key.toLowerCase())) {
+          event.preventDefault(); restore(event.key.toLowerCase() === "y" || event.shiftKey ? "redo" : "undo");
+        }
+        if (!preview && !editable && event.key === "Delete" && selected) {
+          event.preventDefault(); commit(removeControl(items, selected)); setSelected("");
+        }
         if (event.key === "F5") {
           event.preventDefault();
           event.stopPropagation();
@@ -366,7 +423,7 @@ export default function FormDesigner() {
           setPreview(!event.shiftKey);
           setMessage(event.shiftKey
             ? "Stopped Form1 — back in the designer."
-            : "Running Form1 — browser preview checks controls; C# event logic runs in the exported Windows project.");
+            : "Running Form1 — common handlers run here; other C# event logic runs in the exported Windows project.");
         }
       }}
     >
@@ -392,6 +449,22 @@ export default function FormDesigner() {
           <Download size={17} /> Export Windows project
         </button>
       </div>
+      <ProjectReader settings={settings} onOpenCode={(text) => {
+        if (/\b(namespace|class)\s/.test(reviewSource(text))) {
+          setMessage("This is a complete C# file. Read it in the project viewer; copy event methods into Form1.cs, or restore codequest-form.json from a CodeQuest export.");
+          return;
+        }
+        setPracticalCode(text); setWorkspace("code"); setPreview(false);
+      }} onRestoreForm={(text) => {
+        try {
+          const project = JSON.parse(text);
+          const controls = normalizeControls(project.controls);
+          if (project.version !== 1 || !controls || typeof project.handlerCode !== "string" || project.handlerCode.length > 200000)
+            throw new Error("This file is not a valid CodeQuest form project.");
+          commit(controls); setPracticalCode(project.handlerCode); setSelected(""); setPreview(false); setWorkspace("design");
+          setMessage("Form and event code restored. Undo restores your previous controls.");
+        } catch (error) { setMessage(error instanceof Error ? error.message : "Could not restore this form."); }
+      }} />
       <div className="designer-toolbar">
         <div className="button-row">
           <button
@@ -534,9 +607,7 @@ export default function FormDesigner() {
                 label="Form1.cs event code"
               />
               <p className="muted">
-                Build and run this Windows project in Visual Studio to verify
-                native event behaviour. Browser Preview tests control
-                interaction and wiring.
+                Start / F5 runs common event code using real C# and a browser control bridge. Text, Checked, Items, validation and simple MessageBox.Show are supported. Windows APIs, extra forms and confirmation dialogs require Visual Studio.
               </p>
             </section>
           ) : (
@@ -573,6 +644,8 @@ export default function FormDesigner() {
                   ref={formCanvas}
                   className="form-canvas"
                   aria-label="Form design canvas"
+                  aria-busy={eventBusy}
+                  style={eventBusy ? { pointerEvents: "none", opacity: 0.7 } : undefined}
 
                 >
                   {items.length === 0 && (
@@ -582,7 +655,7 @@ export default function FormDesigner() {
                       <p>Add a TextBox, Label or Button from the toolbox.</p>
                     </div>
                   )}
-                  {items.map((c) => {
+                  {(preview ? runtimeItems : items).map((c) => {
                     let layout: React.CSSProperties = {
                       left: c.x,
                       top: c.y,
@@ -628,6 +701,7 @@ export default function FormDesigner() {
                         role={!preview ? "button" : undefined}
                         tabIndex={!preview ? 0 : undefined}
                         aria-label={!preview ? `Select ${c.name}` : undefined}
+                        onFocus={() => !preview && setSelected(c.id)}
                         onClick={() => !preview && setSelected(c.id)}
                         onDoubleClick={() =>
                           !preview && createDefaultHandler(c)
@@ -703,13 +777,17 @@ export default function FormDesigner() {
                             }),
                           );
                         }}
-                        onPointerUp={() => {
+                        onPointerUp={(event) => {
                           const completedDrag = drag.current;
                           drag.current = null;
                           if (completedDrag) {
                             // React may evaluate this updater after pointer-up.
                             // Capture the snapshot, not a mutable cleared ref.
                             const before = completedDrag.before;
+                            setItems(updateControl(before, c.id, {
+                              x: Math.max(0, Math.min(640 - c.width, Math.round((completedDrag.x + event.clientX - completedDrag.startX) / 8) * 8)),
+                              y: Math.max(0, Math.min(420 - c.height, Math.round((completedDrag.y + event.clientY - completedDrag.startY) / 8) * 8)),
+                            }));
                             setUndo((u) => [...u, before].slice(-50));
                             setRedo([]);
                           }
@@ -723,9 +801,10 @@ export default function FormDesigner() {
                           aria-hidden={!preview}
                         >
                           <ControlView
-                            c={c}
+                            c={eventBusy ? { ...c, enabled: false } : c}
                             preview={preview}
-                            onEvent={event}
+                            onValue={(patch) => runtimeChange(c.id, patch)}
+                            onEvent={(name) => { void event(name, c.id); }}
                           />
                         </div>
                         {!preview && selected === c.id && (
@@ -792,8 +871,7 @@ export default function FormDesigner() {
               <p className="muted canvas-note">
                 Design: drag controls, use arrow keys, resize the selected
                 control, or double-click a control to create its default event.
-                Preview: try text fields and selections. C# event logic runs in
-                the exported Windows project.
+                Preview: try inputs and run C# handlers for Text, Checked, Items, numeric values, visibility, password masking and MessageBox.Show. Other Windows APIs require the exported project.
               </p>
               {showCode && (
                 <pre

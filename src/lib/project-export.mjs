@@ -35,6 +35,7 @@ export function projectFiles(controls, { handlerCode = "" } = {}) {
     .map((line) => "            " + line)
     .join("\n");
   return {
+    "codequest-form.json": JSON.stringify({ version: 1, controls, handlerCode }),
     "CodeQuestForms.csproj":
       '<Project Sdk="Microsoft.NET.Sdk">\n  <PropertyGroup>\n    <OutputType>WinExe</OutputType>\n    <TargetFramework>net8.0-windows</TargetFramework>\n    <UseWindowsForms>true</UseWindowsForms>\n    <Nullable>disable</Nullable>\n  </PropertyGroup>\n</Project>\n',
     "Program.cs":

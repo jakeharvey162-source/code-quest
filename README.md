@@ -9,7 +9,8 @@ CodeQuest is an active release candidate. Release candidates must pass unit/regr
 - **21 authored lessons:** nine C# fundamentals, six WinForms knowledge quests and six OOP coding quests.
 - **Real C# compilation:** self-hosted WasmSharp/Roslyn runs in a Web Worker on the learner's device. Build and independent-application challenges check actual output against multiple test cases. The scratchpad compiles arbitrary console C#.
 - **Learning loop:** See → Predict → Build → Break & Fix → Apply alone; hints fade and independent application uses a new task.
-- **WinForms designer:** all eight standard controls, placement, keyboard movement, undo/redo, Properties, Events, typed control previews, collection Items, password masking and numeric bounds.
+- **WinForms designer:** all eight standard controls, placement, keyboard movement, undo/redo, Properties, Events, typed control previews, collection Items, password masking, numeric bounds, TabIndex, 8 px drag snapping and Ctrl+Z/Ctrl+Y/Delete shortcuts.
+- **ZIP/project reader:** browse C#, solution, project and text files locally in Code Lab or WinForms; open selected C# in the editor, read it aloud, and restore controls/event drafts from the codequest-form.json included in new exports. Archives are limited to 10 MB, 300 entries and 8 MB of readable text; unsafe paths and corrupt archives are rejected. Arbitrary third-party Designer.cs is readable but is not automatically converted into a form.
 - **Native export:** download a ZIP with a Visual Studio solution, net8.0-windows project, Program.cs, Form1.cs and generated Designer.cs. Click, TextChanged, SelectedIndexChanged and CheckedChanged handlers are generated. Practical handler drafts are included in the exported Form1.cs.
 - **Assessment arena:** 10-question practice, optional timer, scoring, explanations and result history. Registration briefs hand off to the designer, then a clearly labelled static rubric review suggests targeted lessons. Static review excludes comments/strings and does not verify runtime behaviour.
 - **Progress:** earned XP, real study streaks, neighbourhood completion and milestones. Backup/restore moves progress, forms and practical drafts between browsers; previous version-1 saves migrate without losing work.
@@ -65,7 +66,7 @@ The web/PWA build is Vercel-ready. Preview deployments should pass validation be
 Read SECURITY.md before reporting vulnerabilities. Dependency updates are configured through Dependabot. Core progress and C# execution are local-first. Voice commands are opt-in and browser speech recognition depends on the browser/OS provider.
 
 ## Honest limitations
-The browser WinForms preview simulates controls/event wiring; arbitrary native WinForms event C# executes in the exported Windows project. Content is currently primarily English; language selection is not yet complete UI translation. Practical rubric scores are formative static review, not official academic marks or runtime proof.
+The browser WinForms preview compiles common event C# against a control bridge: Text, Checked, Items collections, SelectedIndex, numeric values, visibility, enabled state, password masking and simple MessageBox.Show. It is not the Windows Forms framework; additional forms, Windows APIs and confirmation dialogs require the exported Windows project. Browser event runs rebuild the form from its current controls; other custom fields do not persist between events. Content is currently primarily English; language selection is not yet complete UI translation. Practical rubric scores are formative static review, not official academic marks or runtime proof.
 
 ## Engineering standards
 - No secrets in source control.

@@ -583,7 +583,7 @@ function App() {
               ) : page === "playground" ? (
                 <Playground progress={progress} update={update} />
               ) : page === "designer" ? (
-                <FormDesigner />
+                <FormDesigner settings={progress.settings} />
               ) : page === "assessment" ? (
                 <Assessment
                   progress={progress}
