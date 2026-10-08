@@ -704,12 +704,14 @@ export default function FormDesigner() {
                           );
                         }}
                         onPointerUp={() => {
-                          if (drag.current) {
-                            setUndo((u) =>
-                              [...u, drag.current!.before].slice(-50),
-                            );
+                          const completedDrag = drag.current;
+                          drag.current = null;
+                          if (completedDrag) {
+                            // React may evaluate this updater after pointer-up.
+                            // Capture the snapshot, not a mutable cleared ref.
+                            const before = completedDrag.before;
+                            setUndo((u) => [...u, before].slice(-50));
                             setRedo([]);
-                            drag.current = null;
                           }
                         }}
                         onPointerCancel={() => {
