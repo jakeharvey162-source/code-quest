@@ -132,14 +132,14 @@ test("designer CRUD, properties, preview, undo and native ZIP export", async ({
   page,
 }) => {
   await page.goto("/#designer");
-  await page.getByRole("button", { name: "TextBox", exact: true }).click();
+  await page.getByRole("button", { name: "TextBox", exact: true }).dblclick();
   await page
     .getByRole("textbox", { name: "Control Name", exact: true })
     .fill("txtName");
   await page
     .getByRole("textbox", { name: "Control Text", exact: true })
     .fill("Ada");
-  await page.getByRole("button", { name: "Button", exact: true }).click();
+  await page.getByRole("button", { name: "Button", exact: true }).dblclick();
   await page
     .getByRole("textbox", { name: "Control Name", exact: true })
     .fill("btnSave");
@@ -381,11 +381,11 @@ test("practical flows from brief to designer code and back to marker", async ({
 }) => {
   await page.goto("/#assessment");
   await page.getByRole("button", { name: "Build this practical" }).click();
-  await page.getByRole("button", { name: "TextBox", exact: true }).click();
+  await page.getByRole("button", { name: "TextBox", exact: true }).dblclick();
   await page
     .getByRole("textbox", { name: "Control Name" })
     .fill("txtStudentNumber");
-  await page.getByRole("button", { name: "Button", exact: true }).click();
+  await page.getByRole("button", { name: "Button", exact: true }).dblclick();
   await page.getByRole("textbox", { name: "Control Name" }).fill("btnRegister");
   await page
     .getByRole("textbox", { name: "Click handler" })
@@ -414,7 +414,7 @@ test("designer previews selection and checked-change event wiring", async ({
   page,
 }) => {
   await page.goto("/#designer");
-  await page.getByRole("button", { name: "ComboBox", exact: true }).click();
+  await page.getByRole("button", { name: "ComboBox", exact: true }).dblclick();
   await page.getByRole("textbox", { name: "Control Name" }).fill("cmbCourse");
   await page
     .getByRole("textbox", { name: "SelectedIndexChanged handler" })
@@ -423,7 +423,7 @@ test("designer previews selection and checked-change event wiring", async ({
     .getByText("Items (one per line)")
     .locator("textarea")
     .fill("BIT\nBCom");
-  await page.getByRole("button", { name: "CheckBox", exact: true }).click();
+  await page.getByRole("button", { name: "CheckBox", exact: true }).dblclick();
   await page.getByRole("textbox", { name: "Control Name" }).fill("chkTerms");
   await page
     .getByRole("textbox", { name: "CheckedChanged handler" })
@@ -586,7 +586,7 @@ test("designer double-click creates a default WinForms event handler", async ({
   page,
 }) => {
   await page.goto("/#designer");
-  await page.getByRole("button", { name: "Button", exact: true }).click();
+  await page.getByRole("button", { name: "Button", exact: true }).dblclick();
   await page.getByRole("textbox", { name: "Control Name" }).fill("btnLogin");
   await page.locator(".placed-control").last().dblclick();
   await expect(
@@ -612,7 +612,7 @@ test("designer resize handle changes size and undo restores it", async ({
   page,
 }) => {
   await page.goto("/#designer");
-  await page.getByRole("button", { name: "Button", exact: true }).click();
+  await page.getByRole("button", { name: "Button", exact: true }).dblclick();
   const control = page.locator(".placed-control").last();
   const before = await control.boundingBox();
   const handle = page.getByRole("button", { name: /Resize button1/ });
@@ -638,7 +638,7 @@ test("designer event code persists and is included in exports without an assessm
   page,
 }) => {
   await page.goto("/#designer");
-  await page.getByRole("button", { name: "Button", exact: true }).click();
+  await page.getByRole("button", { name: "Button", exact: true }).dblclick();
   await page.getByRole("textbox", { name: "Control Name" }).fill("btnHello");
   await page.locator(".placed-control").last().dblclick();
   await expect(

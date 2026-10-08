@@ -22,6 +22,7 @@ import { lessons, tracks } from "./curriculum";
 import { loadProgress, saveProgress, xpFor, streakFor } from "./lib/progress";
 import type { Progress } from "./lib/progress";
 import CityMap from "./components/CityMap";
+import TorCoach from "./components/TorCoach";
 import { VoiceControls } from "./components/VoiceControls";
 import { reloadLatestWorkspace } from "./lib/workspace-recovery";
 import AuthProvider, { useAuth } from "./components/AuthProvider";
@@ -613,6 +614,7 @@ function App() {
             </Suspense>
           </ErrorBoundary>
         </main>
+        <TorCoach page={page} settings={progress.settings} />
         <footer className="app-footer">
           <span>CodeQuest / Built for understanding.</span>
           <span>

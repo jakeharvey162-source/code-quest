@@ -278,6 +278,14 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
   const formCanvas = useRef<HTMLDivElement>(null);
   const toolboxDrag = useRef<{ type: string; x: number; y: number } | null>(null);
   const ignoreToolboxClick = useRef(false);
+  const [armedTool, setArmedTool] = useState("");
+  function placeTool(type: string, x?: number, y?: number) {
+    if (preview || items.length >= 100) return;
+    const next = addControl(items, type);
+    const added = next[next.length - 1];
+    const placed = x === undefined ? next : updateControl(next, added.id, { x: Math.max(0, Math.min(640 - added.width, Math.round(x / 8) * 8)), y: Math.max(0, Math.min(420 - added.height, Math.round((y || 0) / 8) * 8)) });
+    commit(placed); setSelected(added.id); setArmedTool("");
+  }
   const cur = items.find((c) => c.id === selected);
   const validation = validateForm(items);
   useEffect(() => {
@@ -416,6 +424,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
         if (!preview && !editable && event.key === "Delete" && selected) {
           event.preventDefault(); commit(removeControl(items, selected)); setSelected("");
         }
+        if (event.key === "Escape") { setArmedTool(""); setMessage("Tool selection cancelled."); }
         if (event.key === "F5") {
           event.preventDefault();
           event.stopPropagation();
@@ -524,10 +533,11 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
       <div className="designer-grid">
         <aside className="toolbox">
           <h2>Toolbox</h2>
-          <p className="muted">Drag onto the form or double-click to add</p>
+          <p className="muted">Select then click the form · drag or double-click to add</p>
           {toolbox.map((type) => (
             <button
               key={type}
+              aria-pressed={armedTool === type}
               disabled={preview || items.length >= 100}
               style={{ touchAction: "none" }}
               onPointerDown={(event) => {
@@ -548,20 +558,19 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                     event.clientY < rect.top || event.clientY > rect.bottom) return;
                 const next = addControl(items, start.type);
                 const added = next[next.length - 1];
-                const x = Math.max(0, Math.min(640 - added.width, Math.round((event.clientX - rect.left) / 8) * 8));
-                const y = Math.max(0, Math.min(420 - added.height, Math.round((event.clientY - rect.top) / 8) * 8));
+                const x = Math.max(0, Math.min(640 - added.width, Math.round((event.clientX - rect.left - (formCanvas.current?.clientLeft || 0)) / 8) * 8));
+                const y = Math.max(0, Math.min(420 - added.height, Math.round((event.clientY - rect.top - (formCanvas.current?.clientTop || 0)) / 8) * 8));
                 commit(updateControl(next, added.id, { x, y }));
                 setSelected(added.id);
+                setArmedTool("");
                 setMessage(`${start.type} added at ${x}, ${y}. Visual Studio-style 8 px grid snap applied.`);
               }}
               onClick={(event) => {
-                // The first click already adds the control; a double-click
-                // must not add two more controls.
-                if (event.detail > 1 || (event.detail > 0 && ignoreToolboxClick.current)) return;
-                const next = addControl(items, type);
-                commit(next);
-                setSelected(next[next.length - 1].id);
+                if (event.detail > 0 && ignoreToolboxClick.current) return;
+                if (event.detail === 0) placeTool(type);
+                else { setArmedTool(type); setMessage(`${type} selected. Click the form to place it; Escape cancels.`); }
               }}
+              onDoubleClick={() => { if (!ignoreToolboxClick.current) placeTool(type); }}
             >
               <Plus size={14} />
               {type}
@@ -644,8 +653,9 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                   ref={formCanvas}
                   className="form-canvas"
                   aria-label="Form design canvas"
+                  style={eventBusy ? { pointerEvents: "none", opacity: 0.7 } : armedTool && !preview ? {cursor:"crosshair"} : undefined}
+                  onClick={event => { if (!armedTool || preview || (event.target as HTMLElement).closest(".placed-control")) return; const r=event.currentTarget.getBoundingClientRect(); placeTool(armedTool,event.clientX-r.left-event.currentTarget.clientLeft,event.clientY-r.top-event.currentTarget.clientTop); }}
                   aria-busy={eventBusy}
-                  style={eventBusy ? { pointerEvents: "none", opacity: 0.7 } : undefined}
 
                 >
                   {items.length === 0 && (

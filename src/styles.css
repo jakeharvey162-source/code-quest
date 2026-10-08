@@ -2156,3 +2156,21 @@ button.primary{box-shadow:0 4px 0 #10251b}button.primary:active{transform:transl
 .project-reader label { display: grid; gap: 8px; margin: 12px 0; }
 .project-reader select, .project-reader input { max-width: 100%; }
 .project-reader pre { max-height: 300px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+/* A movable, device-voiced tutor, always available above the workspace. */
+.tor-coach { position:fixed; right:18px; bottom:18px; width:130px; z-index:45; border:1px solid #40dced; border-radius:18px; background:#092837f2; color:#ecfcff; box-shadow:0 0 22px #00ddff33; overflow:hidden; }
+.tor-coach.expanded { width:300px; max-width:calc(100vw - 16px); max-height:calc(100dvh - 16px); overflow:auto; }
+.tor-coach button { color:#ecfcff; background:#123e50; border:1px solid #39869a; padding:7px 10px; }
+.tor-coach .tor-handle { width:100%; cursor:grab; touch-action:none; border:0; border-radius:0; font-size:11px; letter-spacing:1px; }
+.tor-coach .tor-avatar { display:block; margin:auto; background:transparent; border:0; font-size:12px; }
+.tor-avatar svg { display:block; width:106px; height:98px; fill:#20cfe733; stroke:#73f4ff; stroke-width:3; filter:drop-shadow(0 0 6px #08dfff); animation:tor-hover 3s ease-in-out infinite; }
+.tor-avatar circle { fill:#ddffff; } .tor-beam { fill:#1fffff33; } .tor-head { fill:#16687ac9; }
+.tor-coach.speaking .tor-mouth { animation:tor-talk .25s ease-in-out infinite alternate; transform-origin:60px 50px; }
+.tor-panel { padding:0 14px 14px; font-size:13px; line-height:1.5; } .tor-reply { max-height:150px; overflow:auto; }
+.tor-panel label { display:block; } .tor-panel input:not([type=checkbox]) { width:100%; margin:5px 0; background:#fff; color:#122b36; padding:8px; border-radius:6px; }
+.tor-roast { margin:10px 0; } .tor-actions { display:flex; gap:6px; margin-bottom:8px; } .tor-panel small { color:#bcf2f8; }
+.toolbox button[aria-pressed=true] { background:#ddf8fa; border-color:#167f8d; color:#133e47; } .canvas-empty { pointer-events:none; }
+@keyframes tor-hover { 50% { transform:translateY(-4px); } } @keyframes tor-talk { to { transform:scaleY(.4); } }
+@media (prefers-reduced-motion:reduce) { .tor-avatar svg,.tor-coach.speaking .tor-mouth { animation:none; } }
+.reduce-motion .tor-avatar svg,.reduce-motion .tor-coach.speaking .tor-mouth { animation:none; }
+@media print { .tor-coach { display:none !important; } }

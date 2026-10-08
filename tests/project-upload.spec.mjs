@@ -17,7 +17,7 @@ test("student restores exported form and keeps undo, label text, preview and num
   let controls=addControl([],"Label"); controls[0].text="Student name";
   controls=addControl(controls,"NumericUpDown"); controls[1].minimum=1; controls[1].maximum=10; controls[1].value=5;
   await page.goto("/#designer");
-  await page.getByRole("button", {name:"TextBox",exact:true}).click();
+  await page.getByRole("button", {name:"TextBox",exact:true}).dblclick();
   await page.getByText("Open ZIP / project files", {exact:true}).click();
   await page.getByLabel("Choose project file").setInputFiles({name:"form.zip",mimeType:"application/zip",buffer:Buffer.from(projectZip(controls,{handlerCode:"// saved handler"}))});
   await page.getByLabel("Project file", {exact:true}).selectOption({label:"codequest-form.json"});
