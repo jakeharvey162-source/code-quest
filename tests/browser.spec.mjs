@@ -595,6 +595,17 @@ test("designer double-click creates a default WinForms event handler", async ({
   await expect(page.locator(".form-validation")).toContainText(
     "Opened btnLogin_Click",
   );
+  await page.reload();
+  const failures = [];
+  page.on("pageerror", error => failures.push(error.message));
+  for (let attempt = 0; attempt < 3; attempt++) {
+    await page.getByRole("button", { name: "Form1.cs [Design]", exact: true }).first().click();
+    await page.getByRole("button", { name: "Select btnLogin", exact: true }).dblclick();
+    await expect(page.getByRole("textbox", { name: "Form1.cs event code", exact: true })).toContainText("btnLogin_Click");
+    await expect(page.getByRole("heading", { name: "Make something useful." })).toBeVisible();
+  }
+  expect(failures).toEqual([]);
+
 });
 
 test("designer resize handle changes size and undo restores it", async ({
