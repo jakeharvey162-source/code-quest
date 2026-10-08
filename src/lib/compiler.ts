@@ -64,7 +64,9 @@ export function runCSharp(
     current.onerror = (event) =>
       fail(event.message || "The compiler could not start.");
     current.onmessage = (event) => {
-      if (event.data.type === "status") onStatus(event.data.text);
+      if (event.data.type === "status") {
+        try { onStatus(event.data.text); } catch { /* UI status failures must not break compilation. */ }
+      }
       else if (event.data.type === "running") {
         clearTimeout(timer);
         timer = setTimeout(
@@ -74,7 +76,7 @@ export function runCSharp(
             ),
           10000,
         );
-        onStatus("Compiling and running C#…");
+        try { onStatus("Compiling and running C#…"); } catch { /* Keep execution alive. */ }
       } else if (event.data.type === "result") {
         finish();
         resolve(event.data.result);
