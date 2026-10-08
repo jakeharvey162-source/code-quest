@@ -80,6 +80,10 @@ export function runCSharp(
         resolve(event.data.result);
       } else if (event.data.type === "error") fail(event.data.message);
     };
-    current.postMessage({ code });
+    try {
+      current.postMessage({ code });
+    } catch {
+      fail("The compiler did not accept the program. Reload and try again; your editor content is preserved.");
+    }
   });
 }
