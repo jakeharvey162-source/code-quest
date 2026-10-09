@@ -161,8 +161,6 @@ export function validateForm(list) {
         c.value > c.maximum)
     )
       issues.push(c.name + ": numeric range/value is invalid.");
-    if (c.type === "Button" && !c.eventClick)
-      issues.push(c.name + ": wire a Click event.");
   }
   return { ok: issues.length === 0, issues };
 }
