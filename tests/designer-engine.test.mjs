@@ -35,8 +35,12 @@ test("moves and resizes", () => {
 });
 test("removes controls", () =>
   assert.equal(removeControl(addControl([], "Label"), "label1").length, 0));
-test("requires button Click event", () =>
-  assert.equal(validateForm(addControl([], "Button")).ok, false));
+test("unwired Button is valid and generates no Click event wiring", () => {
+  const controls = addControl([], "Button");
+  assert.equal(validateForm(controls).ok, true);
+  assert.match(designerCode(controls), /new System\.Windows\.Forms\.Button/);
+  assert.doesNotMatch(designerCode(controls), /Click \+=/);
+});
 test("passes wired button", () => {
   let a = addControl([], "Button");
   a = updateControl(a, a[0].id, {
