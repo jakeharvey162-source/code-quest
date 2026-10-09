@@ -8,6 +8,11 @@ import {
   roastReply,
 } from "../lib/coach-commands.mjs";
 import { requestWorkspaceAction } from "../lib/coach-actions";
+import type { WorkspaceObservation } from "../lib/workspace-observation";
+import {
+  observationReply,
+  describeObservation,
+} from "../lib/coach-observation.mjs";
 import { useVoices } from "./VoiceControls";
 const tips: Record<string, string> = {
   designer:
@@ -44,6 +49,23 @@ export default function TorCoach({
 }) {
   const [open, setOpen] = useState(false);
   const [roast, setRoast] = useState(settings.coach === "Spicy");
+  const [observation, setObservation] = useState<WorkspaceObservation | null>(
+    null,
+  );
+  const [mood, setMood] = useState("ready");
+  const [proactive, setProactive] = useState(
+    () => readText("cq-tor-observe", "true") === "true",
+  );
+  const previousObservation = useRef<WorkspaceObservation | null>(null);
+  const lastRequest = useRef(0);
+  const [accent, setAccent] = useState(() =>
+    readText("cq-tor-accent", "en-ZA"),
+  );
+  const accents = [
+    { code: "en-ZA", name: "South African English" },
+    { code: "en-NG", name: "Nigerian English" },
+    { code: "en-KE", name: "Kenyan English" },
+  ];
   const [question, setQuestion] = useState("");
   const [reply, setReply] = useState(tips[page] || tips.learn);
   const [status, setStatus] = useState("");
@@ -61,14 +83,23 @@ export default function TorCoach({
     readText("cq-tor-voice", settings.voice),
   );
   function say(text: string) {
-    speakText(text, voice, settings.rate, setStatus, "en-ZA");
+    speakText(text, voice, settings.rate, setStatus, accent);
   }
   function respond(text: string) {
     setReply(text);
+    setMood(
+      /error|invalid|failed|denied|isn.t a valid/i.test(text)
+        ? "concerned"
+        : roast
+          ? "cheeky"
+          : "happy",
+    );
     setStatus("");
     if (autoSpeak) say(roast ? roastReply(text) : text);
   }
   async function ask(text: string) {
+    lastRequest.current = Date.now();
+    setMood("thinking");
     pendingAction.current?.abort();
     const request = cleanCoachRequest(text);
     if (!request) return;
@@ -100,6 +131,17 @@ export default function TorCoach({
       respond(
         result ||
           "The designer is still loading. Try that command again once the form appears.",
+      );
+      return;
+    }
+    if (
+      /what (?:do you see|am i doing)|look at (?:my|the) (?:form|screen)|why.*(?:error|work)|help.*(?:error|form)/i.test(
+        request,
+      ) &&
+      observation
+    ) {
+      respond(
+        `${describeObservation(observation)}. ${observation.output ? `Latest output: ${observation.output}. ` : ""}${observation.issues.length ? `Check: ${observation.issues.join(" ")}` : "Your control properties are valid. Run the app and test the inputs."}`,
       );
       return;
     }
@@ -200,6 +242,9 @@ export default function TorCoach({
   useEffect(() => {
     pendingAction.current?.abort();
     setReply(tips[page] || tips.learn);
+    setObservation(null);
+    previousObservation.current = null;
+    setMood("ready");
   }, [page]);
   useEffect(() => {
     const resize = () => {
@@ -218,12 +263,47 @@ export default function TorCoach({
     },
     [],
   );
+  useEffect(() => {
+    const see = (event: Event) => {
+      const next = (event as CustomEvent<WorkspaceObservation>).detail;
+      if (next.page !== page) return;
+      const reaction = observationReply(next, previousObservation.current);
+      previousObservation.current = next;
+      setObservation(next);
+      if (
+        !proactive ||
+        !reaction ||
+        listening ||
+        pendingAction.current ||
+        Date.now() - lastRequest.current < 2000
+      )
+        return;
+      const text = roast ? `${reaction.roast} ${reaction.text}` : reaction.text;
+      setMood(reaction.mood);
+      setReply(text);
+      if (autoSpeak) say(text);
+    };
+    window.addEventListener("cq-workspace-observation", see);
+    return () => window.removeEventListener("cq-workspace-observation", see);
+  }, [
+    page,
+    proactive,
+    listening,
+    roast,
+    autoSpeak,
+    voice,
+    accent,
+    settings.rate,
+  ]);
   const message = roast ? roastReply(reply) : reply;
   return (
     <aside
       ref={box}
       className={`tor-coach ${open ? "expanded" : ""} ${status === "Speaking…" ? "speaking" : ""}`}
       aria-label="Tor hologram tutor"
+      data-mood={
+        listening ? "listening" : status === "Speaking…" ? "speaking" : mood
+      }
       style={
         position
           ? { left: position.x, top: position.y, right: "auto", bottom: "auto" }
@@ -292,15 +372,41 @@ export default function TorCoach({
             rx="18"
           />
           <path d="M60 15V6M52 6H68" />
-          <circle cx="46" cy="35" r="5" />
-          <circle cx="74" cy="35" r="5" />
-          <path className="tor-mouth" d="M48 49 Q60 57 72 49" />
+          <g className="tor-eyes">
+            <circle cx="46" cy="35" r="5" />
+            <circle cx="74" cy="35" r="5" />
+          </g>
+          <path
+            className="tor-brows"
+            d={
+              mood === "concerned"
+                ? "M39 25L51 29M69 29L81 25"
+                : "M39 26Q46 22 51 26M69 26Q74 22 81 26"
+            }
+          />
+          <path
+            className="tor-mouth"
+            d={
+              mood === "concerned"
+                ? "M48 53 Q60 44 72 53"
+                : mood === "thinking"
+                  ? "M51 51H69"
+                  : "M48 49 Q60 61 72 49"
+            }
+          />
           <path d="M24 74L8 60M96 74L112 60" />
         </svg>
         <span>{open ? "Hide panel" : "Talk to Tor"}</span>
       </button>
       {open && (
         <div className="tor-panel">
+          <div className="tor-observation" aria-label="What Tor sees">
+            <b>What I see</b>
+            <br />
+            {observation
+              ? describeObservation(observation)
+              : `You're on ${page}. Waiting for workspace activity.`}
+          </div>
           <p className="tor-reply">{message}</p>
           <form
             onSubmit={(e) => {
@@ -329,6 +435,17 @@ export default function TorCoach({
           <label className="tor-roast">
             <input
               type="checkbox"
+              checked={proactive}
+              onChange={(e) => {
+                setProactive(e.target.checked);
+                writeText("cq-tor-observe", String(e.target.checked));
+              }}
+            />{" "}
+            React to my workspace
+          </label>
+          <label className="tor-roast">
+            <input
+              type="checkbox"
               checked={roast}
               onChange={(e) => setRoast(e.target.checked)}
             />{" "}
@@ -346,6 +463,40 @@ export default function TorCoach({
             />{" "}
             Speak replies automatically
           </label>
+          <label>
+            African English accent
+            <select
+              aria-label="African English accent"
+              value={accent}
+              onChange={(e) => {
+                setAccent(e.target.value);
+                setVoice("");
+                writeText("cq-tor-accent", e.target.value);
+                writeText("cq-tor-voice", "");
+                stopSpeech();
+              }}
+            >
+              {accents.map((a) => (
+                <option key={a.code} value={a.code}>
+                  {a.name}
+                  {voices.some(
+                    (v) => v.lang.toLowerCase() === a.code.toLowerCase(),
+                  )
+                    ? " · available"
+                    : " · voice not installed"}
+                </option>
+              ))}
+            </select>
+          </label>
+          {!voices.some(
+            (v) => v.lang.toLowerCase() === accent.toLowerCase(),
+          ) && (
+            <small>
+              That accent isn't installed here. Automatic uses an available
+              English voice; it does not change its accent. Edge's online
+              natural voices may appear in your device list.
+            </small>
+          )}
           <label>
             Tor voice
             <select
@@ -373,7 +524,8 @@ export default function TorCoach({
             <p>
               Add a label that says Student Name. Set text to Welcome. Rename to
               lblWelcome. Select label1. Move right 24 pixels. Review my form.
-              Start preview. Stop preview. Undo. Open Code Lab.
+              Start preview. Type Jake into txtName. Click btnSave. Stop
+              preview. Undo. Open Code Lab.
             </p>
           </details>
           <small role="status">

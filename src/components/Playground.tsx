@@ -4,6 +4,7 @@ import CodeEditor from "./CodeEditor";
 import ProjectReader from "./ProjectReader";
 import { VoiceControls } from "./VoiceControls";
 import { runCSharp, cancelRun } from "../lib/compiler";
+import { observeWorkspace } from "../lib/workspace-observation";
 import { download } from "../lib/download";
 import type { Progress } from "../lib/progress";
 import type { UpdateProgress } from "./LessonView";
@@ -21,6 +22,22 @@ export default function Playground({
     [ok, setOk] = useState(true);
   const code = progress.drafts.scratchpad ?? starter;
   useEffect(() => () => cancelRun(), []);
+  useEffect(() => {
+    const timer = setTimeout(
+      () =>
+        observeWorkspace({
+          page: "playground",
+          mode: busy ? "Running Program.cs" : "Editing Program.cs",
+          controls: 0,
+          selected: "",
+          caption: "",
+          issues: ok ? [] : ["Fix the first compiler error."],
+          output: output.slice(0, 800),
+        }),
+      500,
+    );
+    return () => clearTimeout(timer);
+  }, [busy, output, ok]);
   function setCode(value: string) {
     update((p) => ({ ...p, drafts: { ...p.drafts, scratchpad: value } }));
   }

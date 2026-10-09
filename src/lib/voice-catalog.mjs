@@ -42,6 +42,10 @@ export function selectDeviceVoice(voices, language, preferredName = "") {
   );
   return (
     matching.find((voice) => voice.name === preferredName) ||
+    matching.find(
+      (voice) =>
+        normalize(voice.lang) === desired && /natural|neural/i.test(voice.name),
+    ) ||
     matching.find((voice) => normalize(voice.lang) === desired) ||
     matching.find((voice) => /natural|neural|google/i.test(voice.name)) ||
     matching.find((voice) => voice.localService) ||

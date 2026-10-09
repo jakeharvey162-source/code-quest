@@ -2178,3 +2178,27 @@ button.primary{box-shadow:0 4px 0 #10251b}button.primary:active{transform:transl
 .tor-mic { margin-left:5px; } .tor-mic[aria-pressed=true] { background:#286957; }
 .tor-mic-note { display:block; margin-top:10px; font-size:10px; } .tor-command-help { margin:8px 0; } .tor-command-help summary { cursor:pointer; }
 .property-help { font-size:12px; line-height:1.5; padding:10px; background:#f7faf4; border:1px solid #c6d0bd; border-radius:6px; }
+/* The debug session is an independent, operable app window. */
+.runtime-window { position:fixed; z-index:40; width:680px; max-width:calc(100vw - 16px); max-height:calc(100dvh - 32px); overflow:auto; border:2px solid #264c60; border-radius:9px; background:#edf1f5; box-shadow:0 18px 60px #10233470; }
+.runtime-window .form-title { position:sticky; top:0; z-index:2; display:flex; gap:8px; padding:4px; background:#173d50; color:white; }
+.runtime-window .form-title button { color:white; background:transparent; border:0; padding:7px; }
+.runtime-drag { flex:1; text-align:left; cursor:grab; touch-action:none; }
+.runtime-window .form-canvas { background:#f0f0f0; border:0; }
+.runtime-output { padding:12px; color:#e0f5e9; background:#12271f; font-size:12px; }
+.runtime-output pre { white-space:pre-wrap; margin:6px 0; max-height:100px; overflow:auto; }
+.runtime-footer { padding:8px 12px; margin:0; font-size:11px; color:#334b5c; }
+.runtime-message { position:absolute; z-index:3; top:120px; left:16px; width:330px; max-width:calc(100% - 32px); border:2px solid #264c60; border-radius:8px; padding:18px; background:white; box-shadow:0 8px 32px #0005; color:#1a2b35; }
+.tor-observation { padding:8px; background:#164354; border-radius:7px; font-size:11px; margin-bottom:10px; }
+.tor-eyes { animation:tor-blink 5s infinite; transform-origin:60px 35px; }
+.tor-coach[data-mood=listening] .tor-head { stroke:#ffcf66; }
+.tor-coach[data-mood=thinking] .tor-eyes { transform:translateX(3px); }
+.tor-coach[data-mood=concerned] .tor-brows { stroke:#ffbf87; }
+.tor-coach[data-mood=cheeky] .tor-brows { transform:rotate(-8deg); transform-origin:60px 27px; }
+.tor-coach[data-mood=happy] .tor-mouth { stroke:#adffca; }
+@keyframes tor-blink { 0%,44%,48%,100% {transform:scaleY(1)} 46% {transform:scaleY(.1)} }
+@media(prefers-reduced-motion:reduce) { .tor-eyes {animation:none;} }
+.reduce-motion .tor-eyes {animation:none;}
+.properties-fields { border:0; padding:0; margin:0; min-width:0; }
+.properties-fields:disabled { opacity:.6; }
+.runtime-stop { position:fixed; z-index:42; top:12px; left:24px; box-shadow:0 3px 12px #0003; }
+.placed-control > .resize-handle { width:22px; height:22px; padding:0; border-radius:50%; font-weight:600; }

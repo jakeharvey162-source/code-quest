@@ -3,7 +3,7 @@ export function cleanCoachRequest(text) {
   return String(text)
     .trim()
     .replace(/^(?:hey\s+|hi\s+)?tor[,!\s]+/i, "")
-    .replace(/^(?:can you|could you|please)\s+/i, "")
+    .replace(/^(?:(?:can you|could you|please)\s+)+/i, "")
     .trim();
 }
 export function coachAction(text) {
@@ -44,6 +44,15 @@ export function coachAction(text) {
       q,
     );
   if (m) return { type: "name", value: m[1] };
+  m = /^(?:click|press)\s+([A-Za-z_]\w*)$/i.exec(q);
+  if (m) return { type: "click", control: m[1] };
+  m = /^(?:type|enter)\s+(.+?)\s+(?:into|in)\s+([A-Za-z_]\w*)$/i.exec(q);
+  if (m)
+    return {
+      type: "input",
+      control: m[2],
+      value: m[1].replace(/^['"]|['"]$/g, ""),
+    };
   m = /^select\s+([A-Za-z_]\w*)$/i.exec(q);
   if (m) return { type: "select", value: m[1] };
   m =

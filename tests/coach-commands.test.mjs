@@ -40,3 +40,16 @@ test("new WinForms captions and text input defaults match their intended purpose
   assert.equal(addControl([], "TextBox")[0].text, "");
   assert.equal(addControl([], "Button")[0].text, "button1");
 });
+
+test("Tor understands explicit runtime controls without arbitrary code execution", () => {
+  assert.deepEqual(coachAction("Tor can you please click btnSave"), {
+    type: "click",
+    control: "btnSave",
+  });
+  assert.deepEqual(coachAction("type Jake into txtName"), {
+    type: "input",
+    control: "txtName",
+    value: "Jake",
+  });
+  assert.equal(coachAction("click document.querySelector('#password')"), null);
+});

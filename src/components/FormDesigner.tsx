@@ -26,6 +26,7 @@ import ProjectReader from "./ProjectReader";
 import { runCSharp, cancelRun } from "../lib/compiler";
 import { formEventSource, parseFormOutput } from "../lib/form-runtime.mjs";
 import type { CoachRequest } from "../lib/coach-actions";
+import { observeWorkspace } from "../lib/workspace-observation";
 import type { Settings } from "../lib/progress";
 import { reviewSource } from "../lib/assessment-engine.mjs";
 export type Control = {
@@ -153,12 +154,15 @@ export function ControlView({
         <input
           style={style}
           aria-label={c.accessibleName || c.name}
-          tabIndex={preview ? c.tabIndex : -1}
+          tabIndex={preview ? 0 : -1}
           type={c.password ? "password" : "text"}
           value={c.text === "TextBox" ? "" : c.text}
           readOnly={!preview}
           disabled={!preview || !c.enabled}
-          onChange={(event) => { onValue?.({ text: event.target.value }); onEvent?.(c.eventTextChanged); }}
+          onChange={(event) => {
+            onValue?.({ text: event.target.value });
+            if (c.eventTextChanged) onEvent?.(c.eventTextChanged);
+          }}
         />
       );
     case "Label":
@@ -168,10 +172,14 @@ export function ControlView({
         <select
           style={style}
           aria-label={c.accessibleName || c.name}
-          tabIndex={preview ? c.tabIndex : -1}
+          tabIndex={preview ? 0 : -1}
           disabled={!preview || !c.enabled}
           value={opts[c.selectedIndex ?? 0] ?? ""}
-          onChange={(event) => { onValue?.({ selectedIndex: event.target.selectedIndex }); onEvent?.(c.eventSelectedIndexChanged); }}
+          onChange={(event) => {
+            onValue?.({ selectedIndex: event.target.selectedIndex });
+            if (c.eventSelectedIndexChanged)
+              onEvent?.(c.eventSelectedIndexChanged);
+          }}
         >
           {opts.length ? (
             opts.map((item, i) => <option key={i}>{item}</option>)
@@ -186,10 +194,14 @@ export function ControlView({
           style={style}
           size={4}
           aria-label={c.accessibleName || c.name}
-          tabIndex={preview ? c.tabIndex : -1}
+          tabIndex={preview ? 0 : -1}
           disabled={!preview || !c.enabled}
           value={opts[c.selectedIndex ?? 0] ?? ""}
-          onChange={(event) => { onValue?.({ selectedIndex: event.target.selectedIndex }); onEvent?.(c.eventSelectedIndexChanged); }}
+          onChange={(event) => {
+            onValue?.({ selectedIndex: event.target.selectedIndex });
+            if (c.eventSelectedIndexChanged)
+              onEvent?.(c.eventSelectedIndexChanged);
+          }}
         >
           {opts.map((item, i) => (
             <option key={i}>{item}</option>
@@ -202,11 +214,14 @@ export function ControlView({
         <label style={style}>
           <input
             type={c.type === "RadioButton" ? "radio" : "checkbox"}
-            tabIndex={preview ? c.tabIndex : -1}
+            tabIndex={preview ? 0 : -1}
             name={c.type === "RadioButton" ? "preview-radio" : c.name}
             checked={c.checked}
             disabled={!preview || !c.enabled}
-            onChange={(event) => { onValue?.({ checked: event.target.checked }); onEvent?.(c.eventCheckedChanged); }}
+            onChange={(event) => {
+              onValue?.({ checked: event.target.checked });
+              if (c.eventCheckedChanged) onEvent?.(c.eventCheckedChanged);
+            }}
           />
           {c.text}
         </label>
@@ -217,7 +232,7 @@ export function ControlView({
           style={style}
           type="number"
           aria-label={c.accessibleName || c.name}
-          tabIndex={preview ? c.tabIndex : -1}
+          tabIndex={preview ? 0 : -1}
           min={c.minimum}
           max={c.maximum}
           value={c.value}
@@ -226,7 +241,9 @@ export function ControlView({
           onChange={(event) => {
             const value = Number(event.target.value);
             if (event.target.value && Number.isFinite(value))
-              onValue?.({ value: Math.min(c.maximum, Math.max(c.minimum, value)) });
+              onValue?.({
+                value: Math.min(c.maximum, Math.max(c.minimum, value)),
+              });
           }}
         />
       );
@@ -234,7 +251,7 @@ export function ControlView({
       return (
         <button
           style={style}
-          tabIndex={preview ? c.tabIndex : -1}
+          tabIndex={preview ? 0 : -1}
           disabled={!preview || !c.enabled}
           onClick={() => onEvent?.(c.eventClick)}
         >
@@ -259,14 +276,40 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
     [eventBusy, setEventBusy] = useState(false),
     [undo, setUndo] = useState<Control[][]>([]),
     [redo, setRedo] = useState<Control[][]>([]);
+  const [runPosition, setRunPosition] = useState({ x: 24, y: 80 });
+  const [messageBoxes, setMessageBoxes] = useState<string[]>([]);
+  const runWindow = useRef<HTMLDivElement>(null);
+  const runDrag = useRef<{
+    x: number;
+    y: number;
+    left: number;
+    top: number;
+  } | null>(null);
   const runtimeRef = useRef<Control[]>([]);
   const eventGeneration = useRef(0);
   useEffect(() => {
     eventGeneration.current++;
-    if (!preview) { cancelRun(); setEventBusy(false); return; }
-    const snapshot = items.map(c => ({ ...c, text: c.type === "TextBox" && c.text === "TextBox" ? "" : c.text, selectedIndex: c.items ? 0 : -1 }));
-    runtimeRef.current = snapshot; setRuntimeItems(snapshot);
-    return () => { eventGeneration.current++; cancelRun(); };
+    if (!preview) {
+      cancelRun();
+      setEventBusy(false);
+      setMessageBoxes([]);
+      return;
+    }
+    const previous = document.activeElement as HTMLElement | null;
+    requestAnimationFrame(() => runWindow.current?.focus());
+    const snapshot = items.map((c) => ({
+      ...c,
+      text: c.type === "TextBox" && c.text === "TextBox" ? "" : c.text,
+      selectedIndex: c.items ? 0 : -1,
+    }));
+    runtimeRef.current = snapshot;
+    setRuntimeItems(snapshot);
+    return () => {
+      eventGeneration.current++;
+      cancelRun();
+      if (previous?.isConnected && previous !== document.body) previous.focus();
+      else (formCanvas.current?.closest(".designer-page") as HTMLElement | null)?.focus();
+    };
   }, [preview]);
   const drag = useRef<{
     id: string;
@@ -277,18 +320,51 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
     before: Control[];
   } | null>(null);
   const formCanvas = useRef<HTMLDivElement>(null);
-  const toolboxDrag = useRef<{ type: string; x: number; y: number } | null>(null);
+  const toolboxDrag = useRef<{ type: string; x: number; y: number } | null>(
+    null,
+  );
   const ignoreToolboxClick = useRef(false);
   const [armedTool, setArmedTool] = useState("");
   function placeTool(type: string, x?: number, y?: number) {
     if (preview || items.length >= 100) return;
     const next = addControl(items, type);
     const added = next[next.length - 1];
-    const placed = x === undefined ? next : updateControl(next, added.id, { x: Math.max(0, Math.min(640 - added.width, Math.round(x / 8) * 8)), y: Math.max(0, Math.min(420 - added.height, Math.round((y || 0) / 8) * 8)) });
-    commit(placed); setSelected(added.id); setArmedTool("");
+    const placed =
+      x === undefined
+        ? next
+        : updateControl(next, added.id, {
+            x: Math.max(0, Math.min(640 - added.width, Math.round(x / 8) * 8)),
+            y: Math.max(
+              0,
+              Math.min(420 - added.height, Math.round((y || 0) / 8) * 8),
+            ),
+          });
+    commit(placed);
+    setSelected(added.id);
+    setArmedTool("");
   }
   const cur = items.find((c) => c.id === selected);
   const validation = validateForm(items);
+  useEffect(() => {
+    const timer = setTimeout(
+      () =>
+        observeWorkspace({
+          page: "designer",
+          mode: preview
+            ? "Running Form1"
+            : workspace === "code"
+              ? "Editing C# handlers"
+              : "Designing Form1",
+          controls: items.length,
+          selected: cur?.name || "",
+          caption: cur?.type === "TextBox" ? "" : cur?.text || "",
+          issues: validation.issues.slice(0, 3),
+          output: message.slice(0, 800),
+        }),
+      500,
+    );
+    return () => clearTimeout(timer);
+  }, [items, selected, preview, workspace, message]);
   useEffect(() => {
     if (!writeText("cq-practical-code", practicalCode))
       setMessage("Storage is full or blocked. Export your project to keep it.");
@@ -323,50 +399,213 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
   useEffect(() => {
     const act = (event: Event) => {
       const { action, respond } = (event as CustomEvent<CoachRequest>).detail;
-      const done = (text: string) => { setMessage(text); respond(text); };
+      const done = (text: string) => {
+        setMessage(text);
+        respond(text);
+      };
       if (action.type === "review") {
-        done(`${items.length} controls on your form. ${cur ? `Selected: ${cur.name}. Its visible Text is ${cur.text || "empty"}. ` : ""}${validation.ok ? "Your control properties and event wiring are valid." : validation.issues.slice(0, 3).join(" ")}`); return;
-      }
-      if (action.type === "start" || action.type === "stop") {
-        setWorkspace("design"); setArmedTool(""); setPreview(action.type === "start");
-        done(action.type === "start" ? "Preview started. Try your inputs and click your Button to test its C# handler." : "Preview stopped. You're back in Design."); return;
-      }
-      if (preview) { done("Stop the preview first so I can edit the form."); return; }
-      if (action.type === "undo" || action.type === "redo") {
-        const available = action.type === "undo" ? undo : redo;
-        if (!available.length) { done(`There's nothing to ${action.type}.`); return; }
-        restore(action.type); done(`${action.type === "undo" ? "Undid" : "Restored"} your last change.`); return;
-      }
-      if (action.type === "add" && action.control && toolbox.includes(action.control)) {
-        if (items.length >= 100) { done("The form already has 100 controls. Remove one before adding another."); return; }
-        let next = addControl(items, action.control);
-        const added = next[next.length - 1];
-        if (action.value !== undefined) next = updateControl(next, added.id, { text: action.value.slice(0, 250) });
-        commit(next); setSelected(added.id); setWorkspace("design");
-        done(`Added ${added.name}${action.value ? ` with the caption ${action.value}` : ""}. You can drag it into position.`); return;
-      }
-      if (action.type === "select") {
-        const found = items.find(c => c.name.toLowerCase() === action.value?.toLowerCase());
-        if (found) { setSelected(found.id); done(`Selected ${found.name}. Its visible Text is ${found.text || "empty"}.`); }
-        else done(`I couldn't find a control named ${action.value}. Check the Selected control list.`);
+        done(
+          `${items.length} controls on your form. ${cur ? `Selected: ${cur.name}. Its visible Text is ${cur.text || "empty"}. ` : ""}${validation.ok ? "Your control properties and event wiring are valid." : validation.issues.slice(0, 3).join(" ")}`,
+        );
         return;
       }
-      if (!cur) { done("Select a control on the form first, then tell me what to change."); return; }
-      if (action.type === "text") { change({ text: (action.value || "").slice(0, 250) }); done(`Done. ${cur.name} now displays ${action.value}. Its C# Name stays ${cur.name}.`); }
-      else if (action.type === "name") {
+      if (action.type === "start" || action.type === "stop") {
+        setWorkspace("design");
+        setArmedTool("");
+        setPreview(action.type === "start");
+        done(
+          action.type === "start"
+            ? "Preview started. Try your inputs and click your Button to test its C# handler."
+            : "Preview stopped. You're back in Design.",
+        );
+        return;
+      }
+      if (action.type === "click" || action.type === "input") {
+        if (!preview) {
+          done(
+            "Start the form with F5 first, then ask me to operate its controls.",
+          );
+          return;
+        }
+        const target = runtimeRef.current.find(
+          (c) => c.name.toLowerCase() === action.control?.toLowerCase(),
+        );
+        if (!target) {
+          done(`I couldn't find ${action.control} in the running form.`);
+          return;
+        }
+        if (eventBusy || messageBoxes.length) {
+          done("Finish the current event or close the MessageBox first.");
+          return;
+        }
+        if (!target.enabled || !target.visible) {
+          done(
+            `${target.name} is hidden or disabled, so it can't be operated.`,
+          );
+          return;
+        }
+        if (action.type === "input") {
+          if (target.type !== "TextBox") {
+            done("Ask me to type into a TextBox by its C# Name.");
+            return;
+          }
+          if (target.password) {
+            done("Enter password values yourself in the form.");
+            return;
+          }
+          runtimeChange(target.id, {
+            text: (action.value || "").slice(0, 250),
+          });
+          done(
+            `Entered ${action.value} into ${target.name}. Your design is preserved.`,
+          );
+          if (target.eventTextChanged)
+            void runFormEvent(target.eventTextChanged, target.id);
+        } else {
+          if (target.type !== "Button") {
+            done("Ask me to click a Button by its C# Name.");
+            return;
+          }
+          if (!target.eventClick) {
+            done(
+              `${target.name} has no Click handler. Stop the form and double-click the Button in Design to wire one.`,
+            );
+            return;
+          }
+          done(
+            `Clicking ${target.name}. Its C# handler runs now; check Debug output for the result.`,
+          );
+          void runFormEvent(target.eventClick, target.id);
+        }
+        return;
+      }
+      if (preview) {
+        done("Stop the preview first so I can edit the form.");
+        return;
+      }
+      if (action.type === "undo" || action.type === "redo") {
+        const available = action.type === "undo" ? undo : redo;
+        if (!available.length) {
+          done(`There's nothing to ${action.type}.`);
+          return;
+        }
+        restore(action.type);
+        done(
+          `${action.type === "undo" ? "Undid" : "Restored"} your last change.`,
+        );
+        return;
+      }
+      if (
+        action.type === "add" &&
+        action.control &&
+        toolbox.includes(action.control)
+      ) {
+        if (items.length >= 100) {
+          done(
+            "The form already has 100 controls. Remove one before adding another.",
+          );
+          return;
+        }
+        let next = addControl(items, action.control);
+        const added = next[next.length - 1];
+        if (action.value !== undefined)
+          next = updateControl(next, added.id, {
+            text: action.value.slice(0, 250),
+          });
+        commit(next);
+        setSelected(added.id);
+        setWorkspace("design");
+        done(
+          `Added ${added.name}${action.value ? ` with the caption ${action.value}` : ""}. You can drag it into position.`,
+        );
+        return;
+      }
+      if (action.type === "select") {
+        const found = items.find(
+          (c) => c.name.toLowerCase() === action.value?.toLowerCase(),
+        );
+        if (found) {
+          setSelected(found.id);
+          done(
+            `Selected ${found.name}. Its visible Text is ${found.text || "empty"}.`,
+          );
+        } else
+          done(
+            `I couldn't find a control named ${action.value}. Check the Selected control list.`,
+          );
+        return;
+      }
+      if (!cur) {
+        done(
+          "Select a control on the form first, then tell me what to change.",
+        );
+        return;
+      }
+      if (action.type === "text") {
+        change({ text: (action.value || "").slice(0, 250) });
+        done(
+          `Done. ${cur.name} now displays ${action.value}. Its C# Name stays ${cur.name}.`,
+        );
+      } else if (action.type === "name") {
         const next = updateControl(items, cur.id, { name: action.value || "" });
-        const errors = validateForm(next).issues.filter((i: string) => /control name|names must/i.test(i));
-        if (errors.length) { done("That isn't a valid unique C# Name. Use something like lblStudentName. To change what the user sees, say set text to Student Name."); return; }
-        change({ name: action.value }); done(`Renamed the C# identifier to ${action.value}. The visible caption stays ${cur.text}.`);
+        const errors = validateForm(next).issues.filter((i: string) =>
+          /control name|names must/i.test(i),
+        );
+        if (errors.length) {
+          done(
+            "That isn't a valid unique C# Name. Use something like lblStudentName. To change what the user sees, say set text to Student Name.",
+          );
+          return;
+        }
+        change({ name: action.value });
+        done(
+          `Renamed the C# identifier to ${action.value}. The visible caption stays ${cur.text}.`,
+        );
       } else if (action.type === "move") {
         const distance = action.distance || 8;
-        change({ x: Math.max(0, Math.min(640 - cur.width, cur.x + (action.direction === "right" ? distance : action.direction === "left" ? -distance : 0))), y: Math.max(0, Math.min(420 - cur.height, cur.y + (action.direction === "down" ? distance : action.direction === "up" ? -distance : 0))) });
-        done(`Moved ${cur.name} ${action.direction} by ${distance} pixels, within the form edges.`);
+        change({
+          x: Math.max(
+            0,
+            Math.min(
+              640 - cur.width,
+              cur.x +
+                (action.direction === "right"
+                  ? distance
+                  : action.direction === "left"
+                    ? -distance
+                    : 0),
+            ),
+          ),
+          y: Math.max(
+            0,
+            Math.min(
+              420 - cur.height,
+              cur.y +
+                (action.direction === "down"
+                  ? distance
+                  : action.direction === "up"
+                    ? -distance
+                    : 0),
+            ),
+          ),
+        });
+        done(
+          `Moved ${cur.name} ${action.direction} by ${distance} pixels, within the form edges.`,
+        );
       }
     };
     window.addEventListener("cq-coach-action", act);
     return () => window.removeEventListener("cq-coach-action", act);
-  }, [items, selected, preview, undo, redo]);
+  }, [
+    items,
+    selected,
+    preview,
+    undo,
+    redo,
+    eventBusy,
+    messageBoxes,
+    practicalCode,
+  ]);
   function exportProject() {
     try {
       if (!items.length) {
@@ -436,28 +675,54 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
   }
   function runtimeChange(id: string, patch: Partial<Control>) {
     let next: Control[] = updateControl(runtimeRef.current, id, patch);
-    if (patch.checked && next.find(c => c.id === id)?.type === "RadioButton")
-      next = next.map(c => c.type === "RadioButton" && c.id !== id ? { ...c, checked: false } : c);
-    runtimeRef.current = next; setRuntimeItems(next);
+    if (patch.checked && next.find((c) => c.id === id)?.type === "RadioButton")
+      next = next.map((c) =>
+        c.type === "RadioButton" && c.id !== id ? { ...c, checked: false } : c,
+      );
+    runtimeRef.current = next;
+    setRuntimeItems(next);
   }
-  async function event(name: string, id: string) {
-    if (!name) { setMessage("No handler is wired to this event."); return; }
-    if (!new RegExp("\\bvoid\\s+" + name + "\\s*\\(").test(reviewSource(practicalCode))) {
-      setMessage(`Event wired to ${name}. Double-click the control to create its C# handler in Form1.cs.`); return;
+  async function runFormEvent(name: string, id: string) {
+    if (!name) {
+      setMessage("No handler is wired to this event.");
+      return;
+    }
+    if (
+      !new RegExp("\\bvoid\\s+" + name + "\\s*\\(").test(
+        reviewSource(practicalCode),
+      )
+    ) {
+      setMessage(
+        `Event wired to ${name}. Double-click the control to create its C# handler in Form1.cs.`,
+      );
+      return;
     }
     if (eventBusy) return;
     const generation = eventGeneration.current;
     setEventBusy(true);
     try {
-      const result = await runCSharp(formEventSource(runtimeRef.current, practicalCode, name, id), setMessage);
+      const result = await runCSharp(
+        formEventSource(runtimeRef.current, practicalCode, name, id),
+        setMessage,
+      );
       if (generation !== eventGeneration.current) return;
-      if (!result.success) { setMessage(result.diagnostics.map(d => `${d.id}: ${d.message}`).join("\n")); return; }
+      if (!result.success) {
+        setMessage(
+          result.diagnostics.map((d) => `${d.id}: ${d.message}`).join("\n"),
+        );
+        return;
+      }
       const next = parseFormOutput(result.stdOut || "", runtimeRef.current);
-      runtimeRef.current = next.controls; setRuntimeItems(next.controls);
+      runtimeRef.current = next.controls;
+      setRuntimeItems(next.controls);
+      setMessageBoxes(next.messages);
       setMessage(`${name} executed. ${next.messages.join(" · ")}`);
     } catch (error) {
-      if (generation === eventGeneration.current) setMessage(error instanceof Error ? error.message : "Event failed.");
-    } finally { if (generation === eventGeneration.current) setEventBusy(false); }
+      if (generation === eventGeneration.current)
+        setMessage(error instanceof Error ? error.message : "Event failed.");
+    } finally {
+      if (generation === eventGeneration.current) setEventBusy(false);
+    }
   }
   const practical = readBrief();
   return (
@@ -465,22 +730,44 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
       className="page designer-page"
       tabIndex={-1}
       onKeyDownCapture={(event) => {
-        const editable = (event.target as HTMLElement).closest("input, textarea, select, [contenteditable=true]");
-        if (!preview && !editable && (event.ctrlKey || event.metaKey) && ["z", "y"].includes(event.key.toLowerCase())) {
-          event.preventDefault(); restore(event.key.toLowerCase() === "y" || event.shiftKey ? "redo" : "undo");
+        const editable = (event.target as HTMLElement).closest(
+          "input, textarea, select, [contenteditable=true]",
+        );
+        if (
+          !preview &&
+          !editable &&
+          (event.ctrlKey || event.metaKey) &&
+          ["z", "y"].includes(event.key.toLowerCase())
+        ) {
+          event.preventDefault();
+          restore(
+            event.key.toLowerCase() === "y" || event.shiftKey ? "redo" : "undo",
+          );
         }
         if (!preview && !editable && event.key === "Delete" && selected) {
-          event.preventDefault(); commit(removeControl(items, selected)); setSelected("");
+          event.preventDefault();
+          commit(removeControl(items, selected));
+          setSelected("");
         }
-        if (event.key === "Escape") { setArmedTool(""); setMessage("Tool selection cancelled."); }
+        if (event.key === "Escape") {
+          if (preview) {
+            setPreview(false);
+            setMessage("Stopped Form1 — back in the designer.");
+          } else {
+            setArmedTool("");
+            setMessage("Tool selection cancelled.");
+          }
+        }
         if (event.key === "F5") {
           event.preventDefault();
           event.stopPropagation();
           setWorkspace("design");
           setPreview(!event.shiftKey);
-          setMessage(event.shiftKey
-            ? "Stopped Form1 — back in the designer."
-            : "Running Form1 — common handlers run here; other C# event logic runs in the exported Windows project.");
+          setMessage(
+            event.shiftKey
+              ? "Stopped Form1 — back in the designer."
+              : "Running Form1 — common handlers run here; other C# event logic runs in the exported Windows project.",
+          );
         }
       }}
     >
@@ -506,22 +793,49 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
           <Download size={17} /> Export Windows project
         </button>
       </div>
-      <ProjectReader settings={settings} onOpenCode={(text) => {
-        if (/\b(namespace|class)\s/.test(reviewSource(text))) {
-          setMessage("This is a complete C# file. Read it in the project viewer; copy event methods into Form1.cs, or restore codequest-form.json from a CodeQuest export.");
-          return;
-        }
-        setPracticalCode(text); setWorkspace("code"); setPreview(false);
-      }} onRestoreForm={(text) => {
-        try {
-          const project = JSON.parse(text);
-          const controls = normalizeControls(project.controls);
-          if (project.version !== 1 || !controls || typeof project.handlerCode !== "string" || project.handlerCode.length > 200000)
-            throw new Error("This file is not a valid CodeQuest form project.");
-          commit(controls); setPracticalCode(project.handlerCode); setSelected(""); setPreview(false); setWorkspace("design");
-          setMessage("Form and event code restored. Undo restores your previous controls.");
-        } catch (error) { setMessage(error instanceof Error ? error.message : "Could not restore this form."); }
-      }} />
+      <ProjectReader
+        settings={settings}
+        onOpenCode={(text) => {
+          if (/\b(namespace|class)\s/.test(reviewSource(text))) {
+            setMessage(
+              "This is a complete C# file. Read it in the project viewer; copy event methods into Form1.cs, or restore codequest-form.json from a CodeQuest export.",
+            );
+            return;
+          }
+          setPracticalCode(text);
+          setWorkspace("code");
+          setPreview(false);
+        }}
+        onRestoreForm={(text) => {
+          try {
+            const project = JSON.parse(text);
+            const controls = normalizeControls(project.controls);
+            if (
+              project.version !== 1 ||
+              !controls ||
+              typeof project.handlerCode !== "string" ||
+              project.handlerCode.length > 200000
+            )
+              throw new Error(
+                "This file is not a valid CodeQuest form project.",
+              );
+            commit(controls);
+            setPracticalCode(project.handlerCode);
+            setSelected("");
+            setPreview(false);
+            setWorkspace("design");
+            setMessage(
+              "Form and event code restored. Undo restores your previous controls.",
+            );
+          } catch (error) {
+            setMessage(
+              error instanceof Error
+                ? error.message
+                : "Could not restore this form.",
+            );
+          }
+        }}
+      />
       <div className="designer-toolbar">
         <div className="button-row">
           <button
@@ -539,7 +853,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
             <Redo2 size={16} />
           </button>
           <button
-            className={preview ? "selected-button" : ""}
+            className={preview ? "selected-button runtime-stop" : ""}
             aria-pressed={preview}
             onClick={() => {
               setWorkspace("design");
@@ -581,7 +895,9 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
       <div className="designer-grid">
         <aside className="toolbox">
           <h2>Toolbox</h2>
-          <p className="muted">Select then click the form · drag or double-click to add</p>
+          <p className="muted">
+            Select then click the form · drag or double-click to add
+          </p>
           {toolbox.map((type) => (
             <button
               key={type}
@@ -591,34 +907,81 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
               onPointerDown={(event) => {
                 if (preview || event.button !== 0) return;
                 ignoreToolboxClick.current = false;
-                toolboxDrag.current = { type, x: event.clientX, y: event.clientY };
+                toolboxDrag.current = {
+                  type,
+                  x: event.clientX,
+                  y: event.clientY,
+                };
                 event.currentTarget.setPointerCapture(event.pointerId);
               }}
-              onPointerCancel={() => { toolboxDrag.current = null; }}
+              onPointerCancel={() => {
+                toolboxDrag.current = null;
+              }}
               onPointerUp={(event) => {
                 const start = toolboxDrag.current;
                 toolboxDrag.current = null;
                 if (!start || preview || items.length >= 100) return;
-                if (Math.hypot(event.clientX - start.x, event.clientY - start.y) < 5) return;
+                if (
+                  Math.hypot(event.clientX - start.x, event.clientY - start.y) <
+                  5
+                )
+                  return;
                 ignoreToolboxClick.current = true;
                 const rect = formCanvas.current?.getBoundingClientRect();
-                if (!rect || event.clientX < rect.left || event.clientX > rect.right ||
-                    event.clientY < rect.top || event.clientY > rect.bottom) return;
+                if (
+                  !rect ||
+                  event.clientX < rect.left ||
+                  event.clientX > rect.right ||
+                  event.clientY < rect.top ||
+                  event.clientY > rect.bottom
+                )
+                  return;
                 const next = addControl(items, start.type);
                 const added = next[next.length - 1];
-                const x = Math.max(0, Math.min(640 - added.width, Math.round((event.clientX - rect.left - (formCanvas.current?.clientLeft || 0)) / 8) * 8));
-                const y = Math.max(0, Math.min(420 - added.height, Math.round((event.clientY - rect.top - (formCanvas.current?.clientTop || 0)) / 8) * 8));
+                const x = Math.max(
+                  0,
+                  Math.min(
+                    640 - added.width,
+                    Math.round(
+                      (event.clientX -
+                        rect.left -
+                        (formCanvas.current?.clientLeft || 0)) /
+                        8,
+                    ) * 8,
+                  ),
+                );
+                const y = Math.max(
+                  0,
+                  Math.min(
+                    420 - added.height,
+                    Math.round(
+                      (event.clientY -
+                        rect.top -
+                        (formCanvas.current?.clientTop || 0)) /
+                        8,
+                    ) * 8,
+                  ),
+                );
                 commit(updateControl(next, added.id, { x, y }));
                 setSelected(added.id);
                 setArmedTool("");
-                setMessage(`${start.type} added at ${x}, ${y}. Visual Studio-style 8 px grid snap applied.`);
+                setMessage(
+                  `${start.type} added at ${x}, ${y}. Visual Studio-style 8 px grid snap applied.`,
+                );
               }}
               onClick={(event) => {
                 if (event.detail > 0 && ignoreToolboxClick.current) return;
                 if (event.detail === 0) placeTool(type);
-                else { setArmedTool(type); setMessage(`${type} selected. Click the form to place it; Escape cancels.`); }
+                else {
+                  setArmedTool(type);
+                  setMessage(
+                    `${type} selected. Click the form to place it; Escape cancels.`,
+                  );
+                }
               }}
-              onDoubleClick={() => { if (!ignoreToolboxClick.current) placeTool(type); }}
+              onDoubleClick={() => {
+                if (!ignoreToolboxClick.current) placeTool(type);
+              }}
             >
               <Plus size={14} />
               {type}
@@ -664,7 +1027,10 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                 label="Form1.cs event code"
               />
               <p className="muted">
-                Start / F5 runs common event code using real C# and a browser control bridge. Text, Checked, Items, validation and simple MessageBox.Show are supported. Windows APIs, extra forms and confirmation dialogs require Visual Studio.
+                Start / F5 runs common event code using real C# and a browser
+                control bridge. Text, Checked, Items, validation and simple
+                MessageBox.Show are supported. Windows APIs, extra forms and
+                confirmation dialogs require Visual Studio.
               </p>
             </section>
           ) : (
@@ -679,6 +1045,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                   value={selected}
                   onChange={(e) => setSelected(e.target.value)}
                   aria-label="Selected control"
+                  disabled={preview}
                 >
                   <option value="">Choose a control</option>
                   {items.map((c) => (
@@ -690,21 +1057,148 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                 </select>
               </label>
               <div
-                className="canvas-scroll"
-                tabIndex={0}
-                aria-label="Scrollable form canvas"
+                ref={runWindow}
+                className={
+                  preview ? "canvas-scroll runtime-window" : "canvas-scroll"
+                }
+                role={preview ? "dialog" : undefined}
+                tabIndex={preview ? -1 : 0}
+                aria-label={
+                  preview
+                    ? "Running Form1 application"
+                    : "Scrollable form canvas"
+                }
+                style={
+                  preview
+                    ? {
+                        left: runPosition.x,
+                        top: runPosition.y,
+                        maxHeight: `calc(100dvh - ${runPosition.y + 8}px)`,
+                      }
+                    : undefined
+                }
               >
                 <div className="form-title">
-                  My CodeQuest Form <span>─　□　×</span>
+                  {preview ? (
+                    <>
+                      <button
+                        className="runtime-drag"
+                        aria-label="Move running form window"
+                        onPointerDown={(e) => {
+                          if (e.button !== 0) return;
+                          runDrag.current = {
+                            x: e.clientX,
+                            y: e.clientY,
+                            left: runPosition.x,
+                            top: runPosition.y,
+                          };
+                          e.currentTarget.setPointerCapture(e.pointerId);
+                        }}
+                        onPointerMove={(e) => {
+                          const d = runDrag.current;
+                          if (d)
+                            setRunPosition({
+                              x: Math.max(
+                                8,
+                                Math.min(
+                                  innerWidth -
+                                    Math.min(680, innerWidth - 16) -
+                                    8,
+                                  d.left + e.clientX - d.x,
+                                ),
+                              ),
+                              y: Math.max(
+                                8,
+                                Math.min(
+                                  innerHeight - 80,
+                                  d.top + e.clientY - d.y,
+                                ),
+                              ),
+                            });
+                        }}
+                        onPointerUp={() => {
+                          runDrag.current = null;
+                        }}
+                        onPointerCancel={() => {
+                          runDrag.current = null;
+                        }}
+                        onKeyDown={(e) => {
+                          const deltas: Record<string, number[]> = {
+                            ArrowLeft: [-16, 0],
+                            ArrowRight: [16, 0],
+                            ArrowUp: [0, -16],
+                            ArrowDown: [0, 16],
+                          };
+                          if (deltas[e.key]) {
+                            e.preventDefault();
+                            setRunPosition((p) => ({
+                              x: Math.max(
+                                8,
+                                Math.min(
+                                  innerWidth -
+                                    Math.min(680, innerWidth - 16) -
+                                    8,
+                                  p.x + deltas[e.key][0],
+                                ),
+                              ),
+                              y: Math.max(
+                                8,
+                                Math.min(
+                                  innerHeight - 80,
+                                  p.y + deltas[e.key][1],
+                                ),
+                              ),
+                            }));
+                          }
+                        }}
+                      >
+                        ▣ Form1 · running · drag to move
+                      </button>
+                      <button
+                        aria-label="Close running form"
+                        onClick={() => {
+                          setPreview(false);
+                          setMessage("Stopped Form1 — back in the designer.");
+                        }}
+                      >
+                        ×
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      My CodeQuest Form <span>─　□　×</span>
+                    </>
+                  )}
                 </div>
                 <div
                   ref={formCanvas}
                   className="form-canvas"
-                  aria-label="Form design canvas"
-                  style={eventBusy ? { pointerEvents: "none", opacity: 0.7 } : armedTool && !preview ? {cursor:"crosshair"} : undefined}
-                  onClick={event => { if (!armedTool || preview || (event.target as HTMLElement).closest(".placed-control")) return; const r=event.currentTarget.getBoundingClientRect(); placeTool(armedTool,event.clientX-r.left-event.currentTarget.clientLeft,event.clientY-r.top-event.currentTarget.clientTop); }}
+                  aria-label={
+                    preview ? "Running form controls" : "Form design canvas"
+                  }
+                  style={
+                    eventBusy
+                      ? { pointerEvents: "none", opacity: 0.7 }
+                      : armedTool && !preview
+                        ? { cursor: "crosshair" }
+                        : undefined
+                  }
+                  onClick={(event) => {
+                    if (
+                      !armedTool ||
+                      preview ||
+                      (event.target as HTMLElement).closest(".placed-control")
+                    )
+                      return;
+                    const r = event.currentTarget.getBoundingClientRect();
+                    placeTool(
+                      armedTool,
+                      event.clientX - r.left - event.currentTarget.clientLeft,
+                      event.clientY - r.top - event.currentTarget.clientTop,
+                    );
+                  }}
                   aria-busy={eventBusy}
-
+                  inert={preview && messageBoxes.length > 0}
                 >
                   {items.length === 0 && (
                     <div className="canvas-empty">
@@ -713,7 +1207,10 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                       <p>Add a TextBox, Label or Button from the toolbox.</p>
                     </div>
                   )}
-                  {(preview ? runtimeItems : items).map((c) => {
+                  {(preview
+                    ? [...runtimeItems].sort((a, b) => a.tabIndex - b.tabIndex)
+                    : items
+                  ).map((c) => {
                     let layout: React.CSSProperties = {
                       left: c.x,
                       top: c.y,
@@ -769,7 +1266,9 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                           if (e.key === "F5") {
                             e.preventDefault();
                             setPreview(true);
-                            setMessage("Running Form1 — press Stop debugging to return to the designer.");
+                            setMessage(
+                              "Running Form1 — press Stop debugging to return to the designer.",
+                            );
                             return;
                           }
                           if (e.key === "Enter" || e.key === " ") {
@@ -790,16 +1289,24 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                                 x:
                                   c.x +
                                   (e.key === "ArrowRight"
-                                    ? e.ctrlKey ? 1 : 8
+                                    ? e.ctrlKey
+                                      ? 1
+                                      : 8
                                     : e.key === "ArrowLeft"
-                                      ? e.ctrlKey ? -1 : -8
+                                      ? e.ctrlKey
+                                        ? -1
+                                        : -8
                                       : 0),
                                 y:
                                   c.y +
                                   (e.key === "ArrowDown"
-                                    ? e.ctrlKey ? 1 : 8
+                                    ? e.ctrlKey
+                                      ? 1
+                                      : 8
                                     : e.key === "ArrowUp"
-                                      ? e.ctrlKey ? -1 : -8
+                                      ? e.ctrlKey
+                                        ? -1
+                                        : -8
                                       : 0),
                               }),
                             );
@@ -808,6 +1315,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                         onPointerDown={(e) => {
                           if (preview) return;
                           e.preventDefault();
+                          e.currentTarget.focus();
                           setSelected(c.id);
                           e.currentTarget.setPointerCapture(e.pointerId);
                           drag.current = {
@@ -838,14 +1346,44 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                         onPointerUp={(event) => {
                           const completedDrag = drag.current;
                           drag.current = null;
-                          if (completedDrag) {
+                          if (
+                            completedDrag &&
+                            (Math.abs(event.clientX - completedDrag.startX) >
+                              2 ||
+                              Math.abs(event.clientY - completedDrag.startY) >
+                                2)
+                          ) {
                             // React may evaluate this updater after pointer-up.
                             // Capture the snapshot, not a mutable cleared ref.
                             const before = completedDrag.before;
-                            setItems(updateControl(before, c.id, {
-                              x: Math.max(0, Math.min(640 - c.width, Math.round((completedDrag.x + event.clientX - completedDrag.startX) / 8) * 8)),
-                              y: Math.max(0, Math.min(420 - c.height, Math.round((completedDrag.y + event.clientY - completedDrag.startY) / 8) * 8)),
-                            }));
+                            setItems(
+                              updateControl(before, c.id, {
+                                x: Math.max(
+                                  0,
+                                  Math.min(
+                                    640 - c.width,
+                                    Math.round(
+                                      (completedDrag.x +
+                                        event.clientX -
+                                        completedDrag.startX) /
+                                        8,
+                                    ) * 8,
+                                  ),
+                                ),
+                                y: Math.max(
+                                  0,
+                                  Math.min(
+                                    420 - c.height,
+                                    Math.round(
+                                      (completedDrag.y +
+                                        event.clientY -
+                                        completedDrag.startY) /
+                                        8,
+                                    ) * 8,
+                                  ),
+                                ),
+                              }),
+                            );
                             setUndo((u) => [...u, before].slice(-50));
                             setRedo([]);
                           }
@@ -862,7 +1400,9 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                             c={eventBusy ? { ...c, enabled: false } : c}
                             preview={preview}
                             onValue={(patch) => runtimeChange(c.id, patch)}
-                            onEvent={(name) => { void event(name, c.id); }}
+                            onEvent={(name) => {
+                              void runFormEvent(name, c.id);
+                            }}
                           />
                         </div>
                         {!preview && selected === c.id && (
@@ -924,11 +1464,48 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                     );
                   })}
                 </div>
+                {preview && (
+                  <>
+                    <div className="runtime-output" role="status">
+                      <b>Debug output</b>
+                      <pre>
+                        {message || "Application started. Try your controls."}
+                      </pre>
+                      {eventBusy && <span>Running C# event…</span>}
+                    </div>
+                    {messageBoxes.length > 0 && (
+                      <div
+                        className="runtime-message"
+                        role="alertdialog"
+                        aria-label="MessageBox"
+                        tabIndex={0}
+                      >
+                        <b>Form1 · MessageBox</b>
+                        <p>{messageBoxes[0]}</p>
+                        <button
+                          autoFocus
+                          onClick={() =>
+                            setMessageBoxes((boxes) => boxes.slice(1))
+                          }
+                        >
+                          OK
+                        </button>
+                      </div>
+                    )}
+                    <p className="runtime-footer">
+                      F5 runs your form · Shift+F5 or Escape stops · Design is
+                      preserved
+                    </p>
+                  </>
+                )}
               </div>
               <p className="muted canvas-note">
                 Design: drag controls, use arrow keys, resize the selected
                 control, or double-click a control to create its default event.
-                Preview: try inputs and run C# handlers for Text, Checked, Items, numeric values, visibility, password masking and MessageBox.Show. Other Windows APIs require the exported project.
+                Preview: try inputs and run C# handlers for Text, Checked,
+                Items, numeric values, visibility, password masking and
+                MessageBox.Show. Other Windows APIs require the exported
+                project.
               </p>
               {showCode && (
                 <pre
@@ -942,238 +1519,245 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
           )}
         </div>
         <aside className="properties-panel">
-          <h2>
-            Properties <span>⚡</span>
-          </h2>
-          {cur ? (
-            <>
-              <p className="muted">
-                {cur.type} / {cur.name}
-              </p>
-              <Field title="Design">
-                <label>
-                  (Name) · C# identifier
-                  <input
-                    aria-label="Control Name"
-                    value={cur.name}
-                    onChange={(e) => change({ name: e.target.value })}
-                  />
-                </label>
-                <label>
-                  AccessibleName
-                  <input
-                    value={cur.accessibleName}
-                    onChange={(e) => change({ accessibleName: e.target.value })}
-                  />
-                </label>
-              </Field>
-              <p className="property-help">Text is what the user sees. (Name) is used in C# code, for example lblStudentName.</p>
-              <Field title="Appearance">
-                <label>
-                  Text · visible caption
-                  <input
-                    aria-label="Control Text"
-                    value={cur.text}
-                    onChange={(e) => change({ text: e.target.value })}
-                  />
-                </label>
-                <label>
-                  Font
-                  <input
-                    value={cur.font}
-                    onChange={(e) => change({ font: e.target.value })}
-                  />
-                </label>
-                <div className="two-fields">
+          <fieldset disabled={preview} className="properties-fields">
+            <h2>
+              Properties <span>⚡</span>
+            </h2>
+            {cur ? (
+              <>
+                <p className="muted">
+                  {cur.type} / {cur.name}
+                </p>
+                <Field title="Design">
                   <label>
-                    ForeColor
+                    (Name) · C# identifier
                     <input
-                      type="color"
-                      value={cur.foreColor}
-                      onChange={(e) => change({ foreColor: e.target.value })}
+                      aria-label="Control Name"
+                      value={cur.name}
+                      onChange={(e) => change({ name: e.target.value })}
                     />
                   </label>
                   <label>
-                    BackColor
+                    AccessibleName
                     <input
-                      type="color"
-                      value={cur.backColor}
-                      onChange={(e) => change({ backColor: e.target.value })}
+                      value={cur.accessibleName}
+                      onChange={(e) =>
+                        change({ accessibleName: e.target.value })
+                      }
                     />
                   </label>
-                </div>
-              </Field>
-              <Field title="Layout">
-                <div className="two-fields">
-                  {(["x", "y", "width", "height", "tabIndex"] as const).map(
-                    (key) => (
+                </Field>
+                <p className="property-help">
+                  Text is what the user sees. (Name) is used in C# code, for
+                  example lblStudentName.
+                </p>
+                <Field title="Appearance">
+                  <label>
+                    Text · visible caption
+                    <input
+                      aria-label="Control Text"
+                      value={cur.text}
+                      onChange={(e) => change({ text: e.target.value })}
+                    />
+                  </label>
+                  <label>
+                    Font
+                    <input
+                      value={cur.font}
+                      onChange={(e) => change({ font: e.target.value })}
+                    />
+                  </label>
+                  <div className="two-fields">
+                    <label>
+                      ForeColor
+                      <input
+                        type="color"
+                        value={cur.foreColor}
+                        onChange={(e) => change({ foreColor: e.target.value })}
+                      />
+                    </label>
+                    <label>
+                      BackColor
+                      <input
+                        type="color"
+                        value={cur.backColor}
+                        onChange={(e) => change({ backColor: e.target.value })}
+                      />
+                    </label>
+                  </div>
+                </Field>
+                <Field title="Layout">
+                  <div className="two-fields">
+                    {(["x", "y", "width", "height", "tabIndex"] as const).map(
+                      (key) => (
+                        <label key={key}>
+                          {key}
+                          <input
+                            aria-label={`Control ${key}`}
+                            type="number"
+                            min={0}
+                            value={cur[key]}
+                            onChange={(e) =>
+                              change({ [key]: Number(e.target.value) })
+                            }
+                          />
+                        </label>
+                      ),
+                    )}
+                  </div>
+                  <label>
+                    Anchor
+                    <select
+                      value={cur.anchor}
+                      onChange={(e) => change({ anchor: e.target.value })}
+                    >
+                      {[
+                        "Top, Left",
+                        "Top, Right",
+                        "Bottom, Left",
+                        "Bottom, Right",
+                        "Top, Bottom, Left, Right",
+                      ].map((x) => (
+                        <option key={x}>{x}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    Dock
+                    <select
+                      value={cur.dock}
+                      onChange={(e) => change({ dock: e.target.value })}
+                    >
+                      {["None", "Top", "Bottom", "Left", "Right", "Fill"].map(
+                        (x) => (
+                          <option key={x}>{x}</option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                </Field>
+                <Field title="Behavior">
+                  {(["enabled", "visible"] as const).map((key) => (
+                    <label className="check-label" key={key}>
+                      <input
+                        type="checkbox"
+                        checked={cur[key]}
+                        onChange={(e) => change({ [key]: e.target.checked })}
+                      />
+                      {key}
+                    </label>
+                  ))}
+                  {["CheckBox", "RadioButton"].includes(cur.type) && (
+                    <label className="check-label">
+                      <input
+                        type="checkbox"
+                        checked={cur.checked}
+                        onChange={(e) => change({ checked: e.target.checked })}
+                      />
+                      Checked
+                    </label>
+                  )}
+                  {cur.type === "TextBox" && (
+                    <label className="check-label">
+                      <input
+                        type="checkbox"
+                        checked={cur.password}
+                        onChange={(e) => change({ password: e.target.checked })}
+                      />
+                      UseSystemPasswordChar
+                    </label>
+                  )}
+                  {["ComboBox", "ListBox"].includes(cur.type) && (
+                    <label>
+                      Items (one per line)
+                      <textarea
+                        aria-label="Control Items"
+                        value={cur.items}
+                        onChange={(e) => change({ items: e.target.value })}
+                      />
+                    </label>
+                  )}
+                  {cur.type === "NumericUpDown" &&
+                    (["minimum", "maximum", "value"] as const).map((key) => (
                       <label key={key}>
                         {key}
                         <input
-                          aria-label={`Control ${key}`}
                           type="number"
-                          min={0}
                           value={cur[key]}
                           onChange={(e) =>
                             change({ [key]: Number(e.target.value) })
                           }
                         />
                       </label>
-                    ),
-                  )}
-                </div>
-                <label>
-                  Anchor
-                  <select
-                    value={cur.anchor}
-                    onChange={(e) => change({ anchor: e.target.value })}
-                  >
-                    {[
-                      "Top, Left",
-                      "Top, Right",
-                      "Bottom, Left",
-                      "Bottom, Right",
-                      "Top, Bottom, Left, Right",
-                    ].map((x) => (
-                      <option key={x}>{x}</option>
                     ))}
-                  </select>
-                </label>
-                <label>
-                  Dock
-                  <select
-                    value={cur.dock}
-                    onChange={(e) => change({ dock: e.target.value })}
-                  >
-                    {["None", "Top", "Bottom", "Left", "Right", "Fill"].map(
-                      (x) => (
-                        <option key={x}>{x}</option>
-                      ),
-                    )}
-                  </select>
-                </label>
-              </Field>
-              <Field title="Behavior">
-                {(["enabled", "visible"] as const).map((key) => (
-                  <label className="check-label" key={key}>
-                    <input
-                      type="checkbox"
-                      checked={cur[key]}
-                      onChange={(e) => change({ [key]: e.target.checked })}
-                    />
-                    {key}
-                  </label>
-                ))}
-                {["CheckBox", "RadioButton"].includes(cur.type) && (
-                  <label className="check-label">
-                    <input
-                      type="checkbox"
-                      checked={cur.checked}
-                      onChange={(e) => change({ checked: e.target.checked })}
-                    />
-                    Checked
-                  </label>
-                )}
-                {cur.type === "TextBox" && (
-                  <label className="check-label">
-                    <input
-                      type="checkbox"
-                      checked={cur.password}
-                      onChange={(e) => change({ password: e.target.checked })}
-                    />
-                    UseSystemPasswordChar
-                  </label>
-                )}
-                {["ComboBox", "ListBox"].includes(cur.type) && (
+                </Field>
+                <Field title="Events">
+                  {defaultEvent(cur) && (
+                    <button
+                      type="button"
+                      onClick={() => createDefaultHandler(cur)}
+                    >
+                      Open default event code
+                    </button>
+                  )}
                   <label>
-                    Items (one per line)
-                    <textarea
-                      aria-label="Control Items"
-                      value={cur.items}
-                      onChange={(e) => change({ items: e.target.value })}
+                    Click
+                    <input
+                      aria-label="Click handler"
+                      placeholder="btnSubmit_Click"
+                      value={cur.eventClick}
+                      onChange={(e) => change({ eventClick: e.target.value })}
                     />
                   </label>
-                )}
-                {cur.type === "NumericUpDown" &&
-                  (["minimum", "maximum", "value"] as const).map((key) => (
-                    <label key={key}>
-                      {key}
+                  <label>
+                    TextChanged
+                    <input
+                      aria-label="TextChanged handler"
+                      value={cur.eventTextChanged}
+                      onChange={(e) =>
+                        change({ eventTextChanged: e.target.value })
+                      }
+                    />
+                  </label>
+                  {["ComboBox", "ListBox"].includes(cur.type) && (
+                    <label>
+                      SelectedIndexChanged
                       <input
-                        type="number"
-                        value={cur[key]}
+                        aria-label="SelectedIndexChanged handler"
+                        value={cur.eventSelectedIndexChanged}
                         onChange={(e) =>
-                          change({ [key]: Number(e.target.value) })
+                          change({ eventSelectedIndexChanged: e.target.value })
                         }
                       />
                     </label>
-                  ))}
-              </Field>
-              <Field title="Events">
-                {defaultEvent(cur) && (
-                  <button
-                    type="button"
-                    onClick={() => createDefaultHandler(cur)}
-                  >
-                    Open default event code
-                  </button>
-                )}
-                <label>
-                  Click
-                  <input
-                    aria-label="Click handler"
-                    placeholder="btnSubmit_Click"
-                    value={cur.eventClick}
-                    onChange={(e) => change({ eventClick: e.target.value })}
-                  />
-                </label>
-                <label>
-                  TextChanged
-                  <input
-                    aria-label="TextChanged handler"
-                    value={cur.eventTextChanged}
-                    onChange={(e) =>
-                      change({ eventTextChanged: e.target.value })
-                    }
-                  />
-                </label>
-                {["ComboBox", "ListBox"].includes(cur.type) && (
-                  <label>
-                    SelectedIndexChanged
-                    <input
-                      aria-label="SelectedIndexChanged handler"
-                      value={cur.eventSelectedIndexChanged}
-                      onChange={(e) =>
-                        change({ eventSelectedIndexChanged: e.target.value })
-                      }
-                    />
-                  </label>
-                )}
-                {["CheckBox", "RadioButton"].includes(cur.type) && (
-                  <label>
-                    CheckedChanged
-                    <input
-                      aria-label="CheckedChanged handler"
-                      value={cur.eventCheckedChanged}
-                      onChange={(e) =>
-                        change({ eventCheckedChanged: e.target.value })
-                      }
-                    />
-                  </label>
-                )}
-              </Field>
-              <button
-                className="danger"
-                onClick={() => {
-                  commit(removeControl(items, cur.id));
-                  setSelected("");
-                }}
-              >
-                <Trash2 size={15} /> Remove control
-              </button>
-            </>
-          ) : (
-            <p className="muted">Select a control to edit its properties.</p>
-          )}
+                  )}
+                  {["CheckBox", "RadioButton"].includes(cur.type) && (
+                    <label>
+                      CheckedChanged
+                      <input
+                        aria-label="CheckedChanged handler"
+                        value={cur.eventCheckedChanged}
+                        onChange={(e) =>
+                          change({ eventCheckedChanged: e.target.value })
+                        }
+                      />
+                    </label>
+                  )}
+                </Field>
+                <button
+                  className="danger"
+                  onClick={() => {
+                    commit(removeControl(items, cur.id));
+                    setSelected("");
+                  }}
+                >
+                  <Trash2 size={15} /> Remove control
+                </button>
+              </>
+            ) : (
+              <p className="muted">Select a control to edit its properties.</p>
+            )}
+          </fieldset>
         </aside>
       </div>
       {practical && (

@@ -54,3 +54,23 @@ test("local account storage never reuses guest or another account keys", async (
     globalThis.localStorage = original;
   }
 });
+
+test("automatic African voice uses a matching natural voice before a legacy voice", () => {
+  const african = [
+    { name: "Legacy South African", lang: "en-ZA" },
+    { name: "Leah Online (Natural)", lang: "en-ZA" },
+    { name: "Abeo Online (Natural)", lang: "en-NG" },
+  ];
+  assert.equal(
+    selectDeviceVoice(african, "en-ZA").name,
+    "Leah Online (Natural)",
+  );
+  assert.equal(
+    selectDeviceVoice(african, "en-NG").name,
+    "Abeo Online (Natural)",
+  );
+  assert.equal(
+    selectDeviceVoice(african, "en-ZA", "Legacy South African").name,
+    "Legacy South African",
+  );
+});

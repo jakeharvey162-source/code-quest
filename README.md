@@ -92,3 +92,12 @@ MIT. Third-party components retain their own licenses; see THIRD_PARTY_NOTICES.m
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for Vercel setup, database migration, environment variables, mail configuration, sharing and current connection blockers. See `.env.example`; keep real keys out of GitHub. Account/browser flows are tested against mocked provider responses and actual Postgres policy tests run locally with PGlite; live SMTP/Supabase/ElevenLabs deployment checks still require connected services.
 
 `npm run test:cloud` builds a separate provider-mocked browser test configuration. Run it after the normal browser tests; it rebuilds `dist` with test-only Supabase settings, so run `npm run build` again before manual deployment of `dist`.
+
+## Running forms and Tor's workspace awareness
+F5 opens a separate movable app window with operable controls, real C# event execution, Debug output and MessageBox popups. Close it, press Escape or Shift+F5 to return to the unchanged design. Properties are disabled during the run. This remains a browser WinForms bridge, not the native Windows runtime; use the exported solution for full Windows API compatibility.
+
+Tor receives structured observations from WinForms and Code Lab. The panel shows the current mode, selected control and visible caption. It reacts to additions, caption edits, compiler errors and successful C# handlers with different expressions and contextual coaching. Turn off **React to my workspace** for quiet practice; speech is separately configurable. No desktop screen capture is used.
+
+While the form runs, try `type Jake into txtName` and `click btnSave`. These use the real runtime controls and the same C# event path as manual interaction. Hidden/disabled controls and active MessageBoxes block the action. Password input stays manual.
+
+The African English accent selector supports South Africa, Nigeria and Kenya when the corresponding device voice is available. It explicitly labels missing accents; automatic fallback remains an English device voice, not a synthesized African accent. Neural African speech still requires a configured speech provider or an installed matching natural voice. No provider key is included in this repository.
