@@ -1,7 +1,13 @@
+import { validSourceFiles } from "./source-files.mjs";
 import { reviewSource } from "./assessment-engine.mjs";
 import { zipSync, strToU8 } from "fflate";
 import { designerCode, validateForm } from "../designer-engine.mjs";
-export function projectFiles(controls, { handlerCode = "" } = {}) {
+export function projectFiles(
+  controls,
+  { handlerCode = "", sourceFiles = [] } = {},
+) {
+  if (!validSourceFiles(sourceFiles))
+    throw new Error("Invalid C# source files.");
   const validation = validateForm(controls);
   if (!validation.ok) throw new Error(validation.issues.join("\n"));
   const fields = controls
@@ -16,6 +22,7 @@ export function projectFiles(controls, { handlerCode = "" } = {}) {
     ...new Set(
       controls
         .flatMap((c) => [
+          c.eventValueChanged,
           c.eventClick,
           c.eventTextChanged,
           c.eventSelectedIndexChanged,
@@ -36,7 +43,13 @@ export function projectFiles(controls, { handlerCode = "" } = {}) {
     .map((line) => "            " + line)
     .join("\n");
   return {
-    "codequest-form.json": JSON.stringify({ version: 1, controls, handlerCode }),
+    ...Object.fromEntries(sourceFiles.map((f) => [f.path, f.text])),
+    "codequest-form.json": JSON.stringify({
+      version: 1,
+      controls,
+      handlerCode,
+      ...(sourceFiles.length ? { sourceFiles } : {}),
+    }),
     "CodeQuestForms.csproj":
       '<Project Sdk="Microsoft.NET.Sdk">\n  <PropertyGroup>\n    <OutputType>WinExe</OutputType>\n    <TargetFramework>net8.0-windows</TargetFramework>\n    <UseWindowsForms>true</UseWindowsForms>\n    <Nullable>disable</Nullable>\n  </PropertyGroup>\n</Project>\n',
     "Program.cs":

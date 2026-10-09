@@ -1,3 +1,4 @@
+import { compileProject } from "./source-files.mjs";
 import { formEventSource, parseFormOutput } from "./form-runtime.mjs";
 import { gridRows } from "./grid-data.mjs";
 import { gradeSystemDesign } from "./system-projects.mjs";
@@ -9,6 +10,7 @@ export async function gradeSystem(
   code: string,
   onStatus: (text: string) => void,
   signal: AbortSignal,
+  sourceFiles: { path: string; text: string }[] = [],
 ) {
   const design = gradeSystemDesign(project, controls, code);
   let state = controls.map((c) => ({ ...c })),
@@ -33,7 +35,10 @@ export async function gradeSystem(
       if (!button?.eventClick)
         throw new Error(`Wire the ${scenario.click} Click event.`);
       const run = await runCSharp(
-        formEventSource(state, code, button.eventClick, button.id, fields),
+        compileProject(
+          formEventSource(state, code, button.eventClick, button.id, fields),
+          sourceFiles,
+        ),
       );
       if (signal.aborted) throw new Error("Checks stopped.");
       if (!run.success)

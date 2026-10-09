@@ -1,5 +1,7 @@
 import { readText, writeText } from "./local-data.ts";
+import { earnedQuestXp } from "./workshop-quests.mjs";
 export type Settings = {
+  theme: "light" | "dark";
   name: string;
   voice: string;
   voiceProvider: "device" | "elevenlabs";
@@ -30,6 +32,7 @@ export const freshProgress = (): Progress => ({
   activity: [],
   assessments: [],
   settings: {
+    theme: "light",
     name: "",
     voice: "",
     voiceProvider: "device",
@@ -75,6 +78,7 @@ export function validateProgress(value: unknown): value is Progress {
     return false;
   const s = value.settings;
   return (
+    ["light", "dark"].includes(String(s.theme)) &&
     typeof s.name === "string" &&
     s.name.length <= 60 &&
     typeof s.voice === "string" &&
@@ -148,11 +152,13 @@ export function completeStep(
 }
 export function xpFor(progress: Progress) {
   return (
-    Object.values(progress.steps).reduce(
-      (sum, steps) => sum + new Set(steps).size * 20,
+    Object.entries(progress.steps).reduce(
+      (sum, [key, steps]) =>
+        sum + (key === "workshop-quests" ? 0 : new Set(steps).size * 20),
       0,
     ) +
-    new Set(progress.completed).size * 60
+    new Set(progress.completed).size * 60 +
+    earnedQuestXp(progress.steps)
   );
 }
 export function streakFor(activity: string[], today = new Date()) {

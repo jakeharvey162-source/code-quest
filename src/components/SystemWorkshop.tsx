@@ -1,3 +1,4 @@
+import { requestQuest } from "../lib/workshop-quests.mjs";
 import { useEffect, useRef, useState } from "react";
 import { systemProjects } from "../lib/system-projects.mjs";
 import { gradeSystem } from "../lib/system-grader";
@@ -10,7 +11,9 @@ export default function SystemWorkshop({
   onLoad,
   disabled = false,
   onBusy,
+  sourceFiles = [],
 }: {
+  sourceFiles?: { path: string; text: string }[];
   controls: Control[];
   code: string;
   onLoad: (project: any, worked: boolean) => void;
@@ -35,7 +38,7 @@ export default function SystemWorkshop({
   useEffect(() => {
     setResult(null);
     setStatus("");
-  }, [controls, code]);
+  }, [controls, code, sourceFiles]);
   useEffect(
     () => () => {
       if (request.current) {
@@ -57,9 +60,12 @@ export default function SystemWorkshop({
         code,
         setStatus,
         controller.signal,
+        sourceFiles,
       );
       if (controller.signal.aborted) return;
       setResult(mark);
+      if (mark.total >= 60) requestQuest("system-builder");
+      if (mark.total >= 90) requestQuest("system-master");
       setStatus("Checks finished. Your design and code are unchanged.");
       writeText(
         "cq-system-report",

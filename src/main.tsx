@@ -19,8 +19,16 @@ import {
 } from "lucide-react";
 import "./styles.css";
 import { lessons, tracks } from "./curriculum";
-import { loadProgress, saveProgress, xpFor, streakFor } from "./lib/progress";
+import {
+  loadProgress,
+  saveProgress,
+  xpFor,
+  streakFor,
+  localDay,
+} from "./lib/progress";
 import type { Progress } from "./lib/progress";
+import QuestBoard from "./components/QuestBoard";
+import { workshopQuests } from "./lib/workshop-quests.mjs";
 import CityMap from "./components/CityMap";
 import TorCoach from "./components/TorCoach";
 import { VoiceControls } from "./components/VoiceControls";
@@ -60,7 +68,10 @@ class ErrorBoundary extends Component<
   }
   componentDidCatch(error: unknown) {
     const message = error instanceof Error ? error.message : String(error);
-    const chunkFailure = /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk/i.test(message);
+    const chunkFailure =
+      /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk/i.test(
+        message,
+      );
     if (!chunkFailure || !navigator.onLine) return;
     const key = "cq-auto-workspace-recovery";
     // Storage may be unavailable in private or restricted browsing. In that
@@ -101,7 +112,9 @@ class ErrorBoundary extends Component<
               );
             }}
           >
-            {this.state.recovering ? "Refreshing workspace…" : "Load latest workspace"}
+            {this.state.recovering
+              ? "Refreshing workspace…"
+              : "Load latest workspace"}
           </button>
           <button
             onClick={() => {
@@ -136,6 +149,30 @@ function App() {
     [saveError, setSaveError] = useState(false),
     [installPrompt, setInstallPrompt] = useState<any>(null),
     [updateReady, setUpdateReady] = useState<ServiceWorker | null>(null);
+  const [questNotice, setQuestNotice] = useState("");
+  useEffect(() => {
+    document.documentElement.dataset.theme = progress.settings.theme || "light";
+  }, [progress.settings.theme]);
+  useEffect(() => {
+    const earned = (e: Event) => {
+      const quest = workshopQuests.find(
+        (q) => q.id === (e as CustomEvent).detail?.id,
+      );
+      if (!quest) return;
+      setProgress((p) => {
+        const done = p.steps["workshop-quests"] || [];
+        if (done.includes(quest.id)) return p;
+        setQuestNotice(quest.title + " · +" + quest.xp + " XP");
+        return {
+          ...p,
+          steps: { ...p.steps, "workshop-quests": [...done, quest.id] },
+          activity: [...new Set([...p.activity, localDay()])].slice(-365),
+        };
+      });
+    };
+    window.addEventListener("cq-quest-earned", earned);
+    return () => window.removeEventListener("cq-quest-earned", earned);
+  }, []);
   const [page, lessonId] = route.split("/");
   const selectedLesson = lessons.find((l) => l.id === lessonId);
   const xp = xpFor(progress),
@@ -284,6 +321,24 @@ function App() {
               "LESSON"}
           </span>
           <div className="header-stats">
+            <button
+              aria-label={
+                progress.settings.theme === "dark"
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+              onClick={() =>
+                update((p) => ({
+                  ...p,
+                  settings: {
+                    ...p.settings,
+                    theme: p.settings.theme === "dark" ? "light" : "dark",
+                  },
+                }))
+              }
+            >
+              {progress.settings.theme === "dark" ? "☀ Light" : "☾ Dark"}
+            </button>
             {!online && (
               <span className="offline-pill">
                 <WifiOff size={14} />
@@ -307,6 +362,20 @@ function App() {
             </button>
           </div>
         </header>
+        {questNotice && (
+          <div className="quest-notice" role="status">
+            Quest complete! {questNotice}
+            <button
+              aria-label="Dismiss quest reward"
+              onClick={() => setQuestNotice("")}
+            >
+              ×
+            </button>
+          </div>
+        )}
+        {(page === "playground" || page === "designer") && (
+          <QuestBoard progress={progress} />
+        )}
         {saveError && (
           <p className="warning-banner" role="alert">
             This browser could not save your progress. Export a backup in
@@ -614,7 +683,11 @@ function App() {
             </Suspense>
           </ErrorBoundary>
         </main>
-        <TorCoach page={page} settings={progress.settings} onNavigate={navigate} />
+        <TorCoach
+          page={page}
+          settings={progress.settings}
+          onNavigate={navigate}
+        />
         <footer className="app-footer">
           <span>CodeQuest / Built for understanding.</span>
           <span>

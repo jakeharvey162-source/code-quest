@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { EditorView, keymap } from "@codemirror/view";
-import { EditorState } from "@codemirror/state";
+import { Prec, EditorState } from "@codemirror/state";
 import { basicSetup } from "codemirror";
 import {
   HighlightStyle,
@@ -9,6 +9,24 @@ import {
 } from "@codemirror/language";
 import { tags } from "@lezer/highlight";
 import { csharp } from "@codemirror/legacy-modes/mode/clike";
+import {
+  snippet,
+  nextSnippetField,
+  prevSnippetField,
+  clearSnippet,
+  autocompletion,
+} from "@codemirror/autocomplete";
+import {
+  indentWithTab,
+  lineComment,
+  lineUncomment,
+  moveLineUp,
+  moveLineDown,
+  copyLineDown,
+} from "@codemirror/commands";
+import { openSearchPanel, gotoLine } from "@codemirror/search";
+import { snippetAt, plainSnippet } from "../lib/editor-snippets.mjs";
+import { requestQuest } from "../lib/workshop-quests.mjs";
 export default function CodeEditor({
   value,
   onChange,
@@ -26,6 +44,8 @@ export default function CodeEditor({
   callback.current = onChange;
   useEffect(() => {
     if (plain || !host.current) return;
+    let armed = -1,
+      chord = false;
     const view = new EditorView({
       parent: host.current,
       state: EditorState.create({
@@ -51,9 +71,99 @@ export default function CodeEditor({
             if (update.docChanged)
               callback.current(update.state.doc.toString());
           }),
-          keymap.of([{ key: "Tab", run: () => false }]),
+          Prec.highest(
+            keymap.of([
+              {
+                key: "Tab",
+                run: (v) => {
+                  if (nextSnippetField(v)) return true;
+                  const at = v.state.selection.main.head,
+                    item = snippetAt(v.state.doc.toString(), at);
+                  if (item) {
+                    if (armed === at) {
+                      snippet(item.template)(v, null, item.from, item.to);
+                      armed = -1;
+                      requestQuest("snippet-builder");
+                    } else armed = at;
+                    return true;
+                  }
+                  armed = -1;
+                  return indentWithTab.run!(v);
+                },
+              },
+              { key: "Shift-Tab", run: prevSnippetField },
+              {
+                key: "Escape",
+                run: (v) => {
+                  armed = -1;
+                  clearSnippet(v);
+                  v.setTabFocusMode(1500);
+                  return false;
+                },
+              },
+              {
+                key: "Mod-k",
+                run: () => {
+                  chord = true;
+                  return true;
+                },
+              },
+              {
+                key: "Mod-c",
+                run: (v) => {
+                  if (!chord) return false;
+                  chord = false;
+                  requestQuest("comment-ninja");
+                  return lineComment(v);
+                },
+              },
+              {
+                key: "Mod-u",
+                run: (v) => {
+                  if (!chord) return false;
+                  chord = false;
+                  return lineUncomment(v);
+                },
+              },
+              { key: "Mod-f", run: openSearchPanel },
+              { key: "Mod-h", run: openSearchPanel },
+              { key: "Mod-g", run: gotoLine },
+              { key: "Alt-ArrowUp", run: moveLineUp },
+              { key: "Alt-ArrowDown", run: moveLineDown },
+              { key: "Mod-d", run: copyLineDown },
+              { key: "Mod-s", run: () => true },
+            ]),
+          ),
+          autocompletion({
+            override: [
+              (context) => {
+                const word = context.matchBefore(/[A-Za-z_]\w*/);
+                if (!word || (!context.explicit && word.from === word.to))
+                  return null;
+                const names = new Set(
+                  "class public private protected interface abstract virtual override new return if else for foreach while using namespace string int decimal double bool void static Console WriteLine"
+                    .split(" ")
+                    .concat(
+                      [
+                        ...context.state.doc
+                          .toString()
+                          .matchAll(/\b[A-Za-z_]\w*\b/g),
+                      ].map((m) => m[0]),
+                    ),
+                );
+                return {
+                  from: word.from,
+                  options: [...names].map((label) => ({ label, type: "text" })),
+                };
+              },
+            ],
+          }),
           EditorView.theme({
-            "&": { height: "100%", background: "#142923", color: "#e8f0eb" },
+            "&": {
+              height: "100%",
+              background: "var(--editor-bg)",
+              color: "var(--editor-fg)",
+            },
             ".cm-content": {
               fontFamily: "Consolas, monospace",
               fontSize: "14px",
@@ -61,7 +171,7 @@ export default function CodeEditor({
               caretColor: "#efb934",
             },
             ".cm-gutters": {
-              background: "#142923",
+              background: "var(--editor-bg)",
               color: "#809e91",
               borderRight: "1px solid #385246",
             },
@@ -95,6 +205,27 @@ export default function CodeEditor({
       value={value}
       onChange={(e) => onChange(e.target.value)}
       spellCheck={false}
+      onKeyDown={(e) => {
+        if (e.key !== "Tab" || e.shiftKey) return;
+        const target = e.currentTarget,
+          item = snippetAt(value, target.selectionStart);
+        if (!item) return;
+        e.preventDefault();
+        if (target.dataset.snippet === String(target.selectionStart)) {
+          const result = plainSnippet(item);
+          onChange(
+            value.slice(0, item.from) + result.text + value.slice(item.to),
+          );
+          delete target.dataset.snippet;
+          requestQuest("snippet-builder");
+          requestAnimationFrame(() =>
+            target.setSelectionRange(
+              item.from + result.selection.from,
+              item.from + result.selection.to,
+            ),
+          );
+        } else target.dataset.snippet = String(target.selectionStart);
+      }}
     />
   ) : (
     <div className="editor-host" ref={host} />

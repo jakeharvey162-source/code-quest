@@ -20,20 +20,28 @@ export function formEventSource(
   const fields = controls
     .map((c) => `public ${c.type} ${c.name} = new ${c.type}();`)
     .join("\n");
-  const init = controls
-    .map(
-      (c) => `
+  const init =
+    controls
+      .map(
+        (c) => `
     ${c.name}.Name = ${literal(c.name)};
     ${c.name}.Text = ${literal(c.text)};
     ${c.name}.Enabled = ${c.enabled ? "true" : "false"};
     ${c.name}.Visible = ${c.visible ? "true" : "false"};
     ${c.name}.Checked = ${c.checked ? "true" : "false"};
     ${c.name}.UseSystemPasswordChar = ${c.password ? "true" : "false"};
-    ${c.name}.Minimum = ${Number(c.minimum)}m; ${c.name}.Maximum = ${Number(c.maximum)}m; ${c.name}.Value = ${Number(c.value)}m;
+    ${c.name}.Minimum = ${Number(c.minimum)}${c.type === "TrackBar" ? "" : "m"}; ${c.name}.Maximum = ${Number(c.maximum)}${c.type === "TrackBar" ? "" : "m"}; ${c.name}.Value = ${c.type === "DateTimePicker" ? `DateTime.Parse(${literal(c.text)}, CultureInfo.InvariantCulture)` : Number(c.value) + (c.type === "TrackBar" ? "" : "m")};
     ${c.name}.Items.AddRange(new object[] { ${c.items.split("\n").filter(Boolean).map(literal).join(",")} });
     ${c.name}.SelectedIndex = ${Number.isSafeInteger(c.selectedIndex) ? c.selectedIndex : -1};`,
-    )
-    .join("\n");
+      )
+      .join("\n") +
+    controls
+      .filter((c) => c.parentId)
+      .map((c) => {
+        const parent = controls.find((x) => x.id === c.parentId);
+        return `\n${parent.name}.Controls.Add(${c.name});`;
+      })
+      .join("");
   const gridInit = controls
     .filter((c) => c.type === "DataGridView")
     .map((c) => {
@@ -79,6 +87,7 @@ namespace System.Windows.Forms {
   public enum MessageBoxButtons { OK, OKCancel, YesNo, YesNoCancel }
   public enum MessageBoxIcon { None, Information, Warning, Error, Question }
   public class Control {
+    public List<Control> Controls {get;} = new List<Control>();
     public string Name {get;set;} = "";
     public string Text {get;set;} = "";
     public bool Enabled {get;set;} = true;
@@ -97,6 +106,9 @@ namespace System.Windows.Forms {
     public void Show() { Visible = true; }
     public void Hide() { Visible = false; }
   }
+  public class LinkLabel : Control {} public class Panel : Control {} public class GroupBox : Control {}
+  public class TrackBar : Control { public new int Value {get;set;} public new int Minimum {get;set;} public new int Maximum {get;set;}=100; }
+  public class DateTimePicker : Control { public new DateTime Value {get;set;} }
   public class Label : Control {} public class TextBox : Control {}
   public class RichTextBox : TextBox {} public class ProgressBar : Control {}
   public class Button : Control {} public class ComboBox : Control {}
@@ -155,6 +167,8 @@ void Restore(string name,string typeName,string value) {
 }
 static string Encode(string value) {return Convert.ToBase64String(Encoding.UTF8.GetBytes(value ?? ""));}
 static void Dump(string id, Control c) {
+  if(c is TrackBar track) c.Value=track.Value;
+  if(c is DateTimePicker date) c.Text=date.Value.ToString("yyyy-MM-dd",CultureInfo.InvariantCulture);
   if(c is DataGridView) {var grid=(DataGridView)c;
     Console.WriteLine("CQGRID|"+id);
     foreach(var col in grid.Columns) Console.WriteLine("CQCOL|"+id+"|"+Encode(col.Name)+"|"+Encode(col.HeaderText));

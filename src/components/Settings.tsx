@@ -1,3 +1,5 @@
+import { loadSourceFiles, saveSourceFiles } from "./SourceExplorer";
+import { validSourceFiles } from "../lib/source-files.mjs";
 import { useState } from "react";
 import { Download, Upload, Volume2, Calendar, Trash2 } from "lucide-react";
 import { VoiceControls, useVoices } from "./VoiceControls";
@@ -39,6 +41,7 @@ export default function Settings({
           controls,
           practicalCode: readText("cq-practical-code"),
           practicalBrief: readBrief(),
+          sourceFiles: loadSourceFiles(),
         },
         null,
         2,
@@ -59,6 +62,11 @@ export default function Settings({
       const restored = migrateProgress(value.progress),
         controls = normalizeControls(value.controls);
       if (
+        value.sourceFiles !== undefined &&
+        !validSourceFiles(value.sourceFiles)
+      )
+        throw new Error("Invalid C# source files in this backup.");
+      if (
         value.format !== "codequest-backup-v1" ||
         !restored ||
         !controls ||
@@ -76,6 +84,7 @@ export default function Settings({
         "cq-practical-brief",
         JSON.stringify(value.practicalBrief || null),
       );
+      saveSourceFiles(value.sourceFiles || []);
       update(() => restored);
       setMessage("Backup restored. Your lessons and designer are ready.");
     } catch (error) {
@@ -353,6 +362,7 @@ export default function Settings({
                     for (const key of [
                       "cq-form",
                       "cq-practical-code",
+                      "cq-source-files",
                       "cq-practical-brief",
                     ])
                       removeText(key);

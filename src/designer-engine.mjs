@@ -11,6 +11,11 @@ export const toolbox = [
   "DataGridView",
   "ProgressBar",
   "RichTextBox",
+  "LinkLabel",
+  "TrackBar",
+  "DateTimePicker",
+  "Panel",
+  "GroupBox",
 ];
 export const categories = [
   "Appearance",
@@ -22,6 +27,7 @@ export const categories = [
   "Events",
 ];
 const defaults = {
+  parentId: "",
   font: "Segoe UI, 9pt",
   foreColor: "#000000",
   backColor: "#f0f0f0",
@@ -31,6 +37,7 @@ const defaults = {
   anchor: "Top, Left",
   dock: "None",
   accessibleName: "",
+  eventValueChanged: "",
   eventClick: "",
   eventTextChanged: "",
   eventSelectedIndexChanged: "",
@@ -63,26 +70,36 @@ export function addControl(list, type) {
       id: type.toLowerCase() + n,
       type,
       name: type.toLowerCase() + n,
-      text: [
-        "TextBox",
-        "RichTextBox",
-        "ComboBox",
-        "ListBox",
-        "NumericUpDown",
-        "DataGridView",
-        "ProgressBar",
-      ].includes(type)
-        ? ""
-        : type.toLowerCase() + n,
+      text:
+        type === "DateTimePicker"
+          ? "2026-01-01"
+          : [
+                "TextBox",
+                "RichTextBox",
+                "ComboBox",
+                "ListBox",
+                "NumericUpDown",
+                "DataGridView",
+                "ProgressBar",
+              ].includes(type)
+            ? ""
+            : type.toLowerCase() + n,
       x: 30 + (Math.floor(list.length / 4) % 3) * 200,
       y: 30 + (list.length % 4) * 95,
-      width:
-        type === "DataGridView"
-          ? 360
-          : ["TextBox", "RichTextBox", "ProgressBar"].includes(type)
-            ? 180
-            : 110,
-      height: ["DataGridView", "RichTextBox"].includes(type)
+      width: ["DataGridView", "Panel", "GroupBox"].includes(type)
+        ? 360
+        : [
+              "TextBox",
+              "RichTextBox",
+              "ProgressBar",
+              "TrackBar",
+              "DateTimePicker",
+            ].includes(type)
+          ? 180
+          : 110,
+      height: ["DataGridView", "RichTextBox", "Panel", "GroupBox"].includes(
+        type,
+      )
         ? 150
         : type === "ListBox"
           ? 90
@@ -104,10 +121,30 @@ export function updateControl(list, id, patch) {
         : 0;
     }
   }
-  return list.map((x) => (x.id === id ? { ...x, ...patch } : x));
+  const original = list.find((x) => x.id === id),
+    dx = original && "x" in patch ? patch.x - original.x : 0,
+    dy = original && "y" in patch ? patch.y - original.y : 0;
+  const inside = (c) => {
+    const seen = new Set();
+    while (c?.parentId && !seen.has(c.id)) {
+      seen.add(c.id);
+      if (c.parentId === id) return true;
+      c = list.find((x) => x.id === c.parentId);
+    }
+    return false;
+  };
+  return list.map((x) =>
+    x.id === id
+      ? { ...x, ...patch }
+      : inside(x)
+        ? { ...x, x: Math.max(0, x.x + dx), y: Math.max(0, x.y + dy) }
+        : x,
+  );
 }
 export function removeControl(list, id) {
-  return list.filter((x) => x.id !== id);
+  return list
+    .filter((x) => x.id !== id)
+    .map((x) => (x.parentId === id ? { ...x, parentId: "" } : x));
 }
 export function moveControl(list, id, x, y) {
   return updateControl(list, id, { x: Math.max(0, x), y: Math.max(0, y) });
@@ -152,6 +189,13 @@ export function validateForm(list) {
       issues.push(
         c.name + ": SelectedIndexChanged is only available for list controls.",
       );
+    if (
+      c.eventValueChanged &&
+      !["TrackBar", "NumericUpDown", "DateTimePicker"].includes(c.type)
+    )
+      issues.push(
+        c.name + ": ValueChanged belongs to numeric and date controls.",
+      );
     if (c.eventCheckedChanged && !["CheckBox", "RadioButton"].includes(c.type))
       issues.push(
         c.name + ": CheckedChanged is only available for checked controls.",
@@ -163,6 +207,7 @@ export function validateForm(list) {
     )
       issues.push(c.name + ": invalid C# control name.");
     for (const k of [
+      "eventValueChanged",
       "eventClick",
       "eventTextChanged",
       "eventSelectedIndexChanged",
@@ -178,6 +223,32 @@ export function validateForm(list) {
       )
         issues.push(c.name + ": invalid event handler name.");
     }
+    if (c.parentId) {
+      const parent = list.find((x) => x.id === c.parentId);
+      if (!parent || !["Panel", "GroupBox"].includes(parent.type))
+        issues.push(
+          c.name + ": choose an existing Panel or GroupBox as the parent.",
+        );
+      let node = c;
+      const seen = new Set();
+      while (node?.parentId) {
+        if (seen.has(node.id)) {
+          issues.push(c.name + ": containers cannot contain themselves.");
+          break;
+        }
+        seen.add(node.id);
+        node = list.find((x) => x.id === node.parentId);
+      }
+    }
+    if (
+      c.type === "DateTimePicker" &&
+      (!/^\d{4}-\d{2}-\d{2}$/.test(c.text) ||
+        !Number.isFinite(Date.parse(c.text)) ||
+        new Date(c.text).toISOString().slice(0, 10) !== c.text ||
+        Number(c.text.slice(0, 4)) < 1753 ||
+        Number(c.text.slice(0, 4)) > 9998)
+    )
+      issues.push(c.name + ": use a date in YYYY-MM-DD format.");
     if (c.type === "DataGridView") {
       const cols = gridColumns(c.columns);
       if (
@@ -206,7 +277,7 @@ export function validateForm(list) {
     if (c.eventSelectionChanged && c.type !== "DataGridView")
       issues.push(c.name + ": SelectionChanged belongs to DataGridView.");
     if (
-      ["NumericUpDown", "ProgressBar"].includes(c.type) &&
+      ["NumericUpDown", "ProgressBar", "TrackBar"].includes(c.type) &&
       (!(
         Number.isFinite(c.minimum) &&
         Number.isFinite(c.maximum) &&
@@ -218,7 +289,7 @@ export function validateForm(list) {
     )
       issues.push(c.name + ": numeric range/value is invalid.");
     if (
-      c.type === "ProgressBar" &&
+      ["ProgressBar", "TrackBar"].includes(c.type) &&
       [c.minimum, c.maximum, c.value].some(
         (v) => !Number.isInteger(v) || v < 0 || v > 2147483647,
       )
@@ -234,85 +305,103 @@ export function validateForm(list) {
 const quote = (value) =>
   JSON.stringify(String(value)).replace(/\\u2028/g, "\\u2028");
 export function designerCode(list) {
-  return list
-    .map((c) => {
-      const target = `this.${c.name}`;
-      const lines = [
-        `${target} = new System.Windows.Forms.${c.type}();`,
-        `${target}.Location = new System.Drawing.Point(${c.x}, ${c.y});`,
-        `${target}.Name = ${quote(c.name)};`,
-        `${target}.Size = new System.Drawing.Size(${c.width}, ${c.height});`,
-        `${target}.Text = ${quote(c.text)};`,
-        `${target}.Enabled = ${c.enabled};`,
-        `${target}.Visible = ${c.visible};`,
-        `${target}.TabIndex = ${c.tabIndex};`,
-        `${target}.AccessibleName = ${quote(c.accessibleName)};`,
-      ];
-      for (const key of ["foreColor", "backColor"])
-        lines.push(
-          `${target}.${key === "foreColor" ? "ForeColor" : "BackColor"} = System.Drawing.ColorTranslator.FromHtml(${quote(c[key])});`,
-        );
-      const font = /^(.+),\s*(\d+(?:\.\d+)?)pt$/.exec(c.font);
-      if (font)
-        lines.push(
-          `${target}.Font = new System.Drawing.Font(${quote(font[1])}, ${font[2]}F);`,
-        );
-      lines.push(
-        `${target}.Anchor = ${c.anchor
-          .split(",")
-          .map((a) => `System.Windows.Forms.AnchorStyles.${a.trim()}`)
-          .join(" | ")};`,
-        `${target}.Dock = System.Windows.Forms.DockStyle.${c.dock};`,
-      );
-      for (const [property, event] of [
-        ["eventClick", "Click"],
-        ["eventTextChanged", "TextChanged"],
-        ["eventSelectedIndexChanged", "SelectedIndexChanged"],
-        ["eventCheckedChanged", "CheckedChanged"],
-        ["eventSelectionChanged", "SelectionChanged"],
-      ])
-        if (c[property])
+  const wiring = [];
+  return (
+    list
+      .map((c) => {
+        const target = `this.${c.name}`;
+        const lines = [
+          `${target} = new System.Windows.Forms.${c.type}();`,
+          `${target}.Location = new System.Drawing.Point(${c.x}, ${c.y});`,
+          `${target}.Name = ${quote(c.name)};`,
+          `${target}.Size = new System.Drawing.Size(${c.width}, ${c.height});`,
+          `${target}.Text = ${quote(c.text)};`,
+          `${target}.Enabled = ${c.enabled};`,
+          `${target}.Visible = ${c.visible};`,
+          `${target}.TabIndex = ${c.tabIndex};`,
+          `${target}.AccessibleName = ${quote(c.accessibleName)};`,
+        ];
+        for (const key of ["foreColor", "backColor"])
           lines.push(
-            `${target}.${event} += new System.EventHandler(this.${c[property]});`,
+            `${target}.${key === "foreColor" ? "ForeColor" : "BackColor"} = System.Drawing.ColorTranslator.FromHtml(${quote(c[key])});`,
           );
-      if (["ListBox", "ComboBox"].includes(c.type) && c.items)
-        lines.push(
-          `${target}.Items.AddRange(new object[] { ${c.items.split("\n").map(quote).join(", ")} });`,
-        );
-      if (["RadioButton", "CheckBox"].includes(c.type))
-        lines.push(`${target}.Checked = ${!!c.checked};`);
-      if (c.type === "TextBox")
-        lines.push(`${target}.UseSystemPasswordChar = ${!!c.password};`);
-      if (["TextBox", "RichTextBox"].includes(c.type))
-        lines.push(
-          `${target}.Multiline = ${c.type === "RichTextBox" || !!c.multiline};`,
-        );
-      if (c.type === "DataGridView") {
-        lines.push(
-          `${target}.AllowUserToAddRows = false;`,
-          `${target}.ReadOnly = ${!!c.readOnly};`,
-          `${target}.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;`,
-          `${target}.MultiSelect = false;`,
-        );
-        gridColumns(c.columns).forEach((col) =>
+        const font = /^(.+),\s*(\d+(?:\.\d+)?)pt$/.exec(c.font);
+        if (font)
           lines.push(
-            `${target}.Columns.Add(${quote(col.name)}, ${quote(col.header)});`,
-          ),
-        );
-        gridRows(c.gridRows).forEach((row) =>
-          lines.push(
-            `${target}.Rows.Add(new object[] { ${row.map(quote).join(", ")} });`,
-          ),
-        );
-      }
-      if (["NumericUpDown", "ProgressBar"].includes(c.type))
+            `${target}.Font = new System.Drawing.Font(${quote(font[1])}, ${font[2]}F);`,
+          );
         lines.push(
-          `${target}.Maximum = ${Number(c.maximum ?? 100)}${c.type === "NumericUpDown" ? "m" : ""};`,
-          `${target}.Minimum = ${Number(c.minimum ?? 0)}${c.type === "NumericUpDown" ? "m" : ""};`,
-          `${target}.Value = ${Number(c.value ?? 0)}${c.type === "NumericUpDown" ? "m" : ""};`,
+          `${target}.Anchor = ${c.anchor
+            .split(",")
+            .map((a) => `System.Windows.Forms.AnchorStyles.${a.trim()}`)
+            .join(" | ")};`,
+          `${target}.Dock = System.Windows.Forms.DockStyle.${c.dock};`,
         );
-      lines.push(`this.Controls.Add(${target});`);
-      return lines.join("\n");
-    })
-    .join("\n\n");
+        for (const [property, event] of [
+          ["eventValueChanged", "ValueChanged"],
+          ["eventClick", "Click"],
+          ["eventTextChanged", "TextChanged"],
+          ["eventSelectedIndexChanged", "SelectedIndexChanged"],
+          ["eventCheckedChanged", "CheckedChanged"],
+          ["eventSelectionChanged", "SelectionChanged"],
+        ])
+          if (c[property])
+            wiring.push(
+              `${target}.${event} += new System.EventHandler(this.${c[property]});`,
+            );
+        if (["ListBox", "ComboBox"].includes(c.type) && c.items)
+          lines.push(
+            `${target}.Items.AddRange(new object[] { ${c.items.split("\n").map(quote).join(", ")} });`,
+          );
+        if (["RadioButton", "CheckBox"].includes(c.type))
+          lines.push(`${target}.Checked = ${!!c.checked};`);
+        if (c.type === "TextBox")
+          lines.push(`${target}.UseSystemPasswordChar = ${!!c.password};`);
+        if (["TextBox", "RichTextBox"].includes(c.type))
+          lines.push(
+            `${target}.Multiline = ${c.type === "RichTextBox" || !!c.multiline};`,
+          );
+        if (c.type === "DateTimePicker")
+          lines.push(
+            `${target}.Value = System.DateTime.Parse(${quote(c.text || "2026-01-01")}, System.Globalization.CultureInfo.InvariantCulture);`,
+            `${target}.Format = System.Windows.Forms.DateTimePickerFormat.Short;`,
+          );
+        if (c.type === "DataGridView") {
+          lines.push(
+            `${target}.AllowUserToAddRows = false;`,
+            `${target}.ReadOnly = ${!!c.readOnly};`,
+            `${target}.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;`,
+            `${target}.MultiSelect = false;`,
+          );
+          gridColumns(c.columns).forEach((col) =>
+            lines.push(
+              `${target}.Columns.Add(${quote(col.name)}, ${quote(col.header)});`,
+            ),
+          );
+          gridRows(c.gridRows).forEach((row) =>
+            lines.push(
+              `${target}.Rows.Add(new object[] { ${row.map(quote).join(", ")} });`,
+            ),
+          );
+        }
+        if (["NumericUpDown", "ProgressBar", "TrackBar"].includes(c.type))
+          lines.push(
+            `${target}.Maximum = ${Number(c.maximum ?? 100)}${c.type === "NumericUpDown" ? "m" : ""};`,
+            `${target}.Minimum = ${Number(c.minimum ?? 0)}${c.type === "NumericUpDown" ? "m" : ""};`,
+            `${target}.Value = ${Number(c.value ?? 0)}${c.type === "NumericUpDown" ? "m" : ""};`,
+          );
+        lines.push(`this.Controls.Add(${target});`);
+        return lines.join("\n");
+      })
+      .join("\n\n") +
+    list
+      .filter((c) => c.parentId)
+      .map((c) => {
+        const parent = list.find((x) => x.id === c.parentId);
+        return `\nthis.${parent.name}.Controls.Add(this.${c.name});\nthis.${c.name}.Location = new System.Drawing.Point(${c.x - parent.x}, ${c.y - parent.y});`;
+      })
+      .join("") +
+    "\n" +
+    wiring.join("\n")
+  );
 }
