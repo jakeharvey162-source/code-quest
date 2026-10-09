@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Clock, CheckCircle2, Play, ArrowRight } from "lucide-react";
+import { systemProjects } from "../lib/system-projects.mjs";
 import { lessons } from "../curriculum";
 import type { Question } from "../curriculum";
 import type { Progress } from "../lib/progress";
@@ -239,6 +240,27 @@ export default function Assessment({
           </div>
         )}
       </div>
+      <section className="system-workshop">
+        <h2>Complete-system challenges</h2>
+        <p>
+          Build an ATM, a loan calculator or a bank account manager in WinForms.
+          Use the system workshop to earn partial marks and test working C#
+          behaviours.
+        </p>
+        <div className="system-actions">
+          {systemProjects.map((project) => (
+            <button
+              key={project.id}
+              onClick={() => {
+                writeText("cq-system-project", project.id);
+                onNavigate("designer");
+              }}
+            >
+              {project.title}
+            </button>
+          ))}
+        </div>
+      </section>
       <div className="assessment-start">
         <div className="arena-number">
           P1<span>PRACTICAL</span>
@@ -272,13 +294,15 @@ export default function Assessment({
         </div>
       </div>
       <div className="question-analyser" id="practical-marker">
-        <h2>Practical marker</h2>
+        <h2>Registration practical marker</h2>
         <p>
-          Build your form in WinForms, then paste your event-handler C# here.
-          CodeQuest reviews six categories using static code patterns and points
-          you to the weakest skill. It does not compile or execute this Windows
-          Forms handler, and a high score does not verify its behaviour. This is
-          formative practice, not an official university mark.
+          Build the Student Registration Form in WinForms, then paste your
+          event-handler C# here. ATM, loan and banking projects use the system
+          workshop’s real C# checks. CodeQuest reviews six categories using
+          static code patterns and points you to the weakest skill. It does not
+          compile or execute this Windows Forms handler, and a high score does
+          not verify its behaviour. This is formative practice, not an official
+          university mark.
         </p>
         <textarea
           aria-label="Practical C# code"
@@ -297,13 +321,7 @@ export default function Assessment({
               markPractical({
                 controls,
                 code: practicalCode,
-                requirements: (() => {
-                  try {
-                    return readBrief() || registrationBrief;
-                  } catch {
-                    return registrationBrief;
-                  }
-                })(),
+                requirements: registrationBrief,
               }),
             );
           }}

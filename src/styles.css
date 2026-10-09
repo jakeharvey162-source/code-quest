@@ -2202,3 +2202,24 @@ button.primary{box-shadow:0 4px 0 #10251b}button.primary:active{transform:transl
 .properties-fields:disabled { opacity:.6; }
 .runtime-stop { position:fixed; z-index:42; top:12px; left:24px; box-shadow:0 3px 12px #0003; }
 .placed-control > .resize-handle { width:22px; height:22px; padding:0; border-radius:50%; font-weight:600; }
+.placed-control .data-grid { height:100%; border:1px solid #8d9ca6; width:100%; }
+.data-grid table { border-collapse:collapse; width:100%; font:12px 'Segoe UI',sans-serif; }
+.data-grid th { background:#e1e7eb; color:#172a36; position:sticky; top:0; text-align:left; border:1px solid #aebac3; padding:5px; }
+.data-grid td { border:1px solid #c4ced6; min-width:70px; padding:0; }
+.placed-control .data-grid td button,.placed-control .data-grid td input { display:block; border:0; min-height:26px; padding:5px; border-radius:0; margin:0; text-align:left; background:white; color:#172a36; }
+.placed-control .data-grid .grid-selected td button,.placed-control .data-grid .grid-selected td input {background:#cfe8f8;}
+.data-grid small { display:block; padding:8px; color:#485c6b; }
+.placed-control textarea {width:100%;height:100%;resize:none;padding:5px;}
+.tor-coach {width:190px;background:linear-gradient(150deg,#123747ed,#082430ed);}
+.tor-model {width:180px;height:170px;pointer-events:none;position:relative;margin:auto;}
+.tor-model[data-state=loading] {position:absolute;visibility:hidden;}
+.tor-model canvas {display:block;filter:drop-shadow(0 0 6px #56c7e344);}
+.tor-coach .tor-avatar {padding:0;width:100%;}
+.tor-coach[data-moving=true] {border-color:#8ce3c0;}
+.system-workshop {border:1px solid #a6b4a1;border-left:5px solid #c49b27;background:#fffdf4;padding:20px;margin:18px 0;border-radius:10px;}
+.system-workshop h2 {margin:0 0 8px;}
+.system-workshop select {display:block;width:100%;max-width:420px;margin:8px 0;padding:9px;}
+.system-actions {display:flex;flex-wrap:wrap;gap:8px;margin:14px 0;}
+.system-report article {padding:10px 14px;margin:8px 0;border-radius:7px;}
+.case-pass {background:#edf6ed;border-left:4px solid #357145;}.case-fail {background:#fff0db;border-left:4px solid #a96913;}
+.previous-system {font-size:12px;margin:10px 0;}

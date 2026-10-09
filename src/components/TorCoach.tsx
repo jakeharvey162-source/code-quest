@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { Settings } from "../lib/progress";
 import { readText, writeText } from "../lib/local-data";
 import { speakText, stopSpeech, commandFor, voiceError } from "../lib/voice";
@@ -14,6 +14,7 @@ import {
   describeObservation,
 } from "../lib/coach-observation.mjs";
 import { useVoices } from "./VoiceControls";
+const TorAvatar = lazy(() => import("./TorAvatar"));
 const tips: Record<string, string> = {
   designer:
     "Select a toolbox control, then click the form to place it. Double-click adds it automatically. Drag to move, edit Name and Text in Properties, and double-click a Button on the form to write its Click event. Press F5 to test.",
@@ -223,6 +224,21 @@ export default function TorCoach({
       }
     },
   );
+  const [modelReady, setModelReady] = useState(false);
+  const [osReduced, setOsReduced] = useState(
+    () => matchMedia("(prefers-reduced-motion: reduce)").matches,
+  );
+  useEffect(() => {
+    const media = matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setOsReduced(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+  const [moving, setMoving] = useState(false);
+  const [roam, setRoam] = useState(
+    () => readText("cq-tor-roam", "true") === "true",
+  );
+  const movement = useRef<ReturnType<typeof setTimeout> | null>(null);
   const box = useRef<HTMLElement>(null);
   const drag = useRef<{
     x: number;
@@ -240,6 +256,60 @@ export default function TorCoach({
     writeText("cq-tor-position", JSON.stringify(p));
   }
   useEffect(() => {
+    if (
+      !roam ||
+      open ||
+      innerWidth < 650 ||
+      settings.reducedMotion ||
+      osReduced
+    ) {
+      setMoving(false);
+      return;
+    }
+    let frame = 0,
+      start = 0,
+      from = 0,
+      target = 0,
+      top = 0;
+    const walk = (time: number) => {
+      if (!box.current || document.hidden || drag.current) {
+        setMoving(false);
+        return;
+      }
+      if (!start) {
+        start = time;
+        const r = box.current.getBoundingClientRect();
+        from = r.left;
+        top = r.top;
+        target = Math.max(
+          8,
+          Math.min(
+            innerWidth - r.width - 8,
+            from + (Math.random() > 0.5 ? 1 : -1) * 180,
+          ),
+        );
+        setMoving(true);
+      }
+      const fraction = Math.min(1, (time - start) / 3000);
+      move(from + (target - from) * fraction, top);
+      if (fraction < 1) frame = requestAnimationFrame(walk);
+      else {
+        setMoving(false);
+        start = 0;
+        movement.current = setTimeout(() => {
+          frame = requestAnimationFrame(walk);
+        }, 12000);
+      }
+    };
+    movement.current = setTimeout(() => {
+      frame = requestAnimationFrame(walk);
+    }, 12000);
+    return () => {
+      cancelAnimationFrame(frame);
+      if (movement.current) clearTimeout(movement.current);
+    };
+  }, [roam, open, settings.reducedMotion, osReduced]);
+  useEffect(() => {
     pendingAction.current?.abort();
     setReply(tips[page] || tips.learn);
     setObservation(null);
@@ -254,7 +324,7 @@ export default function TorCoach({
     resize();
     window.addEventListener("resize", resize);
     return () => window.removeEventListener("resize", resize);
-  }, [open]);
+  }, [open, modelReady]);
   useEffect(
     () => () => {
       pendingAction.current?.abort();
@@ -301,6 +371,7 @@ export default function TorCoach({
       ref={box}
       className={`tor-coach ${open ? "expanded" : ""} ${status === "Speaking…" ? "speaking" : ""}`}
       aria-label="Tor hologram tutor"
+      data-moving={moving}
       data-mood={
         listening ? "listening" : status === "Speaking…" ? "speaking" : mood
       }
@@ -357,7 +428,25 @@ export default function TorCoach({
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        <svg viewBox="0 0 120 110" aria-hidden="true">
+        <Suspense fallback={null}>
+          <TorAvatar
+            mood={
+              listening
+                ? "listening"
+                : status === "Speaking…"
+                  ? "speaking"
+                  : mood
+            }
+            moving={moving}
+            reduced={settings.reducedMotion || osReduced}
+            onReady={setModelReady}
+          />
+        </Suspense>
+        <svg
+          style={{ display: modelReady ? "none" : undefined }}
+          viewBox="0 0 120 110"
+          aria-hidden="true"
+        >
           <ellipse className="tor-beam" cx="60" cy="98" rx="46" ry="9" />
           <path
             className="tor-body"
@@ -432,6 +521,17 @@ export default function TorCoach({
               {listening ? "Stop listening" : "Talk to Tor"}
             </button>
           </form>
+          <label className="tor-roast">
+            <input
+              type="checkbox"
+              checked={roam}
+              onChange={(e) => {
+                setRoam(e.target.checked);
+                writeText("cq-tor-roam", String(e.target.checked));
+              }}
+            />
+            Let Tor walk around
+          </label>
           <label className="tor-roast">
             <input
               type="checkbox"

@@ -20,8 +20,8 @@ self.onmessage = async (event) => {
       type: "result",
       result: {
         ...result,
-        stdOut: result.stdOut?.slice(0, 20000),
-        stdErr: result.stdErr?.slice(0, 20000),
+        stdOut: result.stdOut?.slice(0, 250000),
+        stdErr: result.stdErr?.slice(0, 250000),
       },
     });
   } catch (error) {

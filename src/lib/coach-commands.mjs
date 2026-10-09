@@ -10,6 +10,12 @@ export function coachAction(text) {
   const q = cleanCoachRequest(text).replace(/[.!?]+$/, "");
   const types = {
     label: "Label",
+    datagridview: "DataGridView",
+    "data grid view": "DataGridView",
+    "progress bar": "ProgressBar",
+    progressbar: "ProgressBar",
+    "rich text box": "RichTextBox",
+    richtextbox: "RichTextBox",
     textbox: "TextBox",
     "text box": "TextBox",
     button: "Button",
@@ -25,7 +31,7 @@ export function coachAction(text) {
     numericupdown: "NumericUpDown",
   };
   let m =
-    /^(?:add|create|place)\s+(?:a\s+|an\s+)?(label|text ?box|button|combo ?box|list ?box|check ?box|radio ?button|numeric ?up ?down)(?:\s+(?:with text|that says|saying)\s+(.+))?$/i.exec(
+    /^(?:add|create|place)\s+(?:a\s+|an\s+)?(label|text ?box|button|combo ?box|list ?box|check ?box|radio ?button|numeric ?up ?down|data ?grid ?view|progress ?bar|rich ?text ?box)(?:\s+(?:with text|that says|saying)\s+(.+))?$/i.exec(
       q,
     );
   if (m)

@@ -12,7 +12,17 @@ export default defineConfig({
     launchOptions: process.env.CHROMIUM_EXECUTABLE_PATH
       ? {
           executablePath: process.env.CHROMIUM_EXECUTABLE_PATH,
-          args: ["--no-sandbox", "--disable-gpu", "--disable-dev-shm-usage"],
+          args: [
+            "--no-sandbox",
+            "--disable-dev-shm-usage",
+            ...(process.env.CODEQUEST_WEBGL_TEST
+              ? [
+                  "--use-gl=angle",
+                  "--use-angle=swiftshader",
+                  "--enable-unsafe-swiftshader",
+                ]
+              : ["--disable-gpu"]),
+          ],
         }
       : undefined,
     baseURL: "http://127.0.0.1:5173",

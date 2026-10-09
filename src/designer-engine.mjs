@@ -1,3 +1,4 @@
+import { gridColumns, gridRows } from "./lib/grid-data.mjs";
 export const toolbox = [
   "Label",
   "TextBox",
@@ -7,6 +8,9 @@ export const toolbox = [
   "RadioButton",
   "CheckBox",
   "NumericUpDown",
+  "DataGridView",
+  "ProgressBar",
+  "RichTextBox",
 ];
 export const categories = [
   "Appearance",
@@ -37,6 +41,11 @@ const defaults = {
   minimum: 0,
   maximum: 100,
   value: 0,
+  columns: "Column1|Column 1\nColumn2|Column 2",
+  gridRows: "[]",
+  readOnly: true,
+  multiline: false,
+  eventSelectionChanged: "",
 };
 export function addControl(list, type) {
   if (!toolbox.includes(type)) throw new Error("Unsupported control type");
@@ -54,11 +63,30 @@ export function addControl(list, type) {
       id: type.toLowerCase() + n,
       type,
       name: type.toLowerCase() + n,
-      text: ["TextBox", "ComboBox", "ListBox", "NumericUpDown"].includes(type) ? "" : type.toLowerCase() + n,
+      text: [
+        "TextBox",
+        "RichTextBox",
+        "ComboBox",
+        "ListBox",
+        "NumericUpDown",
+        "DataGridView",
+        "ProgressBar",
+      ].includes(type)
+        ? ""
+        : type.toLowerCase() + n,
       x: 30 + (Math.floor(list.length / 4) % 3) * 200,
       y: 30 + (list.length % 4) * 95,
-      width: type === "TextBox" ? 180 : 110,
-      height: type === "ListBox" ? 90 : 34,
+      width:
+        type === "DataGridView"
+          ? 360
+          : ["TextBox", "RichTextBox", "ProgressBar"].includes(type)
+            ? 180
+            : 110,
+      height: ["DataGridView", "RichTextBox"].includes(type)
+        ? 150
+        : type === "ListBox"
+          ? 90
+          : 34,
       ...defaults,
       tabIndex: list.length,
     },
@@ -139,6 +167,7 @@ export function validateForm(list) {
       "eventTextChanged",
       "eventSelectedIndexChanged",
       "eventCheckedChanged",
+      "eventSelectionChanged",
     ]) {
       if (
         c[k] &&
@@ -149,8 +178,35 @@ export function validateForm(list) {
       )
         issues.push(c.name + ": invalid event handler name.");
     }
+    if (c.type === "DataGridView") {
+      const cols = gridColumns(c.columns);
+      if (
+        !cols.length ||
+        cols.length > 16 ||
+        new Set(cols.map((x) => x.name)).size !== cols.length ||
+        cols.some((x) => !x.name || x.name.includes("|") || x.name.length > 100)
+      )
+        issues.push(c.name + ": use 1–16 unique grid column names.");
+      let rows;
+      try {
+        rows = JSON.parse(c.gridRows || "[]");
+      } catch {
+        rows = null;
+      }
+      if (
+        !Array.isArray(rows) ||
+        gridRows(c.gridRows).length !== rows.length ||
+        rows.some((row) => !Array.isArray(row) || row.length !== cols.length)
+      )
+        issues.push(
+          c.name +
+            ": grid rows must be a JSON array with one value per column (maximum 100 rows).",
+        );
+    }
+    if (c.eventSelectionChanged && c.type !== "DataGridView")
+      issues.push(c.name + ": SelectionChanged belongs to DataGridView.");
     if (
-      c.type === "NumericUpDown" &&
+      ["NumericUpDown", "ProgressBar"].includes(c.type) &&
       (!(
         Number.isFinite(c.minimum) &&
         Number.isFinite(c.maximum) &&
@@ -161,6 +217,15 @@ export function validateForm(list) {
         c.value > c.maximum)
     )
       issues.push(c.name + ": numeric range/value is invalid.");
+    if (
+      c.type === "ProgressBar" &&
+      [c.minimum, c.maximum, c.value].some(
+        (v) => !Number.isInteger(v) || v < 0 || v > 2147483647,
+      )
+    )
+      issues.push(
+        c.name + ": progress values must be non-negative 32-bit integers.",
+      );
     if (c.type === "Button" && !c.eventClick)
       issues.push(c.name + ": wire a Click event.");
   }
@@ -204,6 +269,7 @@ export function designerCode(list) {
         ["eventTextChanged", "TextChanged"],
         ["eventSelectedIndexChanged", "SelectedIndexChanged"],
         ["eventCheckedChanged", "CheckedChanged"],
+        ["eventSelectionChanged", "SelectionChanged"],
       ])
         if (c[property])
           lines.push(
@@ -217,11 +283,33 @@ export function designerCode(list) {
         lines.push(`${target}.Checked = ${!!c.checked};`);
       if (c.type === "TextBox")
         lines.push(`${target}.UseSystemPasswordChar = ${!!c.password};`);
-      if (c.type === "NumericUpDown")
+      if (["TextBox", "RichTextBox"].includes(c.type))
         lines.push(
-          `${target}.Maximum = ${Number(c.maximum ?? 100)}m;`,
-          `${target}.Minimum = ${Number(c.minimum ?? 0)}m;`,
-          `${target}.Value = ${Number(c.value ?? 0)}m;`,
+          `${target}.Multiline = ${c.type === "RichTextBox" || !!c.multiline};`,
+        );
+      if (c.type === "DataGridView") {
+        lines.push(
+          `${target}.AllowUserToAddRows = false;`,
+          `${target}.ReadOnly = ${!!c.readOnly};`,
+          `${target}.SelectionMode = System.Windows.Forms.DataGridViewSelectionMode.FullRowSelect;`,
+          `${target}.MultiSelect = false;`,
+        );
+        gridColumns(c.columns).forEach((col) =>
+          lines.push(
+            `${target}.Columns.Add(${quote(col.name)}, ${quote(col.header)});`,
+          ),
+        );
+        gridRows(c.gridRows).forEach((row) =>
+          lines.push(
+            `${target}.Rows.Add(new object[] { ${row.map(quote).join(", ")} });`,
+          ),
+        );
+      }
+      if (["NumericUpDown", "ProgressBar"].includes(c.type))
+        lines.push(
+          `${target}.Maximum = ${Number(c.maximum ?? 100)}${c.type === "NumericUpDown" ? "m" : ""};`,
+          `${target}.Minimum = ${Number(c.minimum ?? 0)}${c.type === "NumericUpDown" ? "m" : ""};`,
+          `${target}.Value = ${Number(c.value ?? 0)}${c.type === "NumericUpDown" ? "m" : ""};`,
         );
       lines.push(`this.Controls.Add(${target});`);
       return lines.join("\n");

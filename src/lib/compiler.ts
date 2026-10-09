@@ -25,8 +25,8 @@ export function runCSharp(
         "A program is already running. Stop it before starting another.",
       ),
     );
-  if (code.length > 50000)
-    return Promise.reject(new Error("Keep programs below 50,000 characters."));
+  if (code.length > 200000)
+    return Promise.reject(new Error("Keep programs below 200,000 characters."));
   pending = true;
   try {
     worker ??= new Worker(new URL("./compiler.worker.js", import.meta.url), {

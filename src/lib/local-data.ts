@@ -1,3 +1,4 @@
+import { systemProjects } from "./system-projects.mjs";
 let owner = "";
 export function setDataOwner(userId: string | null) {
   owner = userId || "";
@@ -42,7 +43,7 @@ export const registrationBrief = {
 export function readBrief() {
   try {
     const value = JSON.parse(readText("cq-practical-brief", "null"));
-    return value?.id === registrationBrief.id ? registrationBrief : null;
+    return value?.id === registrationBrief.id ? registrationBrief : systemProjects.find(p=>p.id===value?.id) || null;
   } catch {
     return null;
   }

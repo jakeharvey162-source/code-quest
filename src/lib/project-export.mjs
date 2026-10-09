@@ -20,6 +20,7 @@ export function projectFiles(controls, { handlerCode = "" } = {}) {
           c.eventTextChanged,
           c.eventSelectedIndexChanged,
           c.eventCheckedChanged,
+          c.eventSelectionChanged,
         ])
         .filter(Boolean),
     ),
@@ -45,7 +46,7 @@ export function projectFiles(controls, { handlerCode = "" } = {}) {
     "CodeQuestForms.sln":
       'Microsoft Visual Studio Solution File, Format Version 12.00\n# Visual Studio Version 17\nVisualStudioVersion = 17.0.31903.59\nMinimumVisualStudioVersion = 10.0.40219.1\nProject("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CodeQuestForms", "CodeQuestForms.csproj", "{85A24500-16C1-42B0-9999-541C541FCDF1}"\nEndProject\nGlobal\n    GlobalSection(SolutionConfigurationPlatforms) = preSolution\n        Debug|Any CPU = Debug|Any CPU\n        Release|Any CPU = Release|Any CPU\n    EndGlobalSection\n    GlobalSection(ProjectConfigurationPlatforms) = postSolution\n        {85A24500-16C1-42B0-9999-541C541FCDF1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU\n        {85A24500-16C1-42B0-9999-541C541FCDF1}.Debug|Any CPU.Build.0 = Debug|Any CPU\n        {85A24500-16C1-42B0-9999-541C541FCDF1}.Release|Any CPU.ActiveCfg = Release|Any CPU\n        {85A24500-16C1-42B0-9999-541C541FCDF1}.Release|Any CPU.Build.0 = Release|Any CPU\n    EndGlobalSection\nEndGlobal\n',
     "README.txt":
-      "Open CodeQuestForms.sln in Visual Studio on Windows with the .NET desktop development workload. Build and run the form. Event handlers are wired with editable empty bodies: add your business logic in Form1.cs. Native WinForms runs on Windows, not in a web browser.\n",
+      "Open CodeQuestForms.sln in Visual Studio on Windows with the .NET desktop development workload. Build and run the form. Your event code is included in Form1.cs; missing handlers have editable empty bodies. Complete and test your business logic there. Native WinForms runs on Windows, not in a web browser.\n",
   };
 }
 export function projectZip(controls, options = {}) {
