@@ -28,12 +28,14 @@ export default function LessonView({
   onNavigate: (p: string) => void;
 }) {
   const completed = progress.steps[lesson.id] || [];
-  const [stage, setStage] = useState(() => Math.min(completed.length, 4)),
+  const [stage, setStage] = useState(() => { const next = [0, 1, 2, 3, 4].find((i) => !completed.includes(String(i))); return next ?? 4; }),
     [answer, setAnswer] = useState<number | null>(null),
     [feedback, setFeedback] = useState(""),
     [passed, setPassed] = useState(false),
     [busy, setBusy] = useState(false),
     [hint, setHint] = useState(0);
+  const alreadyPassed = completed.includes(String(stage));
+  const canContinue = passed || alreadyPassed;
   const challenge = stage === 4 ? lesson.apply : lesson.build;
   const draftKey = lesson.id + ":" + stage;
   const initial = stage === 3 ? lesson.debug : challenge?.starter;
@@ -120,7 +122,7 @@ export default function LessonView({
           <button
             key={name}
             className={stage === i ? "active" : ""}
-            disabled={busy || i > completed.length}
+            disabled={busy || (i > 0 && ![0, 1, 2, 3, 4].slice(0, i).every((previous) => completed.includes(String(previous))))}
             onClick={() => setStage(i)}
           >
             <span>
@@ -188,7 +190,7 @@ export default function LessonView({
               >
                 Check prediction
               </button>
-              {passed && (
+              {canContinue && (
                 <button onClick={() => setStage(2)}>
                   Build it <ArrowRight size={16} />
                 </button>
@@ -197,6 +199,7 @@ export default function LessonView({
           ) : (
             <>
               <div className="challenge-brief">
+                <p className="eyebrow">STAGE {stage + 1} OF 5 · {stage === 3 ? "DEBUGGING CHALLENGE" : stage === 4 ? "INDEPENDENT CHALLENGE" : "BUILD CHALLENGE"}</p>
                 <p className="eyebrow">
                   {stage === 3
                     ? "FIND AND FIX THE BUG"
@@ -206,7 +209,7 @@ export default function LessonView({
                 </p>
                 <h2>
                   {stage === 3
-                    ? "Repair this version. It must pass the same tests."
+                    ? "Stage 4: Find the mistake in the starter code, fix it, then press Run tests. Your output must match the expected output below."
                     : challenge!.task}
                 </h2>
               </div>
@@ -236,14 +239,14 @@ export default function LessonView({
                       Run tests
                     </button>
                   )}
-                  {passed && stage < 4 && (
-                    <button onClick={() => setStage(stage + 1)}>
-                      Next stage <ArrowRight size={16} />
+                  {canContinue && stage < 4 && (
+                    <button className="primary stage-continue" onClick={() => setStage(stage + 1)}>
+                      {stage === 3 ? "Continue to Stage 5 · Apply alone" : "Next stage"} <ArrowRight size={16} />
                     </button>
                   )}
                 </div>
               </div>
-              <details className="test-cases">
+              <details className="test-cases" open={stage === 3 ? true : undefined}>
                 <summary>What the tests run</summary>
                 <pre>{challenge!.harness}</pre>
                 <b>Expected output</b>
@@ -251,6 +254,8 @@ export default function LessonView({
               </details>
             </>
           )}
+          {stage === 3 && !canContinue && <p className="stage-help" role="note">Stuck on Stage 4? Compare the starter code with the expected output below. Fix the faulty line, then press Run tests. You can use Tor’s hints or open the worked solution to learn the correction.</p>}
+          {alreadyPassed && !passed && stage < 4 && <p className="stage-help" role="status">You passed this stage earlier. You can continue without repeating the tests.</p>}
           {feedback && (
             <pre
               role="status"
