@@ -223,6 +223,18 @@ export function validateForm(list) {
       )
         issues.push(c.name + ": invalid event handler name.");
     }
+    const anchors = typeof c.anchor === "string" ? c.anchor.split(",").map((value) => value.trim()) : [];
+    const allowedAnchors = new Set(["Top", "Bottom", "Left", "Right"]);
+    if (
+      !anchors.length ||
+      (anchors.includes("None")
+        ? anchors.length !== 1
+        : anchors.some((value) => !allowedAnchors.has(value)) ||
+          new Set(anchors).size !== anchors.length)
+    )
+      issues.push(c.name + ": invalid Anchor property.");
+    if (!["None", "Top", "Bottom", "Left", "Right", "Fill"].includes(c.dock))
+      issues.push(c.name + ": invalid Dock property.");
     if (c.parentId) {
       const parent = list.find((x) => x.id === c.parentId);
       if (!parent || !["Panel", "GroupBox"].includes(parent.type))

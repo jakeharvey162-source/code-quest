@@ -136,3 +136,21 @@ test("export rejects event properties incompatible with the selected control typ
       false,
     );
 });
+
+test("rejects unsupported Anchor and Dock enum values before native export", () => {
+  const base = addControl([], "Label");
+  for (const patch of [
+    { anchor: "Top, Banana" },
+    { anchor: "Top, Top" },
+    { anchor: "None, Left" },
+    { dock: "Unicorn" },
+  ]) {
+    const form = updateControl(base, base[0].id, patch);
+    assert.equal(validateForm(form).ok, false, JSON.stringify(patch));
+  }
+  const valid = updateControl(base, base[0].id, {
+    anchor: "Top, Bottom, Left, Right",
+    dock: "Fill",
+  });
+  assert.equal(validateForm(valid).ok, true);
+});
