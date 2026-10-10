@@ -1,0 +1,33 @@
+import {test,expect} from "@playwright/test";
+
+test("curated videos launch hands-on WinForms challenge without loading YouTube by default",async ({page})=>{
+ await page.goto("/#videos");
+ await expect(page.getByRole("heading",{name:"Watch. Build. Break. Fix."})).toBeVisible();
+ const player=page.locator(".tutorial-player");
+ await expect(player.locator("iframe")).toHaveCount(0);
+ await expect(page.getByRole("button",{name:/Play tutorial:/})).toBeVisible();
+ await page.getByRole("combobox",{name:"Filter tutorial category"}).selectOption("WinForms");
+ await expect(page.locator(".tutorial-list button")).toHaveCount(2);
+ await page.getByRole("button",{name:/Visual Studio WinForms controls and events/}).click();
+ await expect(page.getByRole("heading",{name:"Tor's challenge"})).toBeVisible();
+ await expect(page.getByRole("link",{name:/Open on YouTube/})).toHaveAttribute("href",/oOnyVPqssjg/);
+ await page.getByRole("button",{name:"I practised this"}).click();
+ await expect(page.getByRole("button",{name:/Practiced.*undo/})).toBeVisible();
+ await page.reload();
+ await page.getByRole("button",{name:/Visual Studio WinForms controls and events/}).click();
+ await expect(page.getByRole("button",{name:/Practiced.*undo/})).toBeVisible();
+ await page.getByRole("button",{name:/Open WinForms Studio/}).click();
+ await expect(page).toHaveURL(/#designer/);
+});
+test("video studio works on phone and links full-app chapters",async ({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto("/#videos");
+ await page.getByRole("combobox",{name:"Filter tutorial category"}).selectOption("Full application");
+ await expect(page.locator(".tutorial-list button")).toHaveCount(2);
+ await page.getByRole("button",{name:/Build a complete C# Windows application/}).click();
+ await expect(page.getByText(/Build the CodeQuest ATM, loan or banking system/)).toBeVisible();
+ const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>window.innerWidth+2);
+ expect(overflow).toBe(false);
+ await expect(page.locator(".tutorial-player iframe")).toHaveCount(0);
+ await expect(page.getByRole("link",{name:/Open on YouTube/})).toHaveAttribute("href",/wfWxdh-_k_4/);
+});
