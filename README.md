@@ -21,6 +21,17 @@ CodeQuest is an active release candidate. Release candidates must pass unit/regr
 - **Installable/offline:** responsive PWA with icons and cached app shell. Compiler assets are cached after first use. No compiler download on the homepage.
 - **Accessibility:** keyboard navigation, visible focus, plain editor option, reduced-motion support and read-aloud text.
 
+## New: video tutorial hub and full-application missions
+
+At **/#videos**, CodeQuest offers creator-attributed YouTube lessons linking actual teaching chapters to practical C# and WinForms challenges. Videos load only after the learner presses Play to save bandwidth/privacy, and an always-available **Open on YouTube** link handles browsers that block embedding. Current courses:
+- freeCodeCamp / Mike Dane — C# Tutorial - Full Course for Beginners
+- CodeWithSalar — WinForms Programming in C# (buttons, labels, textboxes, events, and a calculator project)
+- freeCodeCamp / IAmTimCorey — Create a C# Application from Start to Finish (planning, UI, class library, SQL, debugging, complete tournament-tracker project)
+
+Users can filter by topic, mark completion on their device, and jump into the Code Lab or WinForms designer. The practice markers are **self-reported**; they do not award certification or imply the full external course was completed.
+
+The **System Workshop** now has a Developer Mission board: place correctly named controls, write event handlers, run actual C# behavior tests for an ATM/loan/bank app, and export a native .sln for Windows. The final step cannot be verified in-browser: the generated Windows Forms program needs a Windows machine with .NET 8/Visual Studio to run as a native desktop window. The browser teaches a substantial subset of this workflow; it does **not** pretend to be the full Microsoft Visual Studio runtime.
+
 ## Core experience
 - Learn: See → Predict → Build → Break & Fix → Apply alone.
 - Run real C# locally through WasmSharp/Roslyn in a Web Worker with timeout/cancel controls.
