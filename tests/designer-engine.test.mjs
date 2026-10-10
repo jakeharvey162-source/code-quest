@@ -136,3 +136,28 @@ test("export rejects event properties incompatible with the selected control typ
       false,
     );
 });
+
+test("rejects malformed restored WinForms geometry before native export", () => {
+  const base = addControl([], "Label");
+  for (const patch of [
+    { x: "oops" },
+    { y: Infinity },
+    { width: -1 },
+    { height: 1.5 },
+    { tabIndex: 2147483648 },
+  ]) {
+    const restored = base.map((control) => ({ ...control, ...patch }));
+    const result = validateForm(restored);
+    assert.equal(result.ok, false, JSON.stringify(patch));
+    assert.ok(result.issues.some((issue) => issue.includes(Object.keys(patch)[0])));
+  }
+  const valid = base.map((control) => ({
+    ...control,
+    x: -12,
+    y: 0,
+    width: 1,
+    height: 1,
+    tabIndex: 0,
+  }));
+  assert.equal(validateForm(valid).ok, true);
+});

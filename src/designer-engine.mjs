@@ -297,6 +297,13 @@ export function validateForm(list) {
       issues.push(
         c.name + ": progress values must be non-negative 32-bit integers.",
       );
+    // Restored or imported controls can bypass updateControl's numeric coercion.
+    for (const key of ["x", "y", "width", "height", "tabIndex"]) {
+      const value = c[key];
+      const min = key === "x" || key === "y" ? -2147483648 : 0;
+      if (!Number.isInteger(value) || value < min || value > 2147483647)
+        issues.push(c.name + ": " + key + " must be a valid 32-bit integer.");
+    }
     if (c.type === "Button" && !c.eventClick)
       issues.push(c.name + ": wire a Click event.");
   }
