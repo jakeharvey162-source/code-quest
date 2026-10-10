@@ -82,7 +82,7 @@ test("learner completes all five stages with real compilation, no replay XP", as
   await expect(page.locator(".run-feedback")).toContainText(
     "All test cases passed",
   );
-  await page.getByRole("button", { name: "Next stage" }).click();
+  await page.getByRole("button", { name: /Continue to Stage 5/ }).click();
   await page
     .getByRole("textbox", { name: "C# code editor" })
     .fill(lesson.apply.solution);
@@ -106,7 +106,7 @@ test("fourth C# lesson Stage 4 resumes, runs tests and unlocks Stage 5", async (
   const progress=freshProgress();
   progress.settings.editorMode="plain";
   progress.steps.logic=["0","1","2"];
-  await page.addInitScript((state)=>localStorage.setItem("cq-progress-v1",JSON.stringify(state)),progress);
+  await page.addInitScript((state)=>{if(!localStorage.getItem("cq-progress-v1"))localStorage.setItem("cq-progress-v1",JSON.stringify(state))},progress);
   await page.goto("/#learn/logic");
   await expect(page.getByRole("heading",{name:/Stage 4: Find the mistake/})).toBeVisible();
   await expect(page.getByText(/Stuck on Stage 4/)).toBeVisible();
