@@ -2944,3 +2944,34 @@ button.primary:active {
   background: transparent !important;
   padding: 2px !important;
 }
+
+
+/* Curated video-to-practice studio. Videos load only after user interaction. */
+.tutorial-page{max-width:1420px}
+.tutorial-note{display:flex;align-items:flex-start;gap:10px;padding:12px 15px;border:1px solid var(--line);border-radius:12px;background:var(--paper);color:var(--muted);font-size:13px}
+.tutorial-note svg{flex-shrink:0}
+.tutorial-layout{display:grid;grid-template-columns:minmax(0,2fr) minmax(260px,1fr);gap:22px;align-items:start}
+.tutorial-main,.tutorial-sidebar{min-width:0}
+.tutorial-player{background:#071715;border:1px solid #4c6154;border-radius:17px;aspect-ratio:16/9;overflow:hidden}
+.tutorial-player iframe{width:100%;height:100%;border:0}
+.tutorial-load-video{width:100%;height:100%;border:0;border-radius:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;color:#fff8e7;background:radial-gradient(circle at 70% 30%,#2b5e4b,#10241d 65%);font-size:20px}
+.tutorial-load-video small{font-size:13px;color:#e4d5a8}
+.tutorial-load-video:hover{background:radial-gradient(circle at 70% 30%,#36755b,#183124 65%)}
+.tutorial-content{padding:22px 3px}
+.tutorial-content h2{margin-top:6px}
+.tutorial-original{display:inline-flex;align-items:center;gap:8px;color:var(--ink);font-weight:700;text-decoration:underline;line-height:1.5;margin:8px 0 22px}
+.tutorial-challenge{padding:22px;border-radius:17px;background:var(--paper);border:1px solid var(--line)}
+.tutorial-challenge p{margin:8px 0}
+.tutorial-challenge ol{padding-left:22px;line-height:1.8;margin:14px 0}
+.tutorial-actions{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin:16px 0}
+.tutorial-sidebar{padding:19px;border:1px solid var(--line);border-radius:17px;background:var(--paper);display:grid;gap:15px}
+.tutorial-list{display:grid;gap:8px}
+.tutorial-list button{display:flex;text-align:left;justify-content:flex-start;align-items:flex-start;padding:13px;gap:12px;width:100%;border:1px solid var(--line);border-radius:12px}
+.tutorial-list button.active{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tutorial-item-icon{margin-top:3px}
+.tutorial-list button span:last-child{display:grid;gap:5px;min-width:0}
+.tutorial-list button strong{font-size:13px;line-height:1.4}
+.tutorial-list button small{font-size:11px;line-height:1.4;opacity:.78}
+[data-theme="dark"] .tutorial-note,[data-theme="dark"] .tutorial-challenge,[data-theme="dark"] .tutorial-sidebar{background:var(--paper)}
+@media(max-width:920px){.tutorial-layout{grid-template-columns:1fr}.tutorial-sidebar{order:-1}.tutorial-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:590px){.tutorial-list{grid-template-columns:1fr}.tutorial-content{padding:16px 0}.tutorial-challenge{padding:16px}.tutorial-actions button{width:100%}}
