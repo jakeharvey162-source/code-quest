@@ -16,6 +16,7 @@ import {
   WifiOff,
   Download,
   Menu,
+  Clapperboard,
 } from "lucide-react";
 import "./styles.css";
 import { lessons, tracks } from "./curriculum";
@@ -39,11 +40,13 @@ const Classes = lazy(() => import("./components/Classes"));
 const Playground = lazy(() => import("./components/Playground"));
 const LessonView = lazy(() => import("./components/LessonView"));
 const FormDesigner = lazy(() => import("./components/FormDesigner"));
+const TutorialLibrary = lazy(() => import("./components/TutorialLibrary"));
 const Assessment = lazy(() => import("./components/Assessment"));
 const SettingsPage = lazy(() => import("./components/Settings"));
 const navigation = [
   { id: "home", title: "World", icon: House },
   { id: "learn", title: "Lessons", icon: BookOpen },
+  { id: "videos", title: "Video tutorials", icon: Clapperboard },
   { id: "playground", title: "Code Lab", icon: Terminal },
   { id: "designer", title: "WinForms", icon: PanelsTopLeft },
   { id: "assessment", title: "Assessment", icon: Flag },
@@ -650,6 +653,8 @@ function App() {
                     </div>
                   )}
                 </section>
+              ) : page === "videos" ? (
+                <TutorialLibrary onNavigate={navigate} />
               ) : page === "playground" ? (
                 <Playground progress={progress} update={update} />
               ) : page === "designer" ? (
