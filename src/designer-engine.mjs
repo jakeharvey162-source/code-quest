@@ -223,6 +223,10 @@ export function validateForm(list) {
       )
         issues.push(c.name + ": invalid event handler name.");
     }
+    for (const key of ["enabled", "visible"]) {
+      if (typeof c[key] !== "boolean")
+        issues.push(c.name + ": " + key + " must be true or false.");
+    }
     const anchors = typeof c.anchor === "string" ? c.anchor.split(",").map((value) => value.trim()) : [];
     const allowedAnchors = new Set(["Top", "Bottom", "Left", "Right"]);
     if (

@@ -169,3 +169,22 @@ test("validates unwired Button alongside Anchor and Dock rules", () => {
   assert.equal(validateForm(valid).ok, true);
   assert.doesNotMatch(designerCode(valid), /\.Click \+=/);
 });
+
+test("rejects nonboolean Enabled/Visible before native C# export", () => {
+  const base = addControl([], "Button");
+  for (const patch of [
+    { enabled: "sometimes" },
+    { visible: "maybe" },
+    { enabled: 1 },
+    { visible: null },
+  ]) {
+    const result = validateForm(updateControl(base, base[0].id, patch));
+    assert.equal(result.ok, false, JSON.stringify(patch));
+    assert.ok(result.issues.some((issue) => issue.includes(Object.keys(patch)[0])));
+  }
+  const valid = updateControl(base, base[0].id, { enabled: false, visible: false });
+  assert.equal(validateForm(valid).ok, true);
+  const code = designerCode(valid);
+  assert.match(code, /\.Enabled = false;/);
+  assert.match(code, /\.Visible = false;/);
+});
