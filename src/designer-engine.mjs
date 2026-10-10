@@ -297,8 +297,7 @@ export function validateForm(list) {
       issues.push(
         c.name + ": progress values must be non-negative 32-bit integers.",
       );
-    if (c.type === "Button" && !c.eventClick)
-      issues.push(c.name + ": wire a Click event.");
+
   }
   return { ok: issues.length === 0, issues };
 }
