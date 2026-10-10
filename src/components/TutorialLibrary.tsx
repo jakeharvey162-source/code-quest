@@ -59,6 +59,7 @@ export default function TutorialLibrary({onNavigate}: {onNavigate:(route:string)
   const [done,setDone]=useState<string[]>(loadDone);
   const [search,setSearch]=useState("");
   const active = tutorials.find(t=>t.id===selected) || tutorials[0];
+  const videoUrl = `https://www.youtube.com/watch?v=${active.videoId}&t=${active.start}s`;
   const visible = useMemo(()=>tutorials.filter(t=>
     (category==="All"||t.category===category) &&
     (t.title+" "+t.topic+" "+t.by).toLowerCase().includes(search.toLowerCase())
@@ -83,12 +84,21 @@ export default function TutorialLibrary({onNavigate}: {onNavigate:(route:string)
     <div className="tutorial-layout">
       <div className="tutorial-main">
         <div className="tutorial-player">
-          {watch ? <iframe title={active.title} src={`https://www.youtube-nocookie.com/embed/${active.videoId}?start=${active.start}&rel=0`}
+          {watch ? <iframe title={active.title} src={`https://www.youtube.com/embed/${active.videoId}?start=${active.start}&rel=0`}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             referrerPolicy="strict-origin-when-cross-origin" allowFullScreen /> :
-            <button className="tutorial-load-video" onClick={()=>setWatch(true)} aria-label={`Play tutorial: ${active.title}`}>
-              <Play size={42}/> <span>Play tutorial</span><small>{active.by} · {active.minutes}</small>
-            </button>}
+            <a className="tutorial-load-video" href={videoUrl} target="_blank" rel="noopener noreferrer"
+              aria-label={`Watch on YouTube: ${active.title}`}>
+              <Play size={42}/> <span>Watch on YouTube</span><small>{active.by} · {active.minutes}</small>
+            </a>}
+        </div>
+        <div className="tutorial-play-options">
+          <p><strong>Recommended:</strong> Watch directly on YouTube. Some creators, networks and browsers block embedded players.</p>
+          <div className="tutorial-actions">
+            <a className="tutorial-watch-link" href={videoUrl} target="_blank" rel="noopener noreferrer"><ExternalLink size={17}/> Play on YouTube</a>
+            <button type="button" onClick={()=>setWatch(value=>!value)}>{watch?"Hide embedded player":"Try embedded player"}</button>
+          </div>
+          {watch&&<p role="status">If you see “This content is blocked” or an unavailable-video message, select <strong>Play on YouTube</strong> above. CodeQuest cannot override a creator’s embedding restrictions.</p>}
         </div>
         <div className="tutorial-content">
           <p className="eyebrow">{active.category.toUpperCase()}</p><h2>{active.title}</h2><p>{active.topic}</p>
