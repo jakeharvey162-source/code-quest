@@ -16,7 +16,7 @@ test("curated videos launch hands-on WinForms challenge without loading YouTube 
  expect(new URL(newTab.url()).hostname).toBe("www.youtube.com");
  await newTab.close();
  await page.getByRole("button",{name:"Try embedded player"}).click();
- await expect(page.locator(".tutorial-player iframe")).toHaveAttribute("src",/youtube.com\\/embed\\/oOnyVPqssjg/);
+ await expect(page.locator(".tutorial-player iframe")).toHaveAttribute("src",/youtube[.]com\/embed\/oOnyVPqssjg/);
  await expect(page.getByText(/If you see.*This content is blocked/)).toBeVisible();
  await page.getByRole("button",{name:"Hide embedded player"}).click();
  await expect(page.locator(".tutorial-player iframe")).toHaveCount(0);
