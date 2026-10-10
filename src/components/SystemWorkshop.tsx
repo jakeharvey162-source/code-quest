@@ -33,7 +33,7 @@ export default function SystemWorkshop({
   const requiredNames = project.template.map(c => c.name);
   const presentControls = requiredNames.filter(name=>controls.some(c=>c.name===name));
   const expectedHandlers = project.template.map(c=>c.eventClick).filter(Boolean);
-  const definedHandlers = expectedHandlers.filter(name=>new RegExp("(?<![a-zA-Z0-9_])"+name+"\\\\s*\\\\(").test(code));
+  const definedHandlers = expectedHandlers.filter(name=>code.includes(name+"(")||code.includes(name+" ("));
   const milestones = [
     {key:"controls",name:"Form designer",passed:presentControls.length===requiredNames.length,
       detail:presentControls.length+" / "+requiredNames.length+" required named controls"},
