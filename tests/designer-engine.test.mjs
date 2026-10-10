@@ -35,8 +35,13 @@ test("moves and resizes", () => {
 });
 test("removes controls", () =>
   assert.equal(removeControl(addControl([], "Label"), "label1").length, 0));
-test("requires button Click event", () =>
-  assert.equal(validateForm(addControl([], "Button")).ok, false));
+test("allows unwired Button and omits Click subscription", () => {
+  const controls = addControl([], "Button");
+  assert.equal(validateForm(controls).ok, true);
+  const code = designerCode(controls);
+  assert.match(code, /new System\.Windows\.Forms\.Button\(\)/);
+  assert.doesNotMatch(code, /\.Click \+=/);
+});
 test("passes wired button", () => {
   let a = addControl([], "Button");
   a = updateControl(a, a[0].id, {
@@ -153,4 +158,14 @@ test("rejects unsupported Anchor and Dock enum values before native export", () 
     dock: "Fill",
   });
   assert.equal(validateForm(valid).ok, true);
+});
+
+test("validates unwired Button alongside Anchor and Dock rules", () => {
+  const base = addControl([], "Button");
+  assert.equal(validateForm(base).ok, true);
+  assert.equal(validateForm(updateControl(base, base[0].id, { anchor: "Left, Banana" })).ok, false);
+  assert.equal(validateForm(updateControl(base, base[0].id, { dock: "Unicorn" })).ok, false);
+  const valid = updateControl(base, base[0].id, { anchor: "Left, Right", dock: "Fill" });
+  assert.equal(validateForm(valid).ok, true);
+  assert.doesNotMatch(designerCode(valid), /\.Click \+=/);
 });
