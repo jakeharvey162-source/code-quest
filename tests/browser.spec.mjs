@@ -101,6 +101,29 @@ test("learner completes all five stages with real compilation, no replay XP", as
     page.getByText("Quest complete.", { exact: true }),
   ).toBeVisible();
 });
+test("fourth C# lesson Stage 4 resumes, runs tests and unlocks Stage 5", async ({page}) => {
+  test.setTimeout(150000);
+  const progress=freshProgress();
+  progress.settings.editorMode="plain";
+  progress.steps.logic=["0","1","2"];
+  await page.addInitScript((state)=>localStorage.setItem("cq-progress-v1",JSON.stringify(state)),progress);
+  await page.goto("/#learn/logic");
+  await expect(page.getByRole("heading",{name:/Stage 4: Find the mistake/})).toBeVisible();
+  await expect(page.getByText(/Stuck on Stage 4/)).toBeVisible();
+  await expect(page.getByText(/Expected output/)).toBeVisible();
+  await page.getByRole("textbox",{name:"C# code editor"}).fill(lessons.find(l=>l.id==="logic").build.solution);
+  await page.getByRole("button",{name:"Run tests",exact:true}).click();
+  await expect(page.locator(".run-feedback")).toContainText("All test cases passed",{timeout:90000});
+  await expect(page.getByRole("button",{name:/Continue to Stage 5/})).toBeVisible();
+  await page.reload();
+  await page.getByRole("button",{name:/Break & fix/}).click();
+  await expect(page.getByRole("button",{name:/Continue to Stage 5/})).toBeVisible();
+  await page.getByRole("button",{name:/Continue to Stage 5/}).click();
+  await expect(page.getByText("YOUR TURN, WITHOUT A WALKTHROUGH")).toBeVisible();
+  await page.getByRole("textbox",{name:"C# code editor"}).fill(lessons.find(l=>l.id==="logic").apply.solution);
+  await page.getByRole("button",{name:"Run tests",exact:true}).click();
+  await expect(page.getByText("Quest complete.",{exact:true})).toBeVisible({timeout:90000});
+});
 test("scratchpad runs actual C#, reports errors and stops infinite loops", async ({
   page,
 }) => {
