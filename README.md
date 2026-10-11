@@ -40,13 +40,14 @@ Open **[Creator Terminal](https://code-quest-tau-woad.vercel.app/#terminal)** fr
 - **HTML:** Runs interactive browser pages (includes a love-letter reveal card).
 - **CSS:** Previews styles, keyframe animations, button states and gradients.
 - **Python:** Loads the open-source Pyodide Python/WebAssembly runtime from a version-pinned public CDN in a disposable sandbox-frame Web Worker. Internet is required for the initial download. Console-oriented Python scripts may run; Windows desktop graphics/window libraries such as `tkinter` and `pygame` are **not** supported.
+- **Python Turtle graphics:** A dedicated language mode uses the MIT-licensed Skulpt browser interpreter (version 1.2.0 from a public CDN) to draw Python `turtle` graphics in the preview. Includes a heart filled with loving phrases and a five-candle birthday scene inspired by the uploaded videos. Only the supported Skulpt Turtle API works; advanced `tkinter` calls, actual native desktop windows and some standard Python features aren't supported. Loading Skulpt requires network access on first use.
 - **C#:** Reuses the existing genuine local WasmSharp/Roslyn compiler for normal C# console applications. It does not open native WinForms or reproduce every console-escape/GUI effect.
 
 Students can paste code, open `.js`, `.html`, `.css`, `.py` or `.cs` files (60 KB source limit), run with F5/Ctrl+Enter, stop, read output/errors, download code, and save it to their own browser. **Share code** generates a URL fragment for up to 2,800 characters of code: the recipient must click **Run**, not automatically execute unknown code on opening the link. Edits on the sender's browser are not remotely synchronized. No GitHub account is needed to open the link.
 
 **Security boundaries:** HTML/CSS/JS are placed inside an iframe with `sandbox="allow-scripts"` **without** `allow-same-origin`, and a restrictive content security policy blocks external scripts/network access. Python uses an additional separate disposable worker under an opaque-origin sandbox, with CDN-only network access. Reset/Stop replaces the frame. This is a browser playground, **not an unrestricted shell or full Visual Studio/VS Code replacement**. Heavy or malicious user programs may still freeze or consume resources; do not enter secrets or execute untrusted code. Native applications require local OS permissions, runtimes and a computer.
 
-To share a birthday surprise: open the Creator Terminal → choose **Animated heart** or **Birthday candles** → change the name/text in the JavaScript → **Run** → **Share code** → send the generated link. Your recipient opens CodeQuest and presses **Run** to watch it. No Visual Studio needed.
+To share a birthday surprise: open the Creator Terminal → choose **Animated heart**, **Birthday candles**, or one of the **Python Turtle** examples → change the name/text in the JavaScript → **Run** → **Share code** → send the generated link. Your recipient opens CodeQuest and presses **Run** to watch it. No Visual Studio needed.
 
 ## Core experience
 - Learn: See → Predict → Build → Break & Fix → Apply alone.
