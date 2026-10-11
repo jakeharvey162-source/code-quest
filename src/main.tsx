@@ -379,7 +379,7 @@ function App() {
             </button>
           </div>
         )}
-        {(page === "playground" || page === "designer") && (
+        {(page === "playground" || page === "designer" || page === "terminal") && (
           <QuestBoard progress={progress} />
         )}
         {saveError && (
