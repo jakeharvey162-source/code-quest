@@ -5,6 +5,7 @@ import {buildPreviewDocument,encodeSharedProgram,decodeSharedProgram,validLangua
 import {runCSharp,cancelRun} from "../lib/compiler";
 import {download} from "../lib/download";
 import {readText,writeText} from "../lib/local-data";
+import {requestQuest} from "../lib/workshop-quests.mjs";
 type Language="javascript"|"html"|"css"|"python"|"python-turtle"|"csharp";
 type Line={kind:string;text:string};
 type Session={token:string;doc:string};
@@ -34,6 +35,9 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  const runRef=useRef(0);
  const timerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
  const busyRef=useRef(false);
+ const errorRef=useRef(false);
+ const langRef=useRef<Language>(language);
+ const exampleRef=useRef(exampleId);
  const fileRef=useRef<HTMLInputElement>(null);
  function clearTimer(){if(timerRef.current){clearTimeout(timerRef.current);timerRef.current=null}}
  function append(kind:string,text:string){
@@ -70,6 +74,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   if(source.trim().length<MINIMUM_SOURCE){setStatus("Enter code before running.");return}
   try{validateSource(source)}catch(error){setStatus(String(error));return}
   const id=++runRef.current;
+  errorRef.current=false;langRef.current=language;exampleRef.current=exampleId;
   busyRef.current=true;setRunning(true);
   setConsoleLines([]);
   setSession(null);
@@ -84,6 +89,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
        ...(!result.success?result.diagnostics.map(d=>({kind:"error",text:d.id+": "+d.message})):[])]
       .slice(-MAX_LINES));
     setStatus(result.success?"C# finished.":"Compilation failed — check the errors.");
+    if(result.success)requestQuest("creator-first-run");
    }catch(error){if(id===runRef.current){append("error",error instanceof Error?error.message:"C# failed");setStatus("C# run failed.");}}
    finally{if(id===runRef.current){setRunning(false);busyRef.current=false;}}
    return;
@@ -118,9 +124,16 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
       !data||data.channel!=="cq-terminal"||data.token!==tokenRef.current)return;
    if(!["log","info","warn","error","status","done"].includes(data.kind))return;
    if(typeof data.text!=="string")return;
+   if(data.kind==="error")errorRef.current=true;
    if(data.kind==="status"||data.kind==="done"){
     setStatus(data.text.slice(0,300));
-    if(data.kind==="done"){clearTimer();setRunning(false);busyRef.current=false}
+    if(data.kind==="done"){
+     if(!errorRef.current){
+      requestQuest("creator-first-run");
+      if((exampleRef.current==="heart"||exampleRef.current==="birthday")&&["javascript","python-turtle"].includes(langRef.current))requestQuest("creator-heart");
+     }
+     clearTimer();setRunning(false);busyRef.current=false
+    }
    }else append(data.kind,data.text);
   }
   window.addEventListener("message",receive);
@@ -167,6 +180,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    const encoded=encodeSharedProgram(language,source);
    const url=location.origin+location.pathname+"#terminal/share/"+encoded;
    setShareUrl(url);
+   requestQuest("creator-share");
    try{await navigator.clipboard.writeText(url);setStatus("Runnable link copied. The recipient must press Run to start it.")}
    catch{setStatus("Copy the share link below. Your program will not run automatically.")}
   }catch(error){setShareUrl("");setStatus(error instanceof Error?error.message:"Could not share.")}
