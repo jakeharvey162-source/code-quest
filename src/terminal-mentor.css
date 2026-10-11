@@ -1,0 +1,6 @@
+.cq-terminal-mentor{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:16px 18px;margin:14px 0;border:1px solid var(--border,rgba(120,200,255,.26));border-radius:16px;background:var(--surface,rgba(9,22,42,.58));color:var(--text,inherit)}
+.cq-terminal-mentor h2{font-size:1rem;margin:5px 0 4px}.cq-terminal-mentor p{margin:4px 0;font-size:.9rem}.cq-terminal-mentor .cq-tor-kicker{font-weight:800;font-size:.72rem;letter-spacing:.09em;text-transform:uppercase;opacity:.85}
+.cq-terminal-mentor .cq-tor-hint{padding-top:7px;font-size:.87rem;line-height:1.5}
+.cq-terminal-mentor-actions{display:flex;flex-direction:column;gap:8px}
+.cq-terminal-mentor-actions button{border-radius:9px;padding:8px 12px;white-space:nowrap}
+@media(max-width:620px){.cq-terminal-mentor{grid-template-columns:1fr}.cq-terminal-mentor-actions{flex-direction:row;flex-wrap:wrap}}

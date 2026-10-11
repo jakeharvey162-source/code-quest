@@ -25,8 +25,15 @@ const tips: Record<string, string> = {
   learn:
     "Predict the output before you run the code. If your prediction differs, trace one statement at a time. Understanding the change is how you prepare for an exam.",
   home: "Pick a quest or open WinForms to build a form. I can explain controls, events, loops and validation. Drag my hologram out of your way, or use the arrow keys on my handle.",
+  terminal: "Pick a language and a starter program in Creator Terminal, press F5, then inspect the preview and console. Try my mini-missions and ask for a hint when you are stuck. Web previews are sandboxed; native desktop graphics need their own runtimes.",
 };
 function answer(question: string, page: string) {
+  if (/python.?turtle|turtle drawing/i.test(question))
+    return "Python Turtle draws shapes with commands such as forward, right, left and circle. Try the birthday example in Creator Terminal and change one value at a time.";
+  if (/birthday|animated heart|surprise card/i.test(question))
+    return "Open Creator Terminal, choose JavaScript Canvas for moving hearts, HTML for a reveal card, or Python Turtle for drawn candles. Edit the recipient's message, press F5 and share the link; receivers choose Run themselves.";
+  if (/terminal|console output|run code/i.test(question) && page === "terminal")
+    return "Check the language dropdown, then press F5. HTML, CSS and JavaScript render in a sandbox; Python may need its first download, and C# uses the local compiler. Read the first red error line before editing.";
   if (/label|textbox|text box/i.test(question))
     return "A Label displays information. A TextBox accepts input. Name is the identifier your C# code uses; Text is what the student sees. For example: lblResult.Text = txtName.Text;";
   if (/event|button|click/i.test(question))
