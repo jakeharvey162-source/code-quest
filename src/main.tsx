@@ -17,6 +17,7 @@ import {
   Download,
   Menu,
   Clapperboard,
+  Heart,
 } from "lucide-react";
 import "./styles.css";
 import { lessons, tracks } from "./curriculum";
@@ -38,6 +39,7 @@ import AuthProvider, { useAuth } from "./components/AuthProvider";
 const Account = lazy(() => import("./components/Account"));
 const Classes = lazy(() => import("./components/Classes"));
 const Playground = lazy(() => import("./components/Playground"));
+const UniversalTerminal = lazy(() => import("./components/UniversalTerminal"));
 const LessonView = lazy(() => import("./components/LessonView"));
 const FormDesigner = lazy(() => import("./components/FormDesigner"));
 const TutorialLibrary = lazy(() => import("./components/TutorialLibrary"));
@@ -48,6 +50,7 @@ const navigation = [
   { id: "learn", title: "Lessons", icon: BookOpen },
   { id: "videos", title: "Video tutorials", icon: Clapperboard },
   { id: "playground", title: "Code Lab", icon: Terminal },
+  { id: "terminal", title: "Creator Terminal", icon: Heart },
   { id: "designer", title: "WinForms", icon: PanelsTopLeft },
   { id: "assessment", title: "Assessment", icon: Flag },
   { id: "progress", title: "Progress", icon: ChartNoAxesCombined },
@@ -655,6 +658,8 @@ function App() {
                 </section>
               ) : page === "videos" ? (
                 <TutorialLibrary onNavigate={navigate} />
+              ) : page === "terminal" ? (
+                <UniversalTerminal sharedCode={route.startsWith("terminal/share/")?route.split("/").slice(2).join("/"):undefined}/>
               ) : page === "playground" ? (
                 <Playground progress={progress} update={update} />
               ) : page === "designer" ? (
