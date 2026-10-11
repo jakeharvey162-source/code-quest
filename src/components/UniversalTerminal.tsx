@@ -5,11 +5,11 @@ import {buildPreviewDocument,encodeSharedProgram,decodeSharedProgram,validLangua
 import {runCSharp,cancelRun} from "../lib/compiler";
 import {download} from "../lib/download";
 import {readText,writeText} from "../lib/local-data";
-type Language="javascript"|"html"|"css"|"python"|"csharp";
+type Language="javascript"|"html"|"css"|"python"|"python-turtle"|"csharp";
 type Line={kind:string;text:string};
 type Session={token:string;doc:string};
-const LABELS:Record<Language,string>={javascript:"JavaScript + Canvas",html:"HTML + interactive page",css:"CSS animations",python:"Python console (online runtime)",csharp:"C# console"};
-const EXT:Record<Language,string>={javascript:"js",html:"html",css:"css",python:"py",csharp:"cs"};
+const LABELS:Record<Language,string>={javascript:"JavaScript + Canvas",html:"HTML + interactive page",css:"CSS animations",python:"Python console (online runtime)","python-turtle":"Python Turtle graphics",csharp:"C# console"};
+const EXT:Record<Language,string>={javascript:"js",html:"html",css:"css",python:"py","python-turtle":"py",csharp:"cs"};
 const MINIMUM_SOURCE=1;
 const MAX_LINES=130;
 function initialLanguage():Language{
@@ -94,12 +94,12 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    const doc=buildPreviewDocument(language,source,token);
    setSession({token,doc});
    setStatus(language==="python"?"Preparing isolated Python runtime...":"Preview running.");
-   const ms=language==="python"?90000:14000;
+   const ms=language==="python"||language==="python-turtle"?90000:14000;
    clearTimer();
    timerRef.current=setTimeout(()=>{
     if(tokenRef.current!==token)return;
     // HTML/CSS/JS animation can continue. Python must stop if the runtime stalls.
-    if(language==="python"){
+    if(language==="python"||language==="python-turtle"){
       setSession(null);tokenRef.current="";append("error","Python timed out after 90 seconds; program stopped.");setStatus("Python runtime timed out.");
     }else{
       setStatus("Preview active. Animations continue until Stop.");
@@ -153,7 +153,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   if(!file)return;
   if(file.size>120000){setStatus("File is too large. Limit 120 KB.");return}
   const extension=file.name.split(".").pop()?.toLowerCase()||"";
-  const next=(Object.keys(EXT) as Language[]).find(key=>EXT[key]===extension);
+  const next=(extension==="py"&&/\b(import\s+turtle|from\s+turtle\s+import)\b/.test(await file.text()))?"python-turtle":(Object.keys(EXT) as Language[]).find(key=>EXT[key]===extension);
   if(!next){setStatus("Supported file types: .js, .html, .css, .py, .cs");return}
   try{
    const text=await file.text();validateSource(text);
@@ -205,7 +205,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   </div>
   <div className="cq-terminal-workspace">
    <div className="cq-terminal-source">
-    <div className="cq-terminal-panel-title"><Code2 size={16}/> {language==="html"?"index.html":language==="csharp"?"Program.cs":language==="python"?"main.py":language==="css"?"styles.css":"main.js"}<span>EDITOR</span></div>
+    <div className="cq-terminal-panel-title"><Code2 size={16}/> {language==="html"?"index.html":language==="csharp"?"Program.cs":language==="python"||language==="python-turtle"?"main.py":language==="css"?"styles.css":"main.js"}<span>EDITOR</span></div>
     <label className="cq-terminal-editor-label" htmlFor="cq-universal-code">Code editor</label>
     <textarea id="cq-universal-code" className="cq-terminal-editor" aria-label="Terminal code editor" spellCheck={false}
       value={source} onChange={e=>edit(e.target.value)} autoCapitalize="off" autoCorrect="off"/>
@@ -233,6 +233,6 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   <p className="cq-terminal-status" role="status">{status}</p>
   {shareUrl&&<label className="cq-terminal-share">Shareable link (code only; never auto-runs)<input aria-label="Shareable terminal code link" readOnly value={shareUrl} onFocus={e=>e.currentTarget.select()}/></label>}
   <div className="cq-terminal-guidance"><ShieldCheck size={18}/><p>
-   Code runs locally in your browser. Web programs run in an isolated preview without access to your CodeQuest files or login; Python loads a free open-source runtime when online. C# uses CodeQuest's existing real compiler. This is not a full desktop operating-system terminal: installed packages, tkinter, pygame, native WinForms and other languages need their own runtime. <strong>Review unknown code before running it; never paste passwords or private keys.</strong></p></div>
+   Code runs locally in your browser. Web programs run in an isolated preview without access to your CodeQuest files or login; Python loads a free open-source runtime when online; Python Turtle uses the open-source Skulpt graphics interpreter. C# uses CodeQuest's existing real compiler. This is not a full desktop operating-system terminal: installed packages, tkinter, pygame, native WinForms and other languages need their own runtime. <strong>Review unknown code before running it; never paste passwords or private keys.</strong></p></div>
  </section>;
 }
