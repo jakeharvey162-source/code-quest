@@ -4,11 +4,11 @@ test("student runs visual JavaScript heart, reads logs and stops the program",as
  await page.goto("/#terminal");
  await expect(page.getByRole("heading",{name:"Make code come alive."})).toBeVisible();
  await expect(page.getByRole("combobox",{name:"Terminal programming language"})).toHaveValue("javascript");
- await expect(page.getByRole("textbox",{name:"Terminal code editor"})).toContainText("canvas");
+ await expect(page.getByRole("textbox",{name:"Terminal code editor"})).toHaveValue(/canvas/);
  await page.getByRole("button",{name:"Run terminal code"}).click();
  const frame=page.frameLocator('iframe[title="Isolated program preview"]');
  await expect(frame.locator("canvas#art")).toBeVisible();
- await expect(page.getByRole("status")).toContainText(/JavaScript loaded|Preview running/);
+ await expect(page.locator(".cq-terminal-status")).toContainText(/JavaScript loaded|Preview running|Preview active/);
  const img=await frame.locator("canvas").evaluate(canvas=>{
    const data=canvas.getContext("2d").getImageData(0,0,canvas.width,canvas.height).data;
    let n=0;
@@ -33,10 +33,10 @@ test("HTML birthday surprise opens without importing or installing packages",asy
 });
 test("JavaScript pasted error appears as safe terminal text, never executes in CodeQuest origin",async({page})=>{
  await page.goto("/#terminal");
- await page.getByRole("textbox",{name:"Terminal code editor"}).fill('console.log("inside sandbox"); document.body.textContent=typeof parent.localStorage;');
+ await page.getByRole("textbox",{name:"Terminal code editor"}).fill('console.log("inside sandbox"); try { parent.localStorage; document.body.textContent="UNSAFE"; } catch(e) { document.body.textContent=e.name; }');
  await page.getByRole("button",{name:"Run terminal code"}).click();
  await expect(page.getByRole("log",{name:"Terminal console output"})).toContainText("inside sandbox");
- await expect(page.frameLocator('iframe[title="Isolated program preview"]').locator("body")).toContainText("undefined");
+ await expect(page.frameLocator('iframe[title="Isolated program preview"]').locator("body")).toContainText("SecurityError");
  await expect(page.locator("body")).toContainText("CodeQuest");
 });
 test("gift can be shared by URL and must be run by recipient",async({page,context})=>{
@@ -61,7 +61,7 @@ test("C# compiles using real code runner and importing a code file preserves its
  await page.getByRole("combobox",{name:"Terminal example"}).selectOption("hello");
  await page.getByRole("button",{name:"Run terminal code"}).click();
  await expect(page.getByRole("log",{name:"Terminal console output"})).toContainText("Hello CodeQuest!",{timeout:90000});
- await page.getByRole("file",{name:"Import terminal code file"}).setInputFiles({
+ await page.locator('input[type="file"][aria-label="Import terminal code file"]').setInputFiles({
    name:"birthday.js",mimeType:"text/javascript",buffer:Buffer.from('console.log("Hi from imported file!");')
  });
  await expect(page.getByRole("combobox",{name:"Terminal programming language"})).toHaveValue("javascript");
