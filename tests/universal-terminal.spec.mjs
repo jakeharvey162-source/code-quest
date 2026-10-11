@@ -96,3 +96,19 @@ test("Python Turtle draws birthday-candle graphics from a real Python script",as
  await expect(page.locator(".cq-terminal-status")).toContainText("Python Turtle drawing finished.", {timeout:50000});
  await expect(page.getByRole("log",{name:"Terminal console output"})).not.toContainText(/Traceback|ImportError|Python library not found/);
 });
+
+test("Python console prints real output through its separate WebAssembly runtime",async({page})=>{
+ test.setTimeout(120000);
+ await page.goto("/#terminal");
+ await page.getByRole("combobox",{name:"Terminal programming language"}).selectOption("python");
+ await page.getByRole("textbox",{name:"Terminal code editor"}).fill('print("Python result:", 2 + 3)');
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ await expect(page.getByRole("log",{name:"Terminal console output"})).toContainText("Python result: 5",{timeout:70000});
+ await expect(page.locator(".cq-terminal-status")).toContainText("Python finished.",{timeout:70000});
+});
+test("CSS animation source appears in the restricted rendering surface",async({page})=>{
+ await page.goto("/#terminal");
+ await page.getByRole("combobox",{name:"Terminal programming language"}).selectOption("css");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ await expect(page.frameLocator('iframe[title="Isolated program preview"]').getByRole("heading",{name:"Style this page"})).toBeVisible();
+});
