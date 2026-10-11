@@ -1,5 +1,5 @@
 /** Opaque-origin code preview and share codec; never evaluate user code in the app origin. */
-export const LANGUAGES = Object.freeze(["javascript","html","css","python","csharp"]);
+export const LANGUAGES = Object.freeze(["javascript","html","css","python","python-turtle","csharp"]);
 const PYODIDE="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";
 export function validLanguage(value){return LANGUAGES.includes(value)}
 export function validateSource(code){
@@ -64,11 +64,33 @@ function pythonFrame(code,token){
  return shell('<div id="display"><h2>Python console</h2><p>Standard input/output only. tkinter, pygame and OS windows are not available inside the browser.</p></div>',STYLE,
  '<script>'+bootstrap+'</script>',token,policy);
 }
+function turtleFrame(code,token){
+ const csp="default-src 'none';script-src 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;connect-src https://cdn.jsdelivr.net;style-src 'unsafe-inline';img-src data: blob:;font-src data:;base-uri 'none';form-action 'none'";
+ const loader=
+ '<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>'+
+ '<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>';
+ const bootstrap=[
+  '(function(){try{',
+  'if(typeof Sk==="undefined")throw Error("Python Turtle runtime unavailable; check internet access.");',
+  'Sk.pre="mycanvas";',
+  'Sk.execLimit=15000;',
+  'Sk.configure({output:text=>window.__cqSend("log",text),read:filename=>{',
+  'if(!Sk.builtinFiles||!Sk.builtinFiles.files[filename])throw Error("Python library not found: "+filename);',
+  'return Sk.builtinFiles.files[filename];},__future__:Sk.python3});',
+  '(Sk.TurtleGraphics||(Sk.TurtleGraphics={})).target="mycanvas";',
+  'Sk.misceval.asyncToPromise(()=>Sk.importMainWithBody("<stdin>",false,'+JSON.stringify(code)+',true))',
+  '.then(()=>window.__cqSend("done","Python Turtle drawing finished."),',
+  'err=>window.__cqSend("error",String(err)));',
+  '}catch(err){window.__cqSend("error",String(err))}})();'
+ ].join("");
+ return shell('<div id="mycanvas" style="min-height:100vh;background:black"></div>',STYLE,loader+"<script>"+bootstrap+"</script>",token,csp);
+}
 export function buildPreviewDocument(language,code,token){
  if(!validLanguage(language)||language==="csharp")throw Error("No browser preview for this language.");
  validateSource(code);
  if(typeof token!=="string"||!/^[a-f0-9-]{10,80}$/i.test(token))throw Error("Invalid preview token.");
  if(language==="python")return pythonFrame(code,token);
+ if(language==="python-turtle")return turtleFrame(code,token);
  if(language==="javascript"){
   return shell('<canvas id="art" width="960" height="540"></canvas>',STYLE,
    '<script>try{\n'+safeScript(code)+'\n}catch(error){window.__cqSend("error",error.stack||String(error))}</script>'+
