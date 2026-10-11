@@ -4,7 +4,7 @@ import {LANGUAGES,encodeSharedProgram,decodeSharedProgram,buildPreviewDocument,s
 import {TERMINAL_EXAMPLES,exampleFor} from "../src/lib/terminal-examples.mjs";
 const token="9a58f433-68d3-4b51-a354-7e8843d676cc";
 test("all supported language demos are editable source code",()=>{
- assert.deepEqual(LANGUAGES,["javascript","html","css","python","csharp"]);
+ assert.deepEqual(LANGUAGES,["javascript","html","css","python","python-turtle","csharp"]);
  for(const language of LANGUAGES){
   const example=exampleFor(language);
   assert.ok(example?.source.length>30);
@@ -30,7 +30,7 @@ test("JS sandbox refuses same-origin and network, preserves console capture and 
 });
 test("script close injection cannot break the script tag and all web previews are sandboxed",()=>{
  assert.equal(safeScript("</script><script>alert(1)</script>"),"<\\/script><script>alert(1)<\\/script>");
- for(const lang of ["html","css","javascript","python"]){
+ for(const lang of ["html","css","javascript","python","python-turtle"]){
   const doc=buildPreviewDocument(lang,"console.log('hello')",token);
   assert.match(doc,/Content-Security-Policy/);
   assert.match(doc,/token/);
@@ -43,4 +43,15 @@ test("Python loads worker-only Pyodide and cannot access CodeQuest's runtime ori
  assert.match(doc,/indexURL/);
  assert.match(doc,/parent\.postMessage/);
  assert.match(doc,/worker-src blob:/);
+});
+
+test("Turtle example matches genuine Python turtle module and uses isolated Skulpt graphics renderer",()=>{
+ const example=exampleFor("python-turtle","heart");
+ assert.match(example.source,/import turtle/);
+ assert.match(example.source,/pen\.write/);
+ const frame=buildPreviewDocument("python-turtle",example.source,token);
+ assert.match(frame,/skulpt@1\.2\.0/);
+ assert.match(frame,/Sk\.TurtleGraphics/);
+ assert.match(frame,/id="mycanvas"/);
+ assert.match(frame,/default-src &#39;none&#39;/);
 });
