@@ -35,6 +35,27 @@ export const workshopQuests = [
     route: "playground",
   },
   {
+    id: "creator-first-run",
+    title: "Code alchemist",
+    xp: 35,
+    task: "Run a working animated program in the Creator Terminal.",
+    route: "terminal",
+  },
+  {
+    id: "creator-heart",
+    title: "Heart coder",
+    xp: 45,
+    task: "Create and run a visual heart or birthday surprise.",
+    route: "terminal",
+  },
+  {
+    id: "creator-share",
+    title: "Share the magic",
+    xp: 30,
+    task: "Generate a safe, review-before-run code gift link.",
+    route: "terminal",
+  },
+  {
     id: "grid-engineer",
     title: "Data keeper",
     xp: 40,
