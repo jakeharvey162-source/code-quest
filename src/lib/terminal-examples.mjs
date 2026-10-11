@@ -43,6 +43,18 @@ export const TERMINAL_EXAMPLES = Object.freeze({
       "source": "for i in range(1,6):\n    print(\"Step\",i,\"♥\")"
     }
   ],
+  "python-turtle": [
+  {
+    "id": "heart",
+    "title": "Python Turtle: phrase-filled heart",
+    "source": "import turtle, math\n# CodeQuest • Python Turtle, inspired by a love-heart animation\nname = \"MY LOVE\" # Change this to her name\nphrases = [\"I love you\", \"Te amo\", \"Je t'aime\", \"Ngiyakuthanda\", \"♥\"]\nscreen = turtle.Screen()\nscreen.bgcolor(\"black\")\nscreen.title(\"A heart for \" + name)\npen = turtle.Turtle()\npen.hideturtle()\npen.speed(0)\npen.penup()\npen.color(\"#ff507c\")\n# Write affectionate words throughout a heart-shaped area\nfor y in range(10, -12, -2):\n    for x in range(-16, 17, 3):\n        a, b = x / 11.0, y / 11.0\n        inside = (a*a + b*b - 1)**3 - a*a*b*b*b\n        if inside <= 0:\n            pen.goto(x * 11, y * 11)\n            pen.write(phrases[(x+y)%len(phrases)], align=\"center\", font=(\"Arial\", 7, \"bold\"))\npen.goto(0, -170)\npen.color(\"pink\")\npen.write(\"For \" + name + \" ♥\", align=\"center\", font=(\"Arial\", 19, \"bold\"))"
+  },
+  {
+    "id": "birthday",
+    "title": "Python Turtle: birthday candles",
+    "source": "import turtle\nscreen = turtle.Screen()\nscreen.bgcolor(\"black\")\nscreen.title(\"Birthday Surprise\")\npen = turtle.Turtle()\npen.hideturtle()\npen.speed(0)\npen.penup()\npen.color(\"#ffd7ea\")\npen.goto(0, 190)\npen.write(\"HAPPY BIRTHDAY ♥\", align=\"center\", font=(\"Arial\", 23, \"bold\"))\npalette = [\"pink\", \"orange\", \"skyblue\", \"violet\", \"salmon\"]\nfor i in range(5):\n    x = (i - 2) * 65\n    pen.goto(x, 45)\n    pen.color(palette[i])\n    pen.pensize(12)\n    pen.setheading(270)\n    pen.pendown()\n    pen.forward(65)\n    pen.penup()\n    pen.goto(x, 55)\n    pen.dot(18, \"gold\")\npen.color(\"white\")\nwishes = [\"You make life magical\", \"Wishing you so much joy\", \"Never stop shining\", \"You are my favourite person\"]\nfor i in range(len(wishes)):\n    pen.goto(0, -75 - i * 29)\n    pen.write(wishes[i], align=\"center\", font=(\"Arial\", 12, \"normal\"))"
+  }
+],
   "csharp": [
     {
       "id": "heart",
