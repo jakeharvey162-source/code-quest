@@ -93,6 +93,6 @@ test("Python Turtle draws birthday-candle graphics from a real Python script",as
  await expect(turtleFrame.locator("#mycanvas")).toBeVisible();
  // The actual Skulpt library must draw a graphic into the canvas container.
  await expect(turtleFrame.locator("#mycanvas canvas, #mycanvas svg").first()).toBeVisible({timeout:70000});
- await expect(page.locator(".cq-terminal-status")).toContainText(/Python Turtle drawing finished|Preview active|Preview running/, {timeout:45000});
+ await expect(page.locator(".cq-terminal-status")).toContainText("Python Turtle drawing finished.", {timeout:50000});
  await expect(page.getByRole("log",{name:"Terminal console output"})).not.toContainText(/Traceback|ImportError|Python library not found/);
 });
