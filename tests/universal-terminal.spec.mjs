@@ -81,3 +81,17 @@ test("terminal remains readable on a 390px phone and retains code after refresh"
  const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);
  expect(overflow).toBe(false);
 });
+
+test("Python Turtle draws birthday-candle graphics from a real Python script",async({page})=>{
+ test.setTimeout(120000);
+ await page.goto("/#terminal");
+ await page.getByRole("combobox",{name:"Terminal programming language"}).selectOption("python-turtle");
+ await expect(page.getByRole("textbox",{name:"Terminal code editor"})).toHaveValue(/import turtle/);
+ await page.getByRole("combobox",{name:"Terminal example"}).selectOption("birthday");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ const turtleFrame=page.frameLocator('iframe[title="Isolated program preview"]');
+ await expect(turtleFrame.locator("#mycanvas")).toBeVisible();
+ // The actual Skulpt library must draw a graphic into the canvas container.
+ await expect(turtleFrame.locator("#mycanvas canvas, #mycanvas svg")).toBeVisible({timeout:70000});
+ await expect(page.locator(".cq-terminal-status")).not.toContainText(/runtime unavailable|library not found|timed out/i);
+});
