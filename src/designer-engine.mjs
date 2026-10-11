@@ -180,6 +180,12 @@ export function validateForm(list) {
   if (new Set(names).size !== names.length)
     issues.push("Control names must be unique.");
   for (const c of list) {
+    for (const key of ["x", "y", "width", "height", "tabIndex"]) {
+      const value = c[key];
+      const minimum = key === "width" || key === "height" ? 1 : 0;
+      if (!Number.isInteger(value) || value < minimum || value > 2147483647)
+        issues.push(c.name + ": " + key + " must be a valid non-negative 32-bit integer" + (minimum ? " greater than zero" : "") + ".");
+    }
     if (!toolbox.includes(c.type))
       issues.push(c.name + ": unsupported control type.");
     if (
