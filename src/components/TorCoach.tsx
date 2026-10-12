@@ -11,6 +11,7 @@ import {
   describeObservation,
 } from "../lib/coach-observation.mjs";
 import { useVoices } from "./VoiceControls";
+import {chooseTorReaction,reactionLine} from "../lib/tor-performance.mjs";
 const TorAvatar = lazy(() => import("./TorAvatar"));
 const tips: Record<string, string> = {
   designer:
@@ -56,6 +57,11 @@ export default function TorCoach({
     null,
   );
   const [mood, setMood] = useState("ready");
+  const [speaking,setSpeaking]=useState(false);
+  const [speechBeat,setSpeechBeat]=useState(0);
+  const [gestureId,setGestureId]=useState(0);
+  const [gestureClip,setGestureClip]=useState("");
+  const [reactionLabel,setReactionLabel]=useState("");
   const [proactive, setProactive] = useState(
     () => readText("cq-tor-observe", "true") === "true",
   );
@@ -86,8 +92,22 @@ export default function TorCoach({
   const [voice, setVoice] = useState(() =>
     readText("cq-tor-voice", settings.voice),
   );
-  function say(text: string) {
-    speakText(text, voice, settings.rate, setStatus, teachingLanguage === "en-ZA" ? accent : teachingLanguage);
+  function say(text: string, rate=settings.rate) {
+    speakText(text,voice,rate,setStatus,teachingLanguage==="en-ZA"?accent:teachingLanguage,
+      (active,index)=>{
+        setSpeaking(active);
+        if(active&&typeof index==="number")setSpeechBeat(n=>n+1);
+      });
+  }
+  function react(kind:"highfive"|"dance"|"celebrate"|"nope"|"wow",voiceReaction=true){
+    const item=chooseTorReaction(kind);
+    setGestureClip(item.clip);
+    setReactionLabel(item.title);
+    setGestureId(n=>n+1);
+    setMood(kind==="nope"?"concerned":kind==="dance"?"cheeky":"happy");
+    const quip=reactionLine(kind,teachingLanguage);
+    setReply(quip);
+    if(voiceReaction&&autoSpeak)say(quip);
   }
   function respond(text: string) {
     setReply(text);
@@ -110,6 +130,10 @@ export default function TorCoach({
     const contextTopic = observation?.output && /error|failed|CS\d{4}/i.test(observation.output)?"debug error":page==="designer"?"button event":page==="terminal"?"debug error":"loop";
     if (/\b(roast me|roast my code|give me a roast)\b/i.test(request)) {
       respond(localizedLesson(contextTopic,teachingLanguage,true,++personalityTurn.current)||localizedFallback(teachingLanguage));
+      const reaction=chooseTorReaction("dance");
+      setGestureClip(reaction.clip);
+      setReactionLabel(reaction.title);
+      setGestureId(n=>n+1);
       return;
     }
     if (/\b(challenge me|coding challenge|give me a challenge)\b/i.test(request)) {
@@ -166,6 +190,7 @@ export default function TorCoach({
     recognition.current = null;
     setListening(false);
     stopSpeech();
+    setSpeaking(false);
     setStatus("Reading stopped.");
   }
   function listen() {
@@ -183,6 +208,7 @@ export default function TorCoach({
       return;
     }
     stopSpeech();
+    setSpeaking(false);
     recognition.current?.abort();
     const r = new Recognition();
     recognition.current = r;
@@ -363,6 +389,10 @@ export default function TorCoach({
         return;
       const text = roast ? `${reaction.roast} ${reaction.text}` : reaction.text;
       setMood(reaction.mood);
+      const performance=chooseTorReaction(reaction.mood==="happy"?"celebrate":reaction.mood==="concerned"?"nope":"wow");
+      setGestureClip(performance.clip);
+      setReactionLabel(performance.title);
+      setGestureId(n=>n+1);
       setReply(text);
       if (autoSpeak) say(text);
     };
@@ -382,11 +412,11 @@ export default function TorCoach({
   return (
     <aside
       ref={box}
-      className={`tor-coach ${open ? "expanded" : ""} ${status === "Speaking…" ? "speaking" : ""}`}
+      className={`tor-coach ${open ? "expanded" : ""} ${speaking ? "speaking" : ""}`}
       aria-label="Tor hologram tutor"
       data-moving={moving}
       data-mood={
-        listening ? "listening" : status === "Speaking…" ? "speaking" : mood
+        listening ? "listening" : speaking ? "speaking" : mood
       }
       style={
         position
@@ -446,11 +476,16 @@ export default function TorCoach({
             mood={
               listening
                 ? "listening"
-                : status === "Speaking…"
+                : speaking
                   ? "speaking"
                   : mood
             }
             moving={moving}
+            speaking={speaking}
+            speechBeat={speechBeat}
+            gestureClip={gestureClip}
+            gestureId={gestureId}
+            reactionLabel={reactionLabel}
             reduced={settings.reducedMotion || osReduced}
             onReady={setModelReady}
           />
@@ -534,6 +569,12 @@ export default function TorCoach({
               {listening ? "Stop listening" : "Talk to Tor"}
             </button>
           </form>
+          <div className="tor-reactions" role="group" aria-label="Play with Tor's 3D reactions">
+            <button type="button" onClick={()=>react("highfive")} aria-label="High five Tor">✋ High five</button>
+            <button type="button" onClick={()=>react("dance")} aria-label="Make Tor dance">♫ Dance</button>
+            <button type="button" onClick={()=>react("celebrate")} aria-label="Make Tor celebrate">★ Celebrate</button>
+            <button type="button" onClick={()=>react("nope")} aria-label="Make Tor act shocked">!? Plot twist</button>
+          </div>
           <div className="tor-quick-quests" aria-label="Tor fun learning shortcuts">
             <button type="button" onClick={() => void ask("Roast my code")}>Roast my code</button>
             <button type="button" onClick={() => void ask("Challenge me")}>Give me a challenge</button>
@@ -575,7 +616,7 @@ export default function TorCoach({
               onChange={(e) => {
                 setAutoSpeak(e.target.checked);
                 writeText("cq-tor-auto-speak", String(e.target.checked));
-                if (!e.target.checked) stopSpeech();
+                if (!e.target.checked) {stopSpeech();setSpeaking(false);}
               }}
             />{" "}
             Speak replies automatically
@@ -652,7 +693,7 @@ export default function TorCoach({
           </label>
           <div className="tor-actions">
             <button onClick={() => say(message)}>Tor, speak</button>
-            <button onClick={() => speakText(message,voice,Math.min(0.8,settings.rate),setStatus,teachingLanguage==="en-ZA"?accent:teachingLanguage)}>Speak slower</button>
+            <button onClick={() => say(message,Math.min(0.8,settings.rate))}>Speak slower</button>
             <button onClick={stop}>Stop voice</button>
           </div>
           <details className="tor-command-help">
