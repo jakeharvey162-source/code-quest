@@ -31,6 +31,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  const [session,setSession]=useState<Session|null>(null);
  const [shareUrl,setShareUrl]=useState("");
  const iframeRef=useRef<HTMLIFrameElement>(null);
+ const resultsRef=useRef<HTMLDivElement>(null);
  const tokenRef=useRef("");
  const runRef=useRef(0);
  const timerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -79,6 +80,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   setConsoleLines([]);
   setSession(null);
   setStatus("Starting "+LABELS[language]+"...");
+  if(window.innerWidth<=900)window.setTimeout(()=>resultsRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);
   if(language==="csharp"){
    try{
     const result=await runCSharp(source,text=>{if(id===runRef.current)setStatus(text)});
@@ -136,6 +138,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
     setStatus(data.text.slice(0,300));
     if(data.kind==="done"){
      if(!errorRef.current){
+      setConsoleLines(prev=>prev.length?prev:[{kind:"info",text:"Run complete. Check the preview above for visual output. For text use console.log(...) or print(...)."}]);
       requestQuest("creator-first-run");
       if((exampleRef.current==="heart"||exampleRef.current==="birthday")&&["javascript","python-turtle"].includes(langRef.current))requestQuest("creator-heart");
      }
@@ -195,15 +198,15 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  const canPreview=language!=="csharp";
  return <section className={"cq-terminal-page "+(full?"cq-terminal-full":"")} aria-label="Universal coding terminal">
   <div className="cq-terminal-heading">
-   <div><p className="cq-terminal-overline"><Heart size={14}/> CODEQUEST / CREATOR TERMINAL</p>
-    <h1>Make code come alive.</h1>
+   <div><p className="cq-terminal-overline"><Terminal size={14}/> CODEQUEST / CODE TERMINAL</p>
+    <h1>Code Terminal</h1>
     <p>Write, run and share something unforgettable. No Visual Studio installation required.</p></div>
    <button type="button" onClick={()=>setFull(x=>!x)} aria-label={full?"Exit expanded terminal":"Expand terminal"}>
     {full?<Minimize2 size={18}/>:<Expand size={18}/>} {full?"Exit full view":"Expand"}</button>
   </div>
   <div className="cq-terminal-topbar">
    <div className="cq-terminal-dots"><span/><span/><span/></div>
-   <strong>~ / CodeQuest / Creator Studio</strong>
+   <strong>~ / CodeQuest / Terminal</strong>
    <span className="cq-terminal-live"><span/> {running?"RUNNING":"READY"}</span>
   </div>
   <div className="cq-terminal-toolbar">
@@ -221,6 +224,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    <div className="cq-terminal-actions">
     <button className="cq-terminal-run" onClick={()=>void run()} disabled={running} aria-label="Run terminal code"><Play size={18}/> Run <small>F5</small></button>
     <button onClick={stop} aria-label="Stop terminal code"><Square size={16}/> Stop</button>
+    <button type="button" onClick={()=>resultsRef.current?.scrollIntoView({behavior:"smooth",block:"start"})} aria-label="Show code output"><Terminal size={16}/> Show output</button>
     <button onClick={()=>{if(confirm("Replace your code with the starter example?"))selectExample(exampleFor(language)?.id||"")}} aria-label="Reset to example"><RotateCcw size={16}/> Reset</button>
    </div>
   </div>
@@ -238,12 +242,17 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
      <button onClick={()=>void share()}><Share2 size={16}/> Share code</button>
     </div>
    </div>
-   <div className="cq-terminal-results">
+   <div ref={resultsRef} className="cq-terminal-results" id="code-terminal-output">
     <div className="cq-terminal-panel-title"><Heart size={16}/> OUTPUT <span>{canPreview?"GRAPHICS + CONSOLE":"CONSOLE"}</span></div>
     <div className="cq-terminal-visual" aria-label="Program visual preview">
      {session&&canPreview?<iframe key={session.token} ref={iframeRef} srcDoc={session.doc}
        title="Isolated program preview" sandbox="allow-scripts" referrerPolicy="no-referrer"/>:
-      <div className="cq-terminal-awaiting"><span>✦</span><h2>{canPreview?"Your creation appears here.":"C# console is ready."}</h2><p>Press Run to see what your program does.</p></div>}
+      language==="csharp"?<div className="cq-terminal-csharp-preview">
+        <h2>C# console output</h2>
+        <pre aria-label="C# visible result">{consoleLines.length?consoleLines.map(item=>item.text).join("\n"):(running?"Compiling and running your C# program...":"Press Run to see the result here.")}</pre>
+        <p>Console programs display here. Native Windows Forms windows still need Windows and .NET.</p>
+      </div>:
+      <div className="cq-terminal-awaiting"><span>✦</span><h2>Your preview appears here.</h2><p>Press Run to see what your program does.</p></div>}
     </div>
     <div className="cq-terminal-console-head"><Terminal size={15}/> Console <span>stdout / errors / status</span></div>
     <pre className="cq-terminal-console" role="log" aria-label="Terminal console output" aria-live="polite">{consoleLines.length?consoleLines.map((line,index)=>
