@@ -93,7 +93,7 @@ export default function Account({
         recovery
           ? "Password updated. Sign out and sign in with your new password."
           : mode === "signup"
-            ? result.data?.session
+            ? (result.data && "session" in result.data && !!result.data.session)
               ? "Your account is ready. You are signed in."
               : "Your account was created. Check your inbox for the confirmation link."
             : mode === "reset"
