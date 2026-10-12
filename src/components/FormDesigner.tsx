@@ -485,6 +485,8 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
     [undo, setUndo] = useState<Control[][]>([]),
     [redo, setRedo] = useState<Control[][]>([]);
   const [runPosition, setRunPosition] = useState({ x: 24, y: 80 });
+  const toolboxSearchRef=useRef<HTMLInputElement>(null);
+  const propertyPanelRef=useRef<HTMLElement>(null);
   const [messageBoxes, setMessageBoxes] = useState<string[]>([]);
   const runWindow = useRef<HTMLDivElement>(null);
   const runDrag = useRef<{
@@ -577,6 +579,12 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
   }
   const cur = items.find((c) => c.id === selected);
   const validation = validateForm(items);
+  function checkDesignBuild(){
+    const report=validateForm(items);
+    setMessage(report.ok
+      ? "Design check passed — properties, names and event wiring look valid. Export the Windows solution and build it with Visual Studio for native verification."
+      : "Design check found "+report.issues.length+" issue(s): "+report.issues.join(" "));
+  }
   useEffect(() => {
     const timer = setTimeout(
       () =>
@@ -1035,6 +1043,31 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
           commit(removeControl(items, selected));
           setSelected("");
         }
+        if (event.key === "F7") {
+          event.preventDefault();event.stopPropagation();
+          setWorkspace(event.shiftKey?"design":"code");
+          if(!event.shiftKey)setActiveSource("Form1.cs");
+          setMessage(event.shiftKey?"Opened Form1 designer (Shift+F7).":"Opened Form1.cs code editor (F7).");
+          return;
+        }
+        if ((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==="b") {
+          event.preventDefault();event.stopPropagation();
+          checkDesignBuild();
+          return;
+        }
+        if(event.key==="F4"){
+          event.preventDefault();event.stopPropagation();
+          const panel=propertyPanelRef.current;
+          (panel?.querySelector("input,select") as HTMLElement|null)?.focus();
+          setMessage(cur?"Properties for "+cur.name+" ready to edit.":"Select a control, then press F4 to edit its Properties.");
+          return;
+        }
+        if((event.ctrlKey||event.metaKey)&&event.altKey&&event.key.toLowerCase()==="x"){
+          event.preventDefault();event.stopPropagation();
+          toolboxSearchRef.current?.focus();
+          setMessage("Toolbox search focused (Ctrl+Alt+X). Type a control name.");
+          return;
+        }
         if (event.key === "Escape") {
           if (preview) {
             setPreview(false);
@@ -1211,6 +1244,10 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
               {preview ? <MousePointer2 size={16} /> : <Play size={16} />}{" "}
               {preview ? "Stop debugging" : "Start / F5"}
             </button>
+            <button type="button" aria-label="Check WinForms design" onClick={checkDesignBuild}>
+              <CheckCircle2 size={16}/> Build Check · Ctrl+Shift+B
+            </button>
+            <button type="button" onClick={()=>{setWorkspace("code");setActiveSource("Form1.cs")}} aria-label="Open Form1 C# code">Code · F7</button>
             <button
               aria-pressed={showCode}
               onClick={() => {
@@ -1247,6 +1284,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
               Select then click the form · drag or double-click to add
             </p>
             <input
+              ref={toolboxSearchRef}
               aria-label="Search toolbox"
               placeholder="Search controls…"
               value={toolSearch}
@@ -1944,7 +1982,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
               </>
             )}
           </div>
-          <aside className="properties-panel">
+          <aside className="properties-panel" ref={propertyPanelRef} tabIndex={-1} aria-label="WinForms Properties panel">
             <fieldset disabled={preview} className="properties-fields">
               <h2>
                 Properties <span>⚡</span>

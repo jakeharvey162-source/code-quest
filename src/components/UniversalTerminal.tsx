@@ -8,6 +8,7 @@ import {runCSharp,cancelRun} from "../lib/compiler";
 import {download} from "../lib/download";
 import {readText,writeText} from "../lib/local-data";
 import {requestQuest} from "../lib/workshop-quests.mjs";
+import {outputKind,languageMismatch,noOutputHint} from "../lib/terminal-output.mjs";
 type Language="javascript"|"typescript"|"html"|"css"|"python"|"python-turtle"|"csharp";
 type Line={kind:string;text:string};
 type Session={token:string;doc:string};
@@ -32,6 +33,9 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  const [full,setFull]=useState(false);
  const [session,setSession]=useState<Session|null>(null);
  const [shareUrl,setShareUrl]=useState("");
+ const [previewKind,setPreviewKind]=useState<"text"|"visual">("visual");
+ const [languageNotice,setLanguageNotice]=useState<{language:string|null;label:string;message:string}|null>(null);
+ const [lastRunFinished,setLastRunFinished]=useState(false);
  const [missionIndex,setMissionIndex]=useState(0);
  const [showMissionHint,setShowMissionHint]=useState(false);
  const iframeRef=useRef<HTMLIFrameElement>(null);
@@ -41,6 +45,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  const timerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
  const busyRef=useRef(false);
  const errorRef=useRef(false);
+ const fatalRef=useRef(false);
  const langRef=useRef<Language>(language);
  const exampleRef=useRef(exampleId);
  const fileRef=useRef<HTMLInputElement>(null);
@@ -50,6 +55,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  }
  function stop(){
   runRef.current++;
+  fatalRef.current=false;
   tokenRef.current="";
   clearTimer();
   cancelRun();
@@ -60,6 +66,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  function changeLanguage(next:Language){
   stop();
   setLanguage(next);setSource(initialSource(next));setExampleId(exampleFor(next)?.id||"");
+  setLanguageNotice(null);setLastRunFinished(false);
   setMissionIndex(0);setShowMissionHint(false);
   setConsoleLines([]);setShareUrl("");
   writeText("cq-terminal-language",next);
@@ -68,24 +75,39 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  function edit(value:string){
   if(value.length>60000){setStatus("Source too long — keep code under 60,000 characters.");return}
   setSource(value);writeText("cq-terminal-source-"+language,value);setShareUrl("");
+  setLanguageNotice(null);setExampleId("");setLastRunFinished(false);
  }
  function selectExample(nextId:string){
   const example=exampleFor(language,nextId);
   if(!example)return;
-  stop();setExampleId(nextId);edit(example.source);
+  stop();setExampleId(nextId);setSource(example.source);
+  writeText("cq-terminal-source-"+language,example.source);
+  setLanguageNotice(null);setLastRunFinished(false);setShareUrl("");
   setConsoleLines([]);setStatus("Loaded "+example.title+". Edit it or press Run.");
  }
  async function run(){
   if(busyRef.current)return;
-  if(source.trim().length<MINIMUM_SOURCE){setStatus("Enter code before running.");return}
-  try{validateSource(source)}catch(error){setStatus(String(error));return}
+  if(source.trim().length<MINIMUM_SOURCE){
+   setConsoleLines([{kind:"warn",text:"Enter some code, then press Run."}]);
+   setStatus("Nothing to run yet.");return;
+  }
+  try{validateSource(source)}catch(error){setConsoleLines([{kind:"error",text:String(error)}]);setStatus("Code could not be started.");return}
+  const mismatch=languageMismatch(language,source);
+  if(mismatch){
+   setConsoleLines([{kind:"error",text:mismatch.message}]);
+   setLanguageNotice(mismatch);setSession(null);setLastRunFinished(false);
+   setStatus("The selected runtime cannot execute this source. "+mismatch.label+" detected.");
+   window.setTimeout(()=>resultsRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),50);
+   return;
+  }
+  setLanguageNotice(null);setLastRunFinished(false);setPreviewKind(outputKind(language,source));
   const id=++runRef.current;
-  errorRef.current=false;langRef.current=language;exampleRef.current=exampleId;
+  errorRef.current=false;fatalRef.current=false;langRef.current=language;exampleRef.current=exampleId;
   busyRef.current=true;setRunning(true);
   setConsoleLines([]);
   setSession(null);
   setStatus("Starting "+LABELS[language]+"...");
-  if(window.innerWidth<=900)window.setTimeout(()=>resultsRef.current?.scrollIntoView({behavior:"smooth",block:"start"}),120);
+  window.setTimeout(()=>resultsRef.current?.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"}),120);
   if(language==="csharp"){
    try{
     const result=await runCSharp(source,text=>{if(id===runRef.current)setStatus(text)});
@@ -95,9 +117,11 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
        ...(result.stdErr?[{kind:"error",text:result.stdErr}]:[]),
        ...(!result.success?result.diagnostics.map(d=>({kind:"error",text:d.id+": "+d.message})):[])]
       .slice(-MAX_LINES));
-    setStatus(result.success?"C# finished.":"Compilation failed — check the errors.");
+    setLastRunFinished(true);
+    if(result.success&&!result.stdOut?.trim()&&!result.stdErr?.trim())setConsoleLines([{kind:"info",text:noOutputHint("csharp")}]);
+    setStatus(result.success?"C# finished. Output displayed above.":"Compilation failed — check the errors above.");
     if(result.success)requestQuest("creator-first-run");
-   }catch(error){if(id===runRef.current){append("error",error instanceof Error?error.message:"C# failed");setStatus("C# run failed.");}}
+   }catch(error){if(id===runRef.current){append("error",error instanceof Error?error.message:"C# failed");setLastRunFinished(true);setStatus("C# run failed. See output.");}}
    finally{if(id===runRef.current){setRunning(false);busyRef.current=false;}}
    return;
   }
@@ -117,11 +141,11 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
     }else{
       setStatus("Preview active. Animations continue until Stop.");
     }
-    setRunning(false);busyRef.current=false;
+    setRunning(false);busyRef.current=false;setLastRunFinished(true);
    },ms);
   }catch(error){
    append("error",error instanceof Error?error.message:"Preview failed.");
-   setStatus("Could not start the preview.");setRunning(false);busyRef.current=false;
+   setStatus("Could not start the preview.");setLastRunFinished(true);setRunning(false);busyRef.current=false;
   }
  }
  useEffect(()=>{
@@ -132,22 +156,25 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    if(!["log","info","warn","error","fatal","status","done"].includes(data.kind))return;
    if(typeof data.text!=="string")return;
    if(data.kind==="fatal"){
+    if(fatalRef.current)return;
+    fatalRef.current=true;
     errorRef.current=true;
     append("error",data.text);
-    clearTimer();setRunning(false);busyRef.current=false;
+    clearTimer();setRunning(false);busyRef.current=false;setLastRunFinished(true);
     setStatus(langRef.current==="typescript"?"TypeScript stopped after an error. Check the console and try again.":langRef.current==="javascript"?"JavaScript stopped after an error. Fix the code and press Run again.":"Python stopped after an error. Check the console, fix the code, then Run again.");
     return;
    }
+   if(fatalRef.current)return;
    if(data.kind==="error")errorRef.current=true;
    if(data.kind==="status"||data.kind==="done"){
-    setStatus(data.text.slice(0,300));
+    setStatus(data.kind==="done"&&errorRef.current?"Completed with errors — review the console.":data.text.slice(0,300));
     if(data.kind==="done"){
      if(!errorRef.current){
-      setConsoleLines(prev=>prev.length?prev:[{kind:"info",text:"Run complete. Check the preview above for visual output. For text use console.log(...) or print(...)."}]);
+      setConsoleLines(prev=>prev.length?prev:[{kind:"info",text:noOutputHint(langRef.current)}]);
       requestQuest("creator-first-run");
       if((exampleRef.current==="heart"||exampleRef.current==="birthday")&&["javascript","python-turtle"].includes(langRef.current))requestQuest("creator-heart");
      }
-     clearTimer();setRunning(false);busyRef.current=false
+     clearTimer();setRunning(false);busyRef.current=false;setLastRunFinished(true)
     }
    }else append(data.kind,data.text);
   }
@@ -202,6 +229,12 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   }catch(error){setShareUrl("");setStatus(error instanceof Error?error.message:"Could not share.")}
  }
  const canPreview=language!=="csharp";
+ function keepCodeSwitch(next:Language){
+  stop();setLanguage(next);writeText("cq-terminal-language",next);
+  writeText("cq-terminal-source-"+next,source);setExampleId("");
+  setLanguageNotice(null);setConsoleLines([]);setLastRunFinished(false);
+  setStatus("Switched to "+LABELS[next]+". Your pasted code is preserved. Press Run to see its output.");
+ }
  const missions=missionsFor(language);
  const mission=missions.length?missions[missionIndex%missions.length]:null;
  return <section className={"cq-terminal-page "+(full?"cq-terminal-full":"")} aria-label="Universal coding terminal">
@@ -250,6 +283,13 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
     <button type="button" onClick={()=>{setMissionIndex(i=>(i+1)%missions.length);setShowMissionHint(false)}} aria-label="Next mission">Next mission →</button>
    </div>
   </section>}
+  {languageNotice&&<div className="cq-terminal-language-notice" role="alert">
+   <strong>Wrong or unsupported language:</strong> {languageNotice.message}
+   {languageNotice.language&&validLanguage(languageNotice.language)&&
+    <button type="button" aria-label={"Switch to "+languageNotice.label+" preserving code"} onClick={()=>keepCodeSwitch(languageNotice.language as Language)}>
+      Switch to {languageNotice.label} (keep code)
+    </button>}
+  </div>}
   <div className="cq-terminal-workspace">
    <div className="cq-terminal-source">
     <div className="cq-terminal-panel-title"><Code2 size={16}/> {language==="html"?"index.html":language==="typescript"?"main.ts":language==="csharp"?"Program.cs":language==="python"||language==="python-turtle"?"main.py":language==="css"?"styles.css":"main.js"}<span>EDITOR</span></div>
@@ -267,8 +307,17 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    <div ref={resultsRef} className="cq-terminal-results" id="code-terminal-output">
     <div className="cq-terminal-panel-title"><Heart size={16}/> OUTPUT <span>{canPreview?"GRAPHICS + CONSOLE":"CONSOLE"}</span></div>
     <div className="cq-terminal-visual" aria-label="Program visual preview">
-     {session&&canPreview?<iframe key={session.token} ref={iframeRef} srcDoc={session.doc}
-       title="Isolated program preview" sandbox="allow-scripts" referrerPolicy="no-referrer"/>:
+     {session&&canPreview?<div className={"cq-terminal-stage "+(previewKind==="text"?"cq-terminal-text-stage":"")}>
+       <iframe key={session.token} ref={iframeRef} srcDoc={session.doc}
+        title="Isolated program preview" sandbox="allow-scripts" referrerPolicy="no-referrer"/>
+       {previewKind==="text"&&<section className="cq-terminal-big-output" aria-label="Visible program output">
+         <div className="cq-terminal-big-output-title"><Terminal size={20}/> Your program result</div>
+         <pre aria-live="polite">{consoleLines.length?consoleLines.map(x=>x.text).join("\n"):
+           running?"Running "+LABELS[language]+" — waiting for output...":
+           lastRunFinished?noOutputHint(language):"Press Run to see output here."}</pre>
+         <small>Text output appears here immediately. For graphics, choose a visual example.</small>
+       </section>}
+     </div>:
       language==="csharp"?<div className="cq-terminal-csharp-preview">
         <h2>C# console output</h2>
         <pre aria-label="C# visible result">{consoleLines.length?consoleLines.map(item=>item.text).join("\n"):(running?"Compiling and running your C# program...":"Press Run to see the result here.")}</pre>
