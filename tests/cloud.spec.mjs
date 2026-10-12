@@ -97,7 +97,7 @@ test("sign in errors, account-isolated local drafts, cloud save and explicit res
   await page.goto("/#account");
   await signin(page, "a@example.com", "wrongpass");
   await expect(page.getByRole("status")).toContainText(
-    "Invalid login credentials",
+    "Email or password is incorrect.",
   );
   await signin(page);
   await expect(
