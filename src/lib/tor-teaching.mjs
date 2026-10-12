@@ -18,7 +18,7 @@ export function teachingTopic(input){
 }
 const LESSONS={
  control:{
-  "en-ZA":"A Label shows text; a TextBox collects input. (Name) is the C# identifier; Text is what the user sees. Example: lblResult.Text = txtName.Text; Your turn: change the label after entering your name.",
+  "en-ZA":"A Label displays information; a TextBox collects input. (Name) is the C# identifier; Text is what the user sees. Example: lblResult.Text = txtName.Text; Your turn: change the label after entering your name.",
   "fr-FR":"Un Label affiche du texte ; un TextBox reçoit la saisie. (Name) est le nom utilisé en C#, tandis que Text est visible par l’utilisateur. Exemple : lblResult.Text = txtName.Text; Essaie de modifier le Label après avoir saisi ton prénom.",
   "zu-ZA":"I-Label ibonisa umbhalo; i-TextBox yamukela okufakwayo. (Name) yigama elisetshenziswa kukhodi ye-C#, kanti i-Text ibonwa umsebenzisi. Isibonelo: lblResult.Text = txtName.Text; Zama ukubonisa igama lakho ku-Label.",
   "pt-PT":"O Label mostra texto; a TextBox recebe dados. (Name) é o identificador em C#; Text é o que a pessoa vê. Exemplo: lblResult.Text = txtName.Text; Experimenta mostrar o teu nome no Label.",
