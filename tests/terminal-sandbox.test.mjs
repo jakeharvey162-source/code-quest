@@ -71,3 +71,10 @@ test("Python and Turtle failures report fatal events for immediate recovery",()=
  assert.match(py,/window.__cqSend\("fatal"/);
  assert.match(turtle,/window.__cqSend\("fatal"/);
 });
+
+test("JavaScript top-level crashes produce a fatal result instead of a false success",()=>{
+ const doc=buildPreviewDocument("javascript","throw new Error('Intentional crash')",token);
+ assert.match(doc,/window\.__cqRuntimeError=true/);
+ assert.match(doc,/__cqSend\("fatal",error\.stack/);
+ assert.match(doc,/if\(!window\.__cqRuntimeError\)window\.__cqSend\("done"/);
+});
