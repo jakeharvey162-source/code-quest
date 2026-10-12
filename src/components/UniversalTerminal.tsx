@@ -133,7 +133,11 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    if(data.kind==="fatal"){
     errorRef.current=true;
     append("error",data.text);
-    clearTimer();setRunning(false);busyRef.current=false;
+    // An errored worker can still send a late "done" after a catch/finally.
+    // Revoke this execution token and remove the sandbox so stale messages
+    // cannot overwrite a visible error or award XP.
+    clearTimer();tokenRef.current="";setSession(null);
+    setRunning(false);busyRef.current=false;
     setStatus(langRef.current==="typescript"?"TypeScript stopped after an error. Check the console and try again.":"Python stopped after an error. Check the console, fix the code, then Run again.");
     return;
    }
