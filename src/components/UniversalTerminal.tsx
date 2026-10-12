@@ -45,6 +45,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  const timerRef=useRef<ReturnType<typeof setTimeout>|null>(null);
  const busyRef=useRef(false);
  const errorRef=useRef(false);
+ const fatalRef=useRef(false);
  const langRef=useRef<Language>(language);
  const exampleRef=useRef(exampleId);
  const fileRef=useRef<HTMLInputElement>(null);
@@ -54,6 +55,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  }
  function stop(){
   runRef.current++;
+  fatalRef.current=false;
   tokenRef.current="";
   clearTimer();
   cancelRun();
@@ -100,7 +102,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   }
   setLanguageNotice(null);setLastRunFinished(false);setPreviewKind(outputKind(language,source));
   const id=++runRef.current;
-  errorRef.current=false;langRef.current=language;exampleRef.current=exampleId;
+  errorRef.current=false;fatalRef.current=false;langRef.current=language;exampleRef.current=exampleId;
   busyRef.current=true;setRunning(true);
   setConsoleLines([]);
   setSession(null);
@@ -154,15 +156,18 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    if(!["log","info","warn","error","fatal","status","done"].includes(data.kind))return;
    if(typeof data.text!=="string")return;
    if(data.kind==="fatal"){
+    if(fatalRef.current)return;
+    fatalRef.current=true;
     errorRef.current=true;
     append("error",data.text);
     clearTimer();setRunning(false);busyRef.current=false;setLastRunFinished(true);
     setStatus(langRef.current==="typescript"?"TypeScript stopped after an error. Check the console and try again.":langRef.current==="javascript"?"JavaScript stopped after an error. Fix the code and press Run again.":"Python stopped after an error. Check the console, fix the code, then Run again.");
     return;
    }
+   if(fatalRef.current)return;
    if(data.kind==="error")errorRef.current=true;
    if(data.kind==="status"||data.kind==="done"){
-    setStatus(data.text.slice(0,300));
+    setStatus(data.kind==="done"&&errorRef.current?"Completed with errors — review the console.":data.text.slice(0,300));
     if(data.kind==="done"){
      if(!errorRef.current){
       setConsoleLines(prev=>prev.length?prev:[{kind:"info",text:noOutputHint(langRef.current)}]);
