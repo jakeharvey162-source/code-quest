@@ -71,3 +71,26 @@ test("fatal Python exceptions cannot be overwritten by a delayed finish signal",
  await expect(page.locator(".cq-terminal-status")).toContainText("Python stopped after an error");
  await expect(page.getByRole("button",{name:"Run terminal code"})).toBeEnabled();
 });
+
+
+test("JavaScript syntax failures show a real error and never claim the program loaded",async({page})=>{
+ await page.goto("/#terminal");
+ await page.getByRole("textbox",{name:"Terminal code editor"}).fill("const = ;");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ const logs=page.getByRole("log",{name:"Terminal console output"});
+ await expect(logs).toContainText(/SyntaxError|Unexpected token|Unexpected keyword|identifier/i);
+ await expect(page.locator(".cq-terminal-status")).toContainText("JavaScript stopped after an error");
+ await expect(page.locator(".cq-terminal-status")).not.toContainText("JavaScript loaded");
+ await expect(page.getByRole("button",{name:"Run terminal code"})).toBeEnabled();
+ await page.getByRole("textbox",{name:"Terminal code editor"}).fill("console.log('Fixed result: 9')");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ await expect(page.getByRole("region",{name:"Visible program output"})).toContainText("Fixed result: 9");
+});
+
+test("asynchronous JavaScript rejection reports failure even after initial load",async({page})=>{
+ await page.goto("/#terminal");
+ await page.getByRole("textbox",{name:"Terminal code editor"}).fill("Promise.reject(new Error('Late code failure'));");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ await expect(page.getByRole("log",{name:"Terminal console output"})).toContainText("Late code failure");
+ await expect(page.locator(".cq-terminal-status")).toContainText("JavaScript stopped after an error");
+});
