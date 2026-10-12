@@ -107,12 +107,12 @@ export default function TorCoach({
     pendingAction.current?.abort();
     const request = cleanCoachRequest(text);
     if (!request) return;
-    const contextTopic = observation?.output && /error|failed|CS\\d{4}/i.test(observation.output)?"debug error":page==="designer"?"button event":page==="terminal"?"debug error":"loop";
-    if (/\\b(roast me|roast my code|give me a roast)\\b/i.test(request)) {
+    const contextTopic = observation?.output && /error|failed|CS\d{4}/i.test(observation.output)?"debug error":page==="designer"?"button event":page==="terminal"?"debug error":"loop";
+    if (/\b(roast me|roast my code|give me a roast)\b/i.test(request)) {
       respond(localizedLesson(contextTopic,teachingLanguage,true,++personalityTurn.current)||localizedFallback(teachingLanguage));
       return;
     }
-    if (/\\b(challenge me|coding challenge|give me a challenge)\\b/i.test(request)) {
+    if (/\b(challenge me|coding challenge|give me a challenge)\b/i.test(request)) {
       respond(localizedChallenge(contextTopic,teachingLanguage));
       return;
     }
