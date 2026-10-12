@@ -94,41 +94,19 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    finally{if(id===runRef.current){setRunning(false);busyRef.current=false;}}
    return;
   }
-  let previewSource=source;
-  if(language==="typescript"){
-   try{
-    setStatus("Transpiling TypeScript locally...");
-    const {compileTerminalTypeScript}=await import("../lib/terminal-typescript.mjs");
-    const result=compileTerminalTypeScript(source);
-    if(id!==runRef.current)return;
-    if(!result.success){
-     setConsoleLines(result.diagnostics.map(text=>({kind:"error",text})).slice(-MAX_LINES));
-     setStatus("TypeScript syntax error — fix the code and try again.");
-     setRunning(false);busyRef.current=false;return;
-    }
-    previewSource=result.code;
-   }catch(error){
-    if(id===runRef.current){
-     append("error",error instanceof Error?error.message:"TypeScript compiler failed.");
-     setStatus("TypeScript compiler could not load. Please retry.");
-     setRunning(false);busyRef.current=false;
-    }
-    return;
-   }
-  }
   const token=crypto.randomUUID();
   tokenRef.current=token;
   try{
-   const doc=buildPreviewDocument(language,previewSource,token);
+   const doc=buildPreviewDocument(language,source,token);
    setSession({token,doc});
-   setStatus(language==="python"?"Preparing isolated Python runtime...":"Preview running.");
-   const ms=language==="python"||language==="python-turtle"?90000:14000;
+   setStatus(language==="python"?"Preparing isolated Python runtime...":language==="typescript"?"Loading TypeScript compiler for isolated preview...":"Preview running.");
+   const ms=language==="python"||language==="python-turtle"||language==="typescript"?90000:14000;
    clearTimer();
    timerRef.current=setTimeout(()=>{
     if(tokenRef.current!==token)return;
     // HTML/CSS/JS animation can continue. Python must stop if the runtime stalls.
-    if(language==="python"||language==="python-turtle"){
-      setSession(null);tokenRef.current="";append("error","Python timed out after 90 seconds; program stopped.");setStatus("Python runtime timed out.");
+    if(language==="python"||language==="python-turtle"||language==="typescript"){
+      setSession(null);tokenRef.current="";append("error",language==="typescript"?"TypeScript compiler timed out after 90 seconds.":"Python timed out after 90 seconds; program stopped.");setStatus(language==="typescript"?"TypeScript compiler timed out.":"Python runtime timed out.");
     }else{
       setStatus("Preview active. Animations continue until Stop.");
     }
@@ -150,7 +128,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
     errorRef.current=true;
     append("error",data.text);
     clearTimer();setRunning(false);busyRef.current=false;
-    setStatus("Python stopped after an error. Check the console, fix the code, then Run again.");
+    setStatus(langRef.current==="typescript"?"TypeScript stopped after an error. Check the console and try again.":"Python stopped after an error. Check the console, fix the code, then Run again.");
     return;
    }
    if(data.kind==="error")errorRef.current=true;
@@ -276,6 +254,6 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   <p className="cq-terminal-status" role="status">{status}</p>
   {shareUrl&&<label className="cq-terminal-share">Shareable link (code only; never auto-runs)<input aria-label="Shareable terminal code link" readOnly value={shareUrl} onFocus={e=>e.currentTarget.select()}/></label>}
   <div className="cq-terminal-guidance"><ShieldCheck size={18}/><p>
-   Code runs locally in your browser. Web programs run in an isolated preview without access to your CodeQuest files or login; Python loads a free open-source runtime when online; Python Turtle uses the open-source Skulpt graphics interpreter. C# uses CodeQuest's existing real compiler. This is not a full desktop operating-system terminal: installed packages, tkinter, pygame, native WinForms and other languages need their own runtime. <strong>Review unknown code before running it; never paste passwords or private keys.</strong></p></div>
+   Code runs locally in your browser. Web programs run in an isolated preview without access to your CodeQuest files or login; Python loads a free open-source runtime when online; Python Turtle uses the open-source Skulpt graphics interpreter. TypeScript downloads a free pinned compiler into an isolated preview on first run. C# uses CodeQuest's existing real compiler. This is not a full desktop operating-system terminal: installed packages, tkinter, pygame, native WinForms and other languages need their own runtime. <strong>Review unknown code before running it; never paste passwords or private keys.</strong></p></div>
  </section>;
 }
