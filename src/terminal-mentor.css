@@ -1,0 +1,9 @@
+
+.cq-terminal-mentor{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;margin:12px 0;padding:14px 17px;border:1px solid #3f6273;border-radius:14px;background:linear-gradient(125deg,#12283a,#171d35);color:#eaf6ff}
+.cq-terminal-mentor h2{font-size:17px;margin:4px 0 8px;color:#fff}
+.cq-terminal-mentor p{margin:4px 0;line-height:1.5;font-size:13px;color:#c3d9e6}
+.cq-terminal-mentor .cq-tor-kicker{font-size:11px;font-weight:800;letter-spacing:.08em;color:#a6e9cc;text-transform:uppercase}
+.cq-terminal-mentor .cq-tor-hint{padding:9px 11px;border:1px solid #6b7180;border-radius:10px;background:#263446;color:#fff1cf}
+.cq-terminal-mentor-actions{display:flex;flex-direction:column;gap:8px}
+.cq-terminal-page .cq-terminal-mentor-actions button{min-height:44px;white-space:nowrap;font-size:13px}
+@media(max-width:650px){.cq-terminal-mentor{grid-template-columns:1fr;padding:13px}.cq-terminal-mentor-actions{flex-direction:row;flex-wrap:wrap}.cq-terminal-mentor-actions button{flex:1;min-width:130px}}
