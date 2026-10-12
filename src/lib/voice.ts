@@ -1,4 +1,5 @@
 import { selectDeviceVoice } from "./voice-catalog.mjs";
+import { speechChunks } from "./voice-chunks.mjs";
 export function voiceError(error: string) {
   return (
     (
@@ -27,6 +28,7 @@ export const voiceCommands: Record<string, Record<string, string>> = {
     settings: "open settings",
     progress: "open progress",
     playground: "open code lab",
+    terminal: "open code terminal",
     stop: "stop",
   },
   "zu-ZA": {
@@ -37,6 +39,7 @@ export const voiceCommands: Record<string, Record<string, string>> = {
     settings: "vula izilungiselelo",
     progress: "vula inqubekelaphambili",
     playground: "vula ikhodi",
+    terminal: "vula itheminali",
     stop: "yima",
   },
   "fr-FR": {
@@ -47,6 +50,7 @@ export const voiceCommands: Record<string, Record<string, string>> = {
     settings: "ouvre paramètres",
     progress: "ouvre progression",
     playground: "ouvre laboratoire",
+    terminal: "ouvre terminal",
     stop: "arrête",
   },
   "pt-PT": {
@@ -57,6 +61,7 @@ export const voiceCommands: Record<string, Record<string, string>> = {
     settings: "abrir definições",
     progress: "abrir progresso",
     playground: "abrir laboratório",
+    terminal: "abrir terminal",
     stop: "parar",
   },
   "sw-KE": {
@@ -67,6 +72,7 @@ export const voiceCommands: Record<string, Record<string, string>> = {
     settings: "fungua mipangilio",
     progress: "fungua maendeleo",
     playground: "fungua maabara",
+    terminal: "fungua terminal",
     stop: "simama",
   },
 };
@@ -94,6 +100,7 @@ export function commandFor(text: string) {
   if (/^(go to |open |show )?(progress|profile)$/.test(s)) return "progress";
   if (/^(go to |open |show )?(code lab|scratchpad|playground)$/.test(s))
     return "playground";
+  if (/^(go to |open |show )?(code terminal|terminal|coding terminal)$/.test(s)) return "terminal";
   if (s === "stop speaking") return "stop";
   return null;
 }
@@ -128,8 +135,14 @@ export function speakText(
     return false;
   }
   stopSpeech();
+  const chunks = speechChunks(text);
+  if (!chunks.length) {
+    onStatus("There is no text to read.");
+    return false;
+  }
   const generation = speechGeneration;
   const synth = window.speechSynthesis;
+  let chunkIndex=0;
   function play() {
     if (generation !== speechGeneration) return;
     const voices = synth.getVoices();
@@ -141,7 +154,7 @@ export function speakText(
       return;
     }
     function utter(voice: SpeechSynthesisVoice | null, retry: boolean) {
-      const u = new SpeechSynthesisUtterance(text.slice(0, 5000));
+      const u = new SpeechSynthesisUtterance(chunks[chunkIndex]);
       activeUtterance = u;
       if (voice) u.voice = voice;
       u.lang = voice?.lang || language;
@@ -151,7 +164,11 @@ export function speakText(
         if (generation === speechGeneration) onStatus("Speaking…");
       };
       u.onend = () => {
-        if (generation === speechGeneration) {
+        if (generation !== speechGeneration || activeUtterance !== u) return;
+        if (chunkIndex < chunks.length - 1) {
+          chunkIndex++;
+          utter(voice, false);
+        } else {
           activeUtterance = undefined;
           onStatus("Finished reading.");
         }
