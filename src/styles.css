@@ -3063,3 +3063,34 @@ button.primary:active {
 @media(max-width:1000px){.cq-terminal-workspace{grid-template-columns:1fr}.cq-terminal-source{border-right:0;border-bottom:1px solid var(--cq-border)}.cq-terminal-page textarea.cq-terminal-editor{min-height:290px}.cq-terminal-visual{height:400px}.cq-terminal-full .cq-terminal-visual{height:440px}}
 @media(max-width:620px){.cq-terminal-page{padding:14px 11px}.cq-terminal-heading{gap:8px;flex-wrap:wrap}.cq-terminal-toolbar>label{flex-basis:100%}.cq-terminal-actions{width:100%}.cq-terminal-actions button{flex:1}.cq-terminal-panel-title{font-size:11px}.cq-terminal-footer>*{flex:1}.cq-terminal-visual{height:295px;min-height:295px}.cq-terminal-page textarea.cq-terminal-editor{font-size:12px;padding:12px}.cq-terminal-full{padding:12px 8px}}
 @media(prefers-reduced-motion:reduce){.cq-terminal-page *{scroll-behavior:auto!important}}
+
+/* Terminal is a phone-first workspace: no iOS input zoom, large tap targets, output at reach. */
+.cq-terminal-csharp-preview{height:100%;min-width:0;display:flex;flex-direction:column;gap:10px;padding:17px 20px;background:#04121a;color:#d3f6e8}
+.cq-terminal-csharp-preview h2{font-size:15px;font-family:Consolas,monospace;margin:0;color:#9cf5c5}
+.cq-terminal-csharp-preview pre{flex:1;min-height:100px;max-height:245px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;margin:0;color:#fff;background:#081e27;border:1px solid #2f6570;border-radius:9px;padding:13px 15px;font:14px/1.6 Consolas,monospace}
+.cq-terminal-csharp-preview p{margin:0;color:#a9c2cb;font-size:12px}
+.cq-terminal-results{scroll-margin-top:12px}
+.cq-terminal-page .cq-terminal-actions button{min-height:44px}
+@media(max-width:760px){
+  .cq-terminal-page{padding:12px 10px calc(25px + env(safe-area-inset-bottom));max-width:100%;overflow-x:hidden}
+  .cq-terminal-heading{margin-bottom:13px}
+  .cq-terminal-heading h1{font-size:27px;letter-spacing:-.7px}
+  .cq-terminal-toolbar{padding:12px;gap:9px}
+  .cq-terminal-toolbar>label{min-width:0;flex-basis:100%}
+  .cq-terminal-page select,.cq-terminal-page textarea.cq-terminal-editor,.cq-terminal-page input{font-size:16px!important}
+  .cq-terminal-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cq-terminal-actions button{min-width:0;min-height:46px}
+  .cq-terminal-page textarea.cq-terminal-editor{min-height:235px;line-height:1.6;padding:13px}
+  .cq-terminal-footer{padding:9px}
+  .cq-terminal-footer>*{min-width:110px;min-height:44px}
+  .cq-terminal-workspace{min-height:0}
+  .cq-terminal-source{min-width:0}
+  .cq-terminal-visual{height:260px;min-height:260px}
+  .cq-terminal-console{min-height:135px;max-height:320px;font-size:13px}
+  .cq-terminal-full{padding:12px 9px calc(20px + env(safe-area-inset-bottom))}
+  .cq-terminal-full .cq-terminal-workspace{min-height:0}
+  .cq-terminal-full .cq-terminal-visual{height:270px;min-height:270px}
+  .tor-coach.expanded{max-height:calc(100dvh - 20px);overflow:auto;overscroll-behavior:contain}
+  .tor-panel{max-height:calc(100dvh - 110px);overflow-y:auto;-webkit-overflow-scrolling:touch}
+  .tor-panel input:not([type="checkbox"]),.tor-panel select{font-size:16px;min-height:44px}
+}
