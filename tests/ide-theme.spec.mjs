@@ -9,8 +9,7 @@ test('dark designer properties, file tabs and XP remain readable and preserve ed
   const properties = page.getByRole('complementary', { name: 'WinForms Properties panel', exact: true });
   await properties.getByLabel('Control Text', { exact: true }).fill('Student name');
   const result = await new AxeBuilder({ page })
-    .include('.properties-panel')
-    .include('.workspace-tabs')
+    .include('.designer-page')
     .include('.header-stats')
     .withRules(['color-contrast'])
     .analyze();

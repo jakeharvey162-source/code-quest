@@ -2901,6 +2901,8 @@ button.primary:active {
     .workspace-tabs,
     .canvas-column,
     .property-help,
+    .designer-error-list,
+    .form-validation,
     .property-panel,
     .form-code-workspace,
     .system-workshop,
@@ -2958,6 +2960,9 @@ button.primary:active {
 }
 [data-theme="dark"] .properties-panel .danger {
   color: #ffb2a3;
+}
+[data-theme="dark"] .form-validation.valid {
+  color: #90efbe;
 }
 [data-theme="dark"] .form-canvas {
   color: #203b2e;
