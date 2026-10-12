@@ -3,11 +3,11 @@ test("WinForms student uses Visual Studio F7 and Shift+F7 to navigate code and d
  await page.goto("/#designer");
  const designer=page.locator(".designer-page");
  await designer.getByRole("button",{name:"Code · F7"}).click();
- await expect(page.getByRole("button",{name:"Form1.cs",exact:true}).first()).toHaveAttribute("aria-pressed","true");
+ await expect(page.locator(".workspace-tabs").getByRole("button",{name:"Form1.cs",exact:true})).toHaveAttribute("aria-pressed","true");
  await page.keyboard.press("Shift+F7");
- await expect(page.getByRole("button",{name:"Form1.cs [Design]"}).first()).toHaveAttribute("aria-pressed","true");
+ await expect(page.locator(".workspace-tabs").getByRole("button",{name:"Form1.cs [Design]"})).toHaveAttribute("aria-pressed","true");
  await page.keyboard.press("F7");
- await expect(page.getByRole("button",{name:"Form1.cs",exact:true}).first()).toHaveAttribute("aria-pressed","true");
+ await expect(page.locator(".workspace-tabs").getByRole("button",{name:"Form1.cs",exact:true})).toHaveAttribute("aria-pressed","true");
 });
 test("WinForms build check validates design but does not claim an actual Windows build",async({page})=>{
  await page.goto("/#designer");
@@ -23,7 +23,7 @@ test("keyboard shortcuts focus toolbox and properties while preserving form work
  await page.keyboard.press("Control+Alt+X");
  await expect(page.getByRole("textbox",{name:"Search toolbox"})).toBeFocused();
  await page.getByRole("textbox",{name:"Search toolbox"}).fill("Button");
- await page.getByRole("button",{name:"Button",exact:true}).first().click();
+ await page.getByRole("button",{name:"Button",exact:true}).first().dblclick();
  await page.getByRole("button",{name:"Check WinForms design"}).focus();
  await page.keyboard.press("F4");
  await expect(page.getByRole("textbox",{name:"Control Name"})).toBeFocused();
