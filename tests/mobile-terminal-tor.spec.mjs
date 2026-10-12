@@ -1,0 +1,44 @@
+import {test,expect} from "@playwright/test";
+test("Android-sized screen exposes real C# output in the same visual panel and lets user jump to results",async({page})=>{
+ test.setTimeout(120000);
+ await page.setViewportSize({width:412,height:915});
+ await page.goto("/#terminal");
+ await expect(page.getByRole("heading",{name:"Code Terminal"})).toBeVisible();
+ await page.getByRole("combobox",{name:"Terminal programming language"}).selectOption("csharp");
+ await page.getByRole("combobox",{name:"Terminal example"}).selectOption("hello");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ await expect(page.getByLabel("C# visible result")).toContainText("Hello CodeQuest!",{timeout:90000});
+ await page.getByRole("button",{name:"Show code output"}).click();
+ await expect(page.locator("#code-terminal-output")).toBeInViewport();
+ const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);
+ expect(overflow).toBe(false);
+});
+test("iPhone-sized interface runs a web preview without sideways scrolling",async({page})=>{
+ await page.setViewportSize({width:375,height:812});
+ await page.goto("/#terminal");
+ await page.getByRole("combobox",{name:"Terminal programming language"}).selectOption("html");
+ await page.getByRole("textbox",{name:"Terminal code editor"}).fill("<h1>Birthday gift works on my phone!</h1>");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ await expect(page.frameLocator('iframe[title="Isolated program preview"]').getByRole("heading",{name:/Birthday gift/})).toBeVisible();
+ await expect(page.getByRole("button",{name:"Show code output"})).toBeVisible();
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2)).toBe(false);
+});
+test("Tor's roast gives a real answer and switches teaching languages on a phone",async({page})=>{
+ await page.setViewportSize({width:390,height:844});
+ await page.goto("/#terminal");
+ await page.getByRole("button",{name:"Open Tor tutor"}).click();
+ const panel=page.getByRole("complementary",{name:"Tor hologram tutor"});
+ await panel.getByLabel("Speak replies automatically").uncheck();
+ await panel.getByLabel("Tor teaching language").selectOption("fr-FR");
+ await panel.getByLabel("Ask about C# or your form").fill("What is a label?");
+ await panel.getByRole("button",{name:"Explain",exact:true}).click();
+ await expect(panel.locator(".tor-reply")).toContainText("Un Label affiche");
+ await panel.getByLabel("Roast mode").check();
+ await panel.getByRole("button",{name:"Explain",exact:true}).click();
+ await expect(panel.locator(".tor-reply")).toContainText("Ce contrôle n’est pas");
+ await expect(panel.locator(".tor-reply")).toContainText("Un Label affiche");
+ await panel.getByLabel("Tor teaching language").selectOption("zu-ZA");
+ await panel.getByRole("button",{name:"Explain",exact:true}).click();
+ await expect(panel.locator(".tor-reply")).toContainText("I-Label ibonisa");
+ expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2)).toBe(false);
+});
