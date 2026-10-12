@@ -6,11 +6,11 @@ import {runCSharp,cancelRun} from "../lib/compiler";
 import {download} from "../lib/download";
 import {readText,writeText} from "../lib/local-data";
 import {requestQuest} from "../lib/workshop-quests.mjs";
-type Language="javascript"|"html"|"css"|"python"|"python-turtle"|"csharp";
+type Language="javascript"|"typescript"|"html"|"css"|"python"|"python-turtle"|"csharp";
 type Line={kind:string;text:string};
 type Session={token:string;doc:string};
-const LABELS:Record<Language,string>={javascript:"JavaScript + Canvas",html:"HTML + interactive page",css:"CSS animations",python:"Python console (online runtime)","python-turtle":"Python Turtle graphics",csharp:"C# console"};
-const EXT:Record<Language,string>={javascript:"js",html:"html",css:"css",python:"py","python-turtle":"py",csharp:"cs"};
+const LABELS:Record<Language,string>={javascript:"JavaScript + Canvas",typescript:"TypeScript + Canvas",html:"HTML + interactive page",css:"CSS animations",python:"Python console (online runtime)","python-turtle":"Python Turtle graphics",csharp:"C# console"};
+const EXT:Record<Language,string>={javascript:"js",typescript:"ts",html:"html",css:"css",python:"py","python-turtle":"py",csharp:"cs"};
 const MINIMUM_SOURCE=1;
 const MAX_LINES=130;
 function initialLanguage():Language{
@@ -94,10 +94,32 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    finally{if(id===runRef.current){setRunning(false);busyRef.current=false;}}
    return;
   }
+  let previewSource=source;
+  if(language==="typescript"){
+   try{
+    setStatus("Transpiling TypeScript locally...");
+    const {compileTerminalTypeScript}=await import("../lib/terminal-typescript.mjs");
+    const result=compileTerminalTypeScript(source);
+    if(id!==runRef.current)return;
+    if(!result.success){
+     setConsoleLines(result.diagnostics.map(text=>({kind:"error",text})).slice(-MAX_LINES));
+     setStatus("TypeScript syntax error — fix the code and try again.");
+     setRunning(false);busyRef.current=false;return;
+    }
+    previewSource=result.code;
+   }catch(error){
+    if(id===runRef.current){
+     append("error",error instanceof Error?error.message:"TypeScript compiler failed.");
+     setStatus("TypeScript compiler could not load. Please retry.");
+     setRunning(false);busyRef.current=false;
+    }
+    return;
+   }
+  }
   const token=crypto.randomUUID();
   tokenRef.current=token;
   try{
-   const doc=buildPreviewDocument(language,source,token);
+   const doc=buildPreviewDocument(language,previewSource,token);
    setSession({token,doc});
    setStatus(language==="python"?"Preparing isolated Python runtime...":"Preview running.");
    const ms=language==="python"||language==="python-turtle"?90000:14000;
@@ -122,8 +144,15 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    const data=event.data;
    if(event.source!==iframeRef.current?.contentWindow||
       !data||data.channel!=="cq-terminal"||data.token!==tokenRef.current)return;
-   if(!["log","info","warn","error","status","done"].includes(data.kind))return;
+   if(!["log","info","warn","error","fatal","status","done"].includes(data.kind))return;
    if(typeof data.text!=="string")return;
+   if(data.kind==="fatal"){
+    errorRef.current=true;
+    append("error",data.text);
+    clearTimer();setRunning(false);busyRef.current=false;
+    setStatus("Python stopped after an error. Check the console, fix the code, then Run again.");
+    return;
+   }
    if(data.kind==="error")errorRef.current=true;
    if(data.kind==="status"||data.kind==="done"){
     setStatus(data.text.slice(0,300));
@@ -167,7 +196,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   if(file.size>120000){setStatus("File is too large. Limit 120 KB.");return}
   const extension=file.name.split(".").pop()?.toLowerCase()||"";
   const next=(extension==="py"&&/\b(import\s+turtle|from\s+turtle\s+import)\b/.test(await file.text()))?"python-turtle":(Object.keys(EXT) as Language[]).find(key=>EXT[key]===extension);
-  if(!next){setStatus("Supported file types: .js, .html, .css, .py, .cs");return}
+  if(!next){setStatus("Supported file types: .js, .ts, .html, .css, .py, .cs");return}
   try{
    const text=await file.text();validateSource(text);
    changeLanguage(next);setSource(text);writeText("cq-terminal-source-"+next,text);
@@ -219,13 +248,13 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   </div>
   <div className="cq-terminal-workspace">
    <div className="cq-terminal-source">
-    <div className="cq-terminal-panel-title"><Code2 size={16}/> {language==="html"?"index.html":language==="csharp"?"Program.cs":language==="python"||language==="python-turtle"?"main.py":language==="css"?"styles.css":"main.js"}<span>EDITOR</span></div>
+    <div className="cq-terminal-panel-title"><Code2 size={16}/> {language==="html"?"index.html":language==="typescript"?"main.ts":language==="csharp"?"Program.cs":language==="python"||language==="python-turtle"?"main.py":language==="css"?"styles.css":"main.js"}<span>EDITOR</span></div>
     <label className="cq-terminal-editor-label" htmlFor="cq-universal-code">Code editor</label>
     <textarea id="cq-universal-code" className="cq-terminal-editor" aria-label="Terminal code editor" spellCheck={false}
       value={source} onChange={e=>edit(e.target.value)} autoCapitalize="off" autoCorrect="off"/>
     <div className="cq-terminal-footer">
      <label className="cq-terminal-file-button"><Upload size={16}/> Open a code file
-      <input ref={fileRef} type="file" aria-label="Import terminal code file" accept=".js,.html,.css,.py,.cs,text/plain" onChange={e=>void importFile(e.target.files?.[0])}/>
+      <input ref={fileRef} type="file" aria-label="Import terminal code file" accept=".js,.ts,.html,.css,.py,.cs,text/plain" onChange={e=>void importFile(e.target.files?.[0])}/>
      </label>
      <button onClick={()=>download("CodeQuestProgram."+EXT[language],source,"text/plain")}><Download size={16}/> Download</button>
      <button onClick={()=>void share()}><Share2 size={16}/> Share code</button>
