@@ -2,7 +2,7 @@ import {test,expect} from "@playwright/test";
 test("WinForms student uses Visual Studio F7 and Shift+F7 to navigate code and design",async({page})=>{
  await page.goto("/#designer");
  const designer=page.locator(".designer-page");
- await designer.getByRole("button",{name:"Code · F7"}).click();
+ await designer.getByRole("button",{name:"Open Form1 C# code"}).click();
  await expect(page.locator(".workspace-tabs").getByRole("button",{name:"Form1.cs",exact:true})).toHaveAttribute("aria-pressed","true");
  await page.keyboard.press("Shift+F7");
  await expect(page.locator(".workspace-tabs").getByRole("button",{name:"Form1.cs [Design]"})).toHaveAttribute("aria-pressed","true");
