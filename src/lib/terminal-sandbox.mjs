@@ -85,13 +85,39 @@ function turtleFrame(code,token){
  ].join("");
  return shell('<div id="mycanvas" style="min-height:100vh;background:black"></div>',STYLE,loader+"<script>"+bootstrap+"</script>",token,csp);
 }
+
+const TS_COMPILER="https://cdn.jsdelivr.net/npm/typescript@5.9.3/lib/typescript.js";
+function typescriptFrame(code,token){
+ // TS 7 ships no JavaScript compiler API. Compile with a pinned browser compiler
+ // inside an opaque-origin frame; never evaluate source in the CodeQuest origin.
+ const csp="default-src 'none';script-src 'unsafe-inline' https://cdn.jsdelivr.net;connect-src 'none';worker-src 'none';style-src 'unsafe-inline';img-src data: blob:;base-uri 'none';form-action 'none'";
+ const bootstrap=[
+  '(function(){try{',
+  'if(!window.ts||typeof window.ts.transpileModule!=="function")throw Error("TypeScript compiler could not load; check the internet connection.");',
+  'const ts=window.ts;',
+  'const source='+safeScript(JSON.stringify(code))+';',
+  'const parsed=ts.createSourceFile("main.ts",source,ts.ScriptTarget.ES2022,true,ts.ScriptKind.TS);',
+  'if(parsed.statements.some(node=>ts.isImportDeclaration(node)||ts.isExportDeclaration(node)||ts.isExportAssignment(node)||ts.isImportEqualsDeclaration(node)||node.modifiers?.some(mod=>mod.kind===ts.SyntaxKind.ExportKeyword)))throw Error("Module imports/exports are unsupported in this local preview. Use Canvas and console APIs.");',
+  'const compiled=ts.transpileModule(source,{fileName:"main.ts",reportDiagnostics:true,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}});',
+  'const errors=[...(parsed.parseDiagnostics||[]),...(compiled.diagnostics||[])].filter(d=>d.category===ts.DiagnosticCategory.Error);',
+  'if(errors.length){for(const d of errors)window.__cqSend("error","TS"+d.code+": "+ts.flattenDiagnosticMessageText(d.messageText," "));window.__cqSend("fatal","TypeScript has syntax errors.");return;}',
+  'window.__cqSend("status","Running compiled TypeScript...");',
+  'const script=document.createElement("script");script.textContent=compiled.outputText;document.body.appendChild(script);',
+  'window.__cqSend("done","TypeScript loaded; animations may continue.");',
+  '}catch(err){window.__cqSend("fatal",err.message||String(err))}})();'
+ ].join("");
+ return shell('<canvas id="art" width="960" height="540"></canvas>',STYLE,
+  '<script src="'+TS_COMPILER+'"></script><script>'+bootstrap+'</script>',token,csp);
+}
+
 export function buildPreviewDocument(language,code,token){
  if(!validLanguage(language)||language==="csharp")throw Error("No browser preview for this language.");
  validateSource(code);
  if(typeof token!=="string"||!/^[a-f0-9-]{10,80}$/i.test(token))throw Error("Invalid preview token.");
  if(language==="python")return pythonFrame(code,token);
+ if(language==="typescript")return typescriptFrame(code,token);
  if(language==="python-turtle")return turtleFrame(code,token);
- if(language==="javascript"||language==="typescript"){
+ if(language==="javascript"){
   return shell('<canvas id="art" width="960" height="540"></canvas>',STYLE,
    '<script>try{\n'+safeScript(code)+'\n}catch(error){window.__cqSend("error",error.stack||String(error))}</script>'+
    '<script>window.__cqSend("done","JavaScript loaded; animations may continue.");</script>',token);
