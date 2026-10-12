@@ -549,7 +549,7 @@ export default function TorCoach({
             <input
               type="checkbox"
               checked={roast}
-              onChange={(e) => { setRoast(e.target.checked); writeText("cq-tor-roast", String(e.target.checked)); }}
+              onChange={(e) => { const on=e.target.checked; setRoast(on); writeText("cq-tor-roast", String(on)); const updated=localizedLesson(question,teachingLanguage,on); if(updated)setReply(updated); }}
             />{" "}
             Roast mode
           </label>
