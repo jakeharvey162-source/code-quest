@@ -1,4 +1,6 @@
 import {useEffect,useRef,useState} from "react";
+import {missionsFor,torDebugTip} from "../lib/terminal-mentor.mjs";
+import "../terminal-mentor.css";
 import {Play,Square,Download,Upload,Share2,Expand,Minimize2,Heart,Terminal,Code2,RotateCcw,ShieldCheck} from "lucide-react";
 import {TERMINAL_EXAMPLES,exampleFor} from "../lib/terminal-examples.mjs";
 import {buildPreviewDocument,encodeSharedProgram,decodeSharedProgram,validLanguage,validateSource} from "../lib/terminal-sandbox.mjs";
@@ -30,6 +32,8 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  const [full,setFull]=useState(false);
  const [session,setSession]=useState<Session|null>(null);
  const [shareUrl,setShareUrl]=useState("");
+ const [missionIndex,setMissionIndex]=useState(0);
+ const [showMissionHint,setShowMissionHint]=useState(false);
  const iframeRef=useRef<HTMLIFrameElement>(null);
  const resultsRef=useRef<HTMLDivElement>(null);
  const tokenRef=useRef("");
@@ -55,7 +59,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  }
  function changeLanguage(next:Language){
   stop();
-  setLanguage(next);setSource(initialSource(next));setExampleId(exampleFor(next)?.id||"");
+  setLanguage(next);setSource(initialSource(next));setExampleId(exampleFor(next)?.id||"");setMissionIndex(0);setShowMissionHint(false);
   setConsoleLines([]);setShareUrl("");
   writeText("cq-terminal-language",next);
   setStatus("Switched to "+LABELS[next]+". Press Run.");
@@ -196,6 +200,8 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   }catch(error){setShareUrl("");setStatus(error instanceof Error?error.message:"Could not share.")}
  }
  const canPreview=language!=="csharp";
+ const missions=missionsFor(language);
+ const mission=missions[missionIndex%missions.length];
  return <section className={"cq-terminal-page "+(full?"cq-terminal-full":"")} aria-label="Universal coding terminal">
   <div className="cq-terminal-heading">
    <div><p className="cq-terminal-overline"><Terminal size={14}/> CODEQUEST / CODE TERMINAL</p>
@@ -204,6 +210,19 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    <button type="button" onClick={()=>setFull(x=>!x)} aria-label={full?"Exit expanded terminal":"Expand terminal"}>
     {full?<Minimize2 size={18}/>:<Expand size={18}/>} {full?"Exit full view":"Expand"}</button>
   </div>
+  <section className="cq-terminal-mentor" aria-label="Tor coding mini missions">
+    <div>
+      <p className="cq-tor-kicker">✦ Tor's coding mission · {language}</p>
+      <h2>{mission?.title||"Create something great"}</h2>
+      <p>{mission?.task||"Choose an example, make a change, then run it."}</p>
+      <p>{torDebugTip(language,source,consoleLines.some(line=>line.kind==="error"))}</p>
+      {showMissionHint&&<p className="cq-tor-hint" role="status">💡 {mission?.hint}</p>}
+    </div>
+    <div className="cq-terminal-mentor-actions">
+      <button type="button" onClick={()=>setShowMissionHint(x=>!x)}>{showMissionHint?"Hide hint":"Ask Tor for hint"}</button>
+      <button type="button" onClick={()=>{setMissionIndex(x=>x+1);setShowMissionHint(false)}}>Next mission →</button>
+    </div>
+  </section>
   <div className="cq-terminal-topbar">
    <div className="cq-terminal-dots"><span/><span/><span/></div>
    <strong>~ / CodeQuest / Terminal</strong>
