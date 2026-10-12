@@ -19,7 +19,7 @@ test("Tor's mouth state follows mocked browser voice lifecycle and stops on comm
   const voice={name:"Mock English",lang:"en-ZA"};
   let utterance=null;
   const synth={
-   getVoices:()=>[voice],cancel(){utterance=null;},
+   getVoices:()=>[voice],addEventListener(){},removeEventListener(){},cancel(){utterance=null;},
    speak(u){utterance=u;setTimeout(()=>{if(utterance===u)u.onstart?.()},50)}
   };
   Object.defineProperty(window,"speechSynthesis",{configurable:true,value:synth});
