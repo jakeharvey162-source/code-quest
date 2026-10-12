@@ -55,6 +55,18 @@ export const TERMINAL_EXAMPLES = Object.freeze({
     "source": "import turtle\nscreen = turtle.Screen()\nscreen.bgcolor(\"black\")\nscreen.title(\"Birthday Surprise\")\npen = turtle.Turtle()\npen.hideturtle()\npen.speed(0)\npen.penup()\npen.color(\"#ffd7ea\")\npen.goto(0, 190)\npen.write(\"HAPPY BIRTHDAY ♥\", align=\"center\", font=(\"Arial\", 23, \"bold\"))\npalette = [\"pink\", \"orange\", \"skyblue\", \"violet\", \"salmon\"]\nfor i in range(5):\n    x = (i - 2) * 65\n    pen.goto(x, 45)\n    pen.color(palette[i])\n    pen.pensize(12)\n    pen.setheading(270)\n    pen.pendown()\n    pen.forward(65)\n    pen.penup()\n    pen.goto(x, 55)\n    pen.dot(18, \"gold\")\npen.color(\"white\")\nwishes = [\"You make life magical\", \"Wishing you so much joy\", \"Never stop shining\", \"You are my favourite person\"]\nfor i in range(len(wishes)):\n    pen.goto(0, -75 - i * 29)\n    pen.write(wishes[i], align=\"center\", font=(\"Arial\", 12, \"normal\"))"
   }
 ],
+  "typescript": [
+    {
+      "id": "heart",
+      "title": "TypeScript: animated birthday heart",
+      "source": "const canvas = document.querySelector<HTMLCanvasElement>('#art')!;\nconst ctx = canvas.getContext('2d')!;\nconst greeting: string = 'Happy Birthday! ♥';\nfunction draw(time: number): void {\n  ctx.clearRect(0, 0, canvas.width, canvas.height);\n  ctx.fillStyle = '#130a25';\n  ctx.fillRect(0, 0, canvas.width, canvas.height);\n  ctx.save();\n  ctx.translate(480, 230);\n  const pulse: number = 1 + Math.sin(time / 300) * 0.08;\n  ctx.scale(pulse, pulse);\n  ctx.fillStyle = '#ff5f9a';\n  ctx.beginPath();\n  ctx.moveTo(0, 90);\n  ctx.bezierCurveTo(-210, -50, -90, -150, 0, -60);\n  ctx.bezierCurveTo(90, -150, 210, -50, 0, 90);\n  ctx.fill();\n  ctx.restore();\n  ctx.font = 'bold 36px sans-serif';\n  ctx.textAlign = 'center';\n  ctx.fillStyle = 'white';\n  ctx.fillText(greeting, 480, 425);\n  requestAnimationFrame(draw);\n}\nrequestAnimationFrame(draw);"
+    },
+    {
+      "id": "hello",
+      "title": "TypeScript: typed console output",
+      "source": "type Person = {name: string; favoriteColor: string};\nconst friend: Person = {name: 'Friend', favoriteColor: 'purple'};\nconsole.log('Hello ' + friend.name + '! Color: ' + friend.favoriteColor);"
+    }
+  ],
   "csharp": [
     {
       "id": "heart",
