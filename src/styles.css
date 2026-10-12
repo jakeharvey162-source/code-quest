@@ -3101,3 +3101,69 @@ button.primary:active {
 .tor-quick-quests button{min-height:44px;min-width:0;white-space:normal;line-height:1.35}
 .tor-quick-quests button:focus-visible{outline:3px solid #ffd28a;outline-offset:2px}
 @media(max-width:390px){.tor-quick-quests{grid-template-columns:1fr}}
+
+
+/* Preserve Tor's original RobotExpressive identity; the tiny visor-style
+   mouth follows the GLB head in projected 3D space rather than replacing it. */
+.tor-3d-mouth{
+  --tor-mouth-open:.24;
+  position:absolute;
+  left:50%;
+  top:44%;
+  width:23px;
+  height:8px;
+  border:2px solid #9ff7ff;
+  background:radial-gradient(ellipse at center,#09243a 40%,#1ba9c4 100%);
+  border-radius:60% / 75%;
+  box-shadow:0 0 7px #4adeffb8, inset 0 0 3px #5effee7a;
+  transform:translate(-50%,-50%) scaleY(var(--tor-mouth-open));
+  transform-origin:center center;
+  z-index:2;
+  pointer-events:none;
+  opacity:0;
+  will-change:transform,top,left;
+}
+.tor-model[data-speaking="true"] .tor-3d-mouth{border-color:#c6ffff;box-shadow:0 0 10px #22fff7c9}
+.tor-reaction-pop{
+  position:absolute;
+  bottom:6px;
+  left:50%;
+  z-index:3;
+  transform:translateX(-50%);
+  pointer-events:none;
+  white-space:nowrap;
+  max-width:180px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-size:10px;
+  font-weight:800;
+  color:#fff9dd;
+  background:#092d3cdd;
+  border:1px solid #6edbe5;
+  border-radius:15px;
+  padding:3px 8px;
+  animation:tor-reaction-bounce 2.4s ease-out both;
+}
+@keyframes tor-reaction-bounce{
+  0%{opacity:0;transform:translate(-50%,12px) scale(.7)}
+  18%{opacity:1;transform:translate(-50%,-8px) scale(1.08)}
+  60%{opacity:1;transform:translate(-50%,-5px)}
+  100%{opacity:0;transform:translate(-50%,-15px)}
+}
+.tor-reactions{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  margin:10px 0;
+}
+.tor-reactions button{min-height:44px;min-width:0;white-space:normal;font-weight:700}
+.tor-reactions button:focus-visible{outline:3px solid #ffd28a;outline-offset:2px}
+.tor-coach[data-mood="speaking"] .tor-panel{
+  box-shadow:0 0 21px #4cecfb55,0 5px 24px #0004;
+}
+@media(prefers-reduced-motion:reduce){
+  .tor-reaction-pop{animation:none;opacity:1}
+  .tor-3d-mouth{will-change:auto}
+}
+.reduce-motion .tor-reaction-pop{animation:none;opacity:1}
+@media(max-width:390px){.tor-reactions{grid-template-columns:1fr 1fr}.tor-reactions button{font-size:12px;padding:9px 4px}}
