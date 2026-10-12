@@ -2,7 +2,7 @@ import {test,expect} from "@playwright/test";
 
 test("student runs visual JavaScript heart, reads logs and stops the program",async({page})=>{
  await page.goto("/#terminal");
- await expect(page.getByRole("heading",{name:"Make code come alive."})).toBeVisible();
+ await expect(page.getByRole("heading",{name:"Code Terminal"})).toBeVisible();
  await expect(page.getByRole("combobox",{name:"Terminal programming language"})).toHaveValue("javascript");
  await expect(page.getByRole("textbox",{name:"Terminal code editor"})).toHaveValue(/canvas/);
  await page.getByRole("button",{name:"Run terminal code"}).click();

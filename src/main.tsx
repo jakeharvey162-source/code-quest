@@ -50,7 +50,7 @@ const navigation = [
   { id: "learn", title: "Lessons", icon: BookOpen },
   { id: "videos", title: "Video tutorials", icon: Clapperboard },
   { id: "playground", title: "Code Lab", icon: Terminal },
-  { id: "terminal", title: "Creator Terminal", icon: Heart },
+  { id: "terminal", title: "Code Terminal", icon: Terminal },
   { id: "designer", title: "WinForms", icon: PanelsTopLeft },
   { id: "assessment", title: "Assessment", icon: Flag },
   { id: "progress", title: "Progress", icon: ChartNoAxesCombined },

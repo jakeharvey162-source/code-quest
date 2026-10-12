@@ -69,7 +69,7 @@ test("Tor moves, remembers position, explains controls and speaks with optional 
   await expect(page.getByLabel("Roast mode")).not.toBeChecked();
   await page.getByLabel("Roast mode").check();
   await expect(page.locator(".tor-reply")).toContainText(
-    "Less guessing, more debugging",
+    "That control isn't decoration",
   );
   await page.getByRole("button", { name: "Tor, speak" }).click();
   await expect(page.locator(".tor-coach")).toHaveClass(/speaking/);
