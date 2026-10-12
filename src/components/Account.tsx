@@ -1,14 +1,21 @@
 import { useEffect, useState, type FormEvent } from "react";
-import {
-  supabase,
-  authRedirect,
-  supabaseConfigurationError,
-} from "../lib/supabase";
+import { supabase, authRedirect } from "../lib/supabase";
 import { useAuth } from "./AuthProvider";
 import { migrateProgress, xpFor, type Progress } from "../lib/progress";
 import { readText, writeText, readBrief } from "../lib/local-data";
 import { normalizeControls } from "./FormDesigner";
 import type { UpdateProgress } from "./LessonView";
+function friendlyAccountError(error: unknown): string {
+  const message = error instanceof Error ? error.message : String((error as any)?.message || error || "");
+  if (/invalid.login.credentials|invalid_credentials|invalid.*password/i.test(message)) return "Email or password is incorrect. Please try again.";
+  if (/email.not.confirmed|email_not_confirmed/i.test(message)) return "Please check your inbox to confirm your email before signing in.";
+  if (/already.registered|user_already_exists/i.test(message)) return "This email is already registered. Try signing in instead.";
+  if (/rate.limit|too.many.requests/i.test(message)) return "Too many attempts. Please try again a little later.";
+  if (/network|failed.to.fetch|timed.out|fetch error/i.test(message)) return "We could not connect right now. Check your connection and try again.";
+  if (/revision|conflict|already.changed/i.test(message)) return "Your saved work changed on another device. Refresh your saves before trying again.";
+  return "Something went wrong. Please try again. Your work on this device has not been deleted.";
+}
+
 export default function Account({
   progress,
   update,
@@ -46,7 +53,7 @@ export default function Account({
   useEffect(() => {
     refresh().catch(() =>
       setMessage(
-        "Cloud history is unavailable. Check the CodeQuest database migration and connection.",
+        "We could not load your saved history. Your work on this device is still available.",
       ),
     );
   }, [user?.id]);
@@ -57,12 +64,8 @@ export default function Account({
     try {
       await task();
     } catch (error) {
-      setMessage(
-        error instanceof Error
-          ? error.message
-          : (error as any)?.message ||
-              "The request could not complete. Try again.",
-      );
+      console.error("CodeQuest account action failed", error);
+      setMessage(friendlyAccountError(error));
     } finally {
       setBusy(false);
       setPassword("");
@@ -71,7 +74,7 @@ export default function Account({
   function submit(event: FormEvent) {
     event.preventDefault();
     action(async () => {
-      if (!supabase) throw new Error("Accounts have not been connected yet.");
+      if (!supabase) throw new Error("Account sign-in is not available yet.");
       const result = recovery
         ? await supabase.auth.updateUser({ password })
         : mode === "signup"
@@ -90,7 +93,9 @@ export default function Account({
         recovery
           ? "Password updated. Sign out and sign in with your new password."
           : mode === "signup"
-            ? "Check your email to confirm your account. Your guest profile stays on this device."
+            ? result.data?.session
+              ? "Your account is ready. You are signed in."
+              : "Your account was created. Check your inbox for the confirmation link."
             : mode === "reset"
               ? "If the address has an account, a reset link will arrive by email."
               : "Signed in.",
@@ -168,14 +173,21 @@ export default function Account({
       </div>
       {!supabase ? (
         <article className="settings-card">
-          <h2>Local learning is ready</h2>
-          {supabaseConfigurationError && (
-            <p role="status">{supabaseConfigurationError}</p>
-          )}
+          <h2>Jump into CodeQuest</h2>
           <p>
-            Accounts need the dedicated CodeQuest Supabase project. You can
-            learn, save locally, and export a backup from Settings now.
+            You can learn, run code and save your progress on this device without
+            signing in. Account sign-in is temporarily unavailable, but your
+            learning journey does not have to stop.
           </p>
+          <div className="button-row">
+            <button type="button" className="primary" onClick={() => { location.hash = "learn"; }}>
+              Start learning
+            </button>
+            <button type="button" onClick={() => { location.hash = "settings"; }}>
+              Back up my progress
+            </button>
+          </div>
+          <p className="muted">If you clear your browser data or switch devices, you may lose progress unless you save a backup.</p>
         </article>
       ) : !user || recovery ? (
         <form className="settings-card" onSubmit={submit}>
