@@ -119,8 +119,8 @@ export function buildPreviewDocument(language,code,token){
  if(language==="python-turtle")return turtleFrame(code,token);
  if(language==="javascript"){
   return shell('<canvas id="art" width="960" height="540"></canvas>',STYLE,
-   '<script>try{\n'+safeScript(code)+'\n}catch(error){window.__cqSend("error",error.stack||String(error))}</script>'+
-   '<script>window.__cqSend("done","JavaScript loaded; animations may continue.");</script>',token);
+   '<script>try{\n'+safeScript(code)+'\n}catch(error){window.__cqRuntimeError=true;window.__cqSend("fatal",error.stack||String(error))}</script>'+
+   '<script>if(!window.__cqRuntimeError)window.__cqSend("done","JavaScript loaded; animations may continue.");</script>',token);
  }
  if(language==="css"){
   return shell('<div id="display"><h1>Style this page</h1><p>Your CSS controls this preview.</p><button>Hover me ✦</button><div class="heart">♥</div></div>',STYLE+'\n'+safeScript(code),

@@ -130,7 +130,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
     errorRef.current=true;
     append("error",data.text);
     clearTimer();setRunning(false);busyRef.current=false;
-    setStatus(langRef.current==="typescript"?"TypeScript stopped after an error. Check the console and try again.":"Python stopped after an error. Check the console, fix the code, then Run again.");
+    setStatus(langRef.current==="typescript"?"TypeScript stopped after an error. Check the console and try again.":langRef.current==="javascript"?"JavaScript stopped after an error. Fix the code and press Run again.":"Python stopped after an error. Check the console, fix the code, then Run again.");
     return;
    }
    if(data.kind==="error")errorRef.current=true;
