@@ -3,7 +3,7 @@ import type { Settings } from "../lib/progress";
 import { readText, writeText } from "../lib/local-data";
 import { speakText, stopSpeech, commandFor, voiceError } from "../lib/voice";
 import { coachAction, cleanCoachRequest } from "../lib/coach-commands.mjs";
-import { TOR_LANGUAGES, localizedLesson, localizedFallback } from "../lib/tor-teaching.mjs";
+import { TOR_LANGUAGES, localizedLesson, localizedChallenge, localizedFallback } from "../lib/tor-teaching.mjs";
 import { requestWorkspaceAction } from "../lib/coach-actions";
 import type { WorkspaceObservation } from "../lib/workspace-observation";
 import {
@@ -24,8 +24,8 @@ const tips: Record<string, string> = {
   home: "Pick a quest or open WinForms to build a form. I can explain controls, events, loops and validation. Drag my hologram out of your way, or use the arrow keys on my handle.",
   terminal: "Pick a language, press Run, and inspect the preview and console. I can help debug your code.",
 };
-function answer(question: string, page: string, language: string, spicy: boolean) {
-  const lesson=localizedLesson(question,language,spicy);
+function answer(question: string, page: string, language: string, spicy: boolean, variation=0) {
+  const lesson=localizedLesson(question,language,spicy,variation);
   if(lesson)return lesson;
   if(language!=="en-ZA")return localizedFallback(language);
   if (/label|textbox|text box/i.test(question))
@@ -61,6 +61,7 @@ export default function TorCoach({
   );
   const previousObservation = useRef<WorkspaceObservation | null>(null);
   const lastRequest = useRef(0);
+  const personalityTurn = useRef(0);
   const [accent, setAccent] = useState(() =>
     readText("cq-tor-accent", "en-ZA"),
   );
@@ -106,6 +107,15 @@ export default function TorCoach({
     pendingAction.current?.abort();
     const request = cleanCoachRequest(text);
     if (!request) return;
+    const contextTopic = observation?.output && /error|failed|CS\d{4}/i.test(observation.output)?"debug error":page==="designer"?"button event":page==="terminal"?"debug error":"loop";
+    if (/\b(roast me|roast my code|give me a roast)\b/i.test(request)) {
+      respond(localizedLesson(contextTopic,teachingLanguage,true,++personalityTurn.current)||localizedFallback(teachingLanguage));
+      return;
+    }
+    if (/\b(challenge me|coding challenge|give me a challenge)\b/i.test(request)) {
+      respond(localizedChallenge(contextTopic,teachingLanguage));
+      return;
+    }
     const route = commandFor(request);
     if (route === "stop") {
       stop();
@@ -148,7 +158,7 @@ export default function TorCoach({
       );
       return;
     }
-    respond(answer(request, page, teachingLanguage, roast));
+    respond(answer(request, page, teachingLanguage, roast, ++personalityTurn.current));
   }
   function stop() {
     pendingAction.current?.abort();
@@ -196,6 +206,7 @@ export default function TorCoach({
     };
     r.onerror = (event: any) => {
       if (recognition.current === r) {
+        recognition.current=null;
         setStatus(voiceError(event.error));
         setListening(false);
       }
@@ -523,6 +534,10 @@ export default function TorCoach({
               {listening ? "Stop listening" : "Talk to Tor"}
             </button>
           </form>
+          <div className="tor-quick-quests" aria-label="Tor fun learning shortcuts">
+            <button type="button" onClick={() => void ask("Roast my code")}>Roast my code</button>
+            <button type="button" onClick={() => void ask("Challenge me")}>Give me a challenge</button>
+          </div>
           <label className="tor-roast">
             <input
               type="checkbox"
@@ -637,6 +652,7 @@ export default function TorCoach({
           </label>
           <div className="tor-actions">
             <button onClick={() => say(message)}>Tor, speak</button>
+            <button onClick={() => speakText(message,voice,Math.min(0.8,settings.rate),setStatus,teachingLanguage==="en-ZA"?accent:teachingLanguage)}>Speak slower</button>
             <button onClick={stop}>Stop voice</button>
           </div>
           <details className="tor-command-help">
@@ -645,7 +661,7 @@ export default function TorCoach({
               Add a label that says Student Name. Set text to Welcome. Rename to
               lblWelcome. Select label1. Move right 24 pixels. Review my form.
               Start preview. Type Jake into txtName. Click btnSave. Stop
-              preview. Undo. Open Code Lab.
+              preview. Undo. Open Code Lab. Open Code Terminal. Challenge me. Roast my code.
             </p>
           </details>
           <small role="status">

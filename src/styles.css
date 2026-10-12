@@ -3094,3 +3094,10 @@ button.primary:active {
   .tor-panel{max-height:calc(100dvh - 110px);overflow-y:auto;-webkit-overflow-scrolling:touch}
   .tor-panel input:not([type="checkbox"]),.tor-panel select{font-size:16px;min-height:44px}
 }
+
+
+/* Tor's opt-in mini challenge shortcuts: large tap targets on phones. */
+.tor-quick-quests{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:10px 0}
+.tor-quick-quests button{min-height:44px;min-width:0;white-space:normal;line-height:1.35}
+.tor-quick-quests button:focus-visible{outline:3px solid #ffd28a;outline-offset:2px}
+@media(max-width:390px){.tor-quick-quests{grid-template-columns:1fr}}

@@ -1,6 +1,8 @@
 import {useEffect,useRef,useState} from "react";
 import {Play,Square,Download,Upload,Share2,Expand,Minimize2,Heart,Terminal,Code2,RotateCcw,ShieldCheck} from "lucide-react";
 import {TERMINAL_EXAMPLES,exampleFor} from "../lib/terminal-examples.mjs";
+import {missionsFor,torDebugTip} from "../lib/terminal-mentor.mjs";
+import "../terminal-mentor.css";
 import {buildPreviewDocument,encodeSharedProgram,decodeSharedProgram,validLanguage,validateSource} from "../lib/terminal-sandbox.mjs";
 import {runCSharp,cancelRun} from "../lib/compiler";
 import {download} from "../lib/download";
@@ -30,6 +32,8 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  const [full,setFull]=useState(false);
  const [session,setSession]=useState<Session|null>(null);
  const [shareUrl,setShareUrl]=useState("");
+ const [missionIndex,setMissionIndex]=useState(0);
+ const [showMissionHint,setShowMissionHint]=useState(false);
  const iframeRef=useRef<HTMLIFrameElement>(null);
  const resultsRef=useRef<HTMLDivElement>(null);
  const tokenRef=useRef("");
@@ -56,6 +60,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  function changeLanguage(next:Language){
   stop();
   setLanguage(next);setSource(initialSource(next));setExampleId(exampleFor(next)?.id||"");
+  setMissionIndex(0);setShowMissionHint(false);
   setConsoleLines([]);setShareUrl("");
   writeText("cq-terminal-language",next);
   setStatus("Switched to "+LABELS[next]+". Press Run.");
@@ -158,6 +163,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
    const shared=decodeSharedProgram(sharedCode);
    stop();
    setLanguage(shared.language as Language);setSource(shared.source);
+   setMissionIndex(0);setShowMissionHint(false);
    setExampleId("");setConsoleLines([]);
    setStatus("Shared program loaded. Review the code, then press Run.");
    // Never auto-execute code from a link.
@@ -196,6 +202,8 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   }catch(error){setShareUrl("");setStatus(error instanceof Error?error.message:"Could not share.")}
  }
  const canPreview=language!=="csharp";
+ const missions=missionsFor(language);
+ const mission=missions.length?missions[missionIndex%missions.length]:null;
  return <section className={"cq-terminal-page "+(full?"cq-terminal-full":"")} aria-label="Universal coding terminal">
   <div className="cq-terminal-heading">
    <div><p className="cq-terminal-overline"><Terminal size={14}/> CODEQUEST / CODE TERMINAL</p>
@@ -228,6 +236,20 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
     <button onClick={()=>{if(confirm("Replace your code with the starter example?"))selectExample(exampleFor(language)?.id||"")}} aria-label="Reset to example"><RotateCcw size={16}/> Reset</button>
    </div>
   </div>
+  {mission&&<section className="cq-terminal-mentor" aria-label="Tor coding side quest">
+   <div>
+    <span className="cq-tor-kicker">TOR // DAILY SIDE QUEST</span>
+    <h2>{mission.title}</h2>
+    <p>{mission.task}</p>
+    <p className="cq-tor-guidance">{torDebugTip(language,source,consoleLines.some(line=>line.kind==="error"))}</p>
+    {showMissionHint&&<p className="cq-tor-hint"><strong>Hint:</strong> {mission.hint}</p>}
+    <small>Practice challenge · Tor won't claim you passed without checking your code.</small>
+   </div>
+   <div className="cq-terminal-mentor-actions">
+    <button type="button" onClick={()=>setShowMissionHint(x=>!x)} aria-label="Ask Tor for hint">{showMissionHint?"Hide hint":"Ask Tor for hint"}</button>
+    <button type="button" onClick={()=>{setMissionIndex(i=>(i+1)%missions.length);setShowMissionHint(false)}} aria-label="Next mission">Next mission →</button>
+   </div>
+  </section>}
   <div className="cq-terminal-workspace">
    <div className="cq-terminal-source">
     <div className="cq-terminal-panel-title"><Code2 size={16}/> {language==="html"?"index.html":language==="typescript"?"main.ts":language==="csharp"?"Program.cs":language==="python"||language==="python-turtle"?"main.py":language==="css"?"styles.css":"main.js"}<span>EDITOR</span></div>

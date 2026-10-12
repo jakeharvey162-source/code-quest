@@ -68,11 +68,103 @@ const ROAST={
  oop:{"en-ZA":"One giant class isn't architecture; it's a crowded suitcase.","fr-FR":"Une classe géante, ce n’est pas une architecture : c’est une valise trop pleine.","zu-ZA":"I-class enkulu kakhulu ayisona isakhiwo esihle.","pt-PT":"Uma classe gigante não é arquitetura; é uma mala cheia.","sw-KE":"Class moja kubwa si usanifu mzuri; ni begi lililojaa."},
  debug:{"en-ZA":"The compiler already gave you a clue; read it before blaming the laptop.","fr-FR":"Le compilateur t’a donné un indice ; lis-le avant d’accuser l’ordinateur.","zu-ZA":"I-compiler isinike umkhondo; funda wona kuqala.","pt-PT":"O compilador já deixou uma pista; lê-a antes de culpar o computador.","sw-KE":"Compiler tayari imetoa kidokezo; kisome kabla ya kulaumu kompyuta."}
 };
-export function localizedLesson(question,language="en-ZA",spicy=false){
+
+const MORE_ROASTS={
+ "en-ZA":{
+  control:["That TextBox is taking names while the Label stays unemployed. Connect them.","Your form has more mystery guests than a reality show. Give each control a clear Name."],
+  event:["That button has stage fright. Give it a Click handler and let it perform.","A button without an event is a doorbell with no wire. Connect the Click event."],
+  validation:["Your input validator left the door open and the alphabet walked into your calculator.","Even your calculator needs boundaries. Use TryParse before doing maths."],
+  loop:["That loop booked a holiday and forgot the return ticket. Check its condition.","Your loop is doing cardio. Can you prove exactly when it stops?"],
+  oop:["That class is carrying the whole group project. Split responsibilities.","One giant class wants to be the app, the database AND the lecturer. Use smaller classes."],
+  debug:["The compiler dropped clues all over the floor. Follow the first one.","Your bug is hiding behind the first red line. Read that line before changing ten others."]
+ },
+ "fr-FR":{
+  control:["Ton TextBox recueille des données, mais ton Label garde le silence. Relie-les."],
+  event:["Ce bouton attend son grand moment. Ajoute un gestionnaire Click."],
+  validation:["Les lettres veulent entrer dans ta calculatrice ! Vérifie avec TryParse."],
+  loop:["Ta boucle court sans regarder la sortie. Vérifie sa condition."],
+  oop:["Cette classe porte tout le projet sur ses épaules. Répartis les responsabilités."],
+  debug:["Le compilateur laisse des indices. Commence par la première erreur."]
+ },
+ "zu-ZA":{
+  control:["I-TextBox ibambe ulwazi kodwa i-Label ithule. Zixhumanise."],
+  event:["Le Button ilinde umsebenzi. Yinike i-Click handler."],
+  validation:["Izinhlamvu zingene ezibalweni! Hlola okufakiwe nge-TryParse."],
+  loop:["I-loop iyagijima kodwa ikuphi indlela yokuphuma? Hlola umbandela."],
+  oop:["Le class ithwele wonke umsebenzi. Hlukanisa imisebenzi."],
+  debug:["I-compiler ikunika izinkomba. Qala ngephutha lokuqala."]
+ },
+ "pt-PT":{
+  control:["A TextBox recebe dados, mas a Label ficou em silêncio. Liga as duas."],
+  event:["O botão está pronto para atuar. Só falta o evento Click."],
+  validation:["As letras entraram na calculadora! Confere com TryParse."],
+  loop:["O teu ciclo corre sem bilhete de volta. Confere a condição."],
+  oop:["Essa classe está a fazer o trabalho de toda a equipa. Divide responsabilidades."],
+  debug:["O compilador deixou pistas. Começa pelo primeiro erro."]
+ },
+ "sw-KE":{
+  control:["TextBox imepokea taarifa, lakini Label iko kimya. Ziunganishe."],
+  event:["Button iko tayari kufanya kazi. Ipe Click handler."],
+  validation:["Herufi zimeingia kwenye kikokotoo! Tumia TryParse kwanza."],
+  loop:["Loop yako inakimbia bila kufikiria mwisho. Kagua sharti."],
+  oop:["Class hii imebeba kazi zote. Gawanya majukumu."],
+  debug:["Compiler imetoa vidokezo. Anza na kosa la kwanza."]
+ }
+};
+const PRACTICE={
+ "en-ZA":{
+  control:"Mini challenge: add a TextBox, Button and Label. On Click, show the entered name in the Label. Can you explain Text versus (Name)?",
+  event:"Mini challenge: make a Click handler change a Label to 'Saved!'. Test it twice and explain when the handler executes.",
+  validation:"Mini challenge: use int.TryParse on '27' and 'abc'. Show a friendly message for the invalid input.",
+  loop:"Mini challenge: predict for (int i=0; i<3; i++) and then change the condition to i<=3. Which extra value appears?",
+  oop:"Mini challenge: create two Student objects with different Name values. Print both names.",
+  debug:"Mini challenge: introduce one missing semicolon, run the code, read the FIRST error, fix it and run again."
+ },
+ "fr-FR":{
+  control:"Défi : ajoute un TextBox, un Button et un Label. Affiche le prénom saisi après Click. Explique Text et (Name).",
+  event:"Défi : avec Click, change le texte d'un Label en « Enregistré ! ». Teste deux fois.",
+  validation:"Défi : teste int.TryParse avec « 27 » et « abc ». Affiche un message en cas d'erreur.",
+  loop:"Défi : prédis les valeurs de i dans for (int i=0; i<3; i++). Puis essaie i<=3.",
+  oop:"Défi : crée deux objets Student avec des prénoms différents et affiche-les.",
+  debug:"Défi : enlève un point-virgule, exécute, lis la première erreur, puis corrige."
+ },
+ "zu-ZA":{
+  control:"Inselele: engeza i-TextBox, Button ne-Label. Uma uchofoza, bonisa igama ku-Label.",
+  event:"Inselele: i-Click handler mayiguqule umbhalo we-Label ube 'Saved!'. Yihlole kabili.",
+  validation:"Inselele: hlola u-'27' no-'abc' nge-int.TryParse. Bonisa umlayezo uma kungalungile.",
+  loop:"Inselele: qagela u-i ku-for (int i=0; i<3; i++), bese uzama i<=3.",
+  oop:"Inselele: dala ama-Student object amabili anamagama ahlukene. Bonisa amagama.",
+  debug:"Inselele: susa i-semicolon, sebenzisa ikhodi, funda iphutha lokuqala bese ulilungisa."
+ },
+ "pt-PT":{
+  control:"Desafio: adiciona TextBox, Button e Label. Ao clicar, mostra o nome na Label. Explica Text e (Name).",
+  event:"Desafio: faz o evento Click mudar uma Label para 'Guardado!'. Testa duas vezes.",
+  validation:"Desafio: usa int.TryParse com '27' e 'abc'. Mostra uma mensagem se falhar.",
+  loop:"Desafio: prevê os valores de i em for (int i=0; i<3; i++), depois testa i<=3.",
+  oop:"Desafio: cria dois objetos Student com nomes diferentes e mostra os nomes.",
+  debug:"Desafio: retira um ponto e vírgula, executa, lê o primeiro erro e corrige."
+ },
+ "sw-KE":{
+  control:"Changamoto: ongeza TextBox, Button na Label. Ukibonyeza, onyesha jina kwenye Label.",
+  event:"Changamoto: Click handler ibadilishe Label iwe 'Saved!'. Jaribu mara mbili.",
+  validation:"Changamoto: tumia int.TryParse kwa '27' na 'abc'. Onyesha ujumbe wa kosa.",
+  loop:"Changamoto: tabiri thamani za i kwa for (int i=0; i<3; i++), kisha jaribu i<=3.",
+  oop:"Changamoto: tengeneza Student objects mbili zenye majina tofauti na uzionyeshe.",
+  debug:"Changamoto: ondoa semicolon moja, endesha, soma kosa la kwanza kisha rekebisha."
+ }
+};
+export function localizedChallenge(question,language="en-ZA"){
+ const topic=teachingTopic(question)||"debug";
+ return (PRACTICE[language]||PRACTICE["en-ZA"])[topic];
+}
+
+export function localizedLesson(question,language="en-ZA",spicy=false,variation=0){
  const topic=teachingTopic(question);
  if(!topic)return null;
  const locale=LESSONS[topic][language]?language:"en-ZA";
- return (spicy?ROAST[topic][locale]+" ":"")+LESSONS[topic][locale];
+ const jokes=[ROAST[topic][locale],...(MORE_ROASTS[locale]?.[topic]||[])];
+ const index=Math.abs(Math.trunc(Number.isFinite(variation)?variation:0))%jokes.length;
+ return (spicy?jokes[index]+" ":"")+LESSONS[topic][locale];
 }
 export function localizedFallback(language="en-ZA"){
  return ({
