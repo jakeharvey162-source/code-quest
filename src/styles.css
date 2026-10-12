@@ -2896,6 +2896,11 @@ button.primary:active {
     .welcome-card,
     .toolbox,
     .properties,
+    .properties-panel,
+    .designer-grid,
+    .workspace-tabs,
+    .canvas-column,
+    .property-help,
     .property-panel,
     .form-code-workspace,
     .system-workshop,
@@ -2935,9 +2940,31 @@ button.primary:active {
 [data-theme="dark"] .muted {
   color: var(--muted);
 }
+[data-theme="dark"] .workspace-tabs span {
+  color: var(--muted);
+}
+[data-theme="dark"] .xp-pill,
+[data-theme="dark"] .header-stats button.avatar {
+  background: #334854;
+  color: var(--ink);
+  border-color: var(--line);
+}
+[data-theme="dark"] .header-stats svg {
+  color: #efb934;
+}
+[data-theme="dark"] .selected-button {
+  background: #334854;
+  color: var(--ink);
+}
+[data-theme="dark"] .properties-panel .danger {
+  color: #ffb2a3;
+}
 [data-theme="dark"] .form-canvas {
   color: #203b2e;
   background-color: #f0f0f0;
+}
+[data-theme="dark"] .form-title {
+  color: #203b2e;
 }
 .link-label-control {
   border: 0 !important;
