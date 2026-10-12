@@ -83,7 +83,7 @@ export default function TorAvatar({
     },undefined,()=>{if(!stopped)onReady(false);});
     const clock=new THREE.Clock(),headBox=new THREE.Box3(),headSize=new THREE.Vector3();
     const headCenter=new THREE.Vector3(),projected=new THREE.Vector3();
-    let elapsed=0,gestureUntil=0,lastMood="",lastGesture=-1,lastTalking=false,lastClip="";
+    let elapsed=0,gestureUntil=0,lastMood="",lastGesture=-1,lastTalking=false,lastClip="",nextIdle=24,idleMove=0;
     const draw=()=>{
       if(stopped)return;
       frame=requestAnimationFrame(draw);
@@ -104,6 +104,11 @@ export default function TorAvatar({
           lastClip=clipForMood(effectiveMood);
         }
         lastMood=effectiveMood;
+        if(!state.reduced&&!state.moving&&!state.speaking&&elapsed>nextIdle&&elapsed>=gestureUntil){
+          lastClip=["Wave","Yes","ThumbsUp"][idleMove++%3];
+          gestureUntil=elapsed+1.7;
+          nextIdle=elapsed+34;
+        }
         const desired=state.reduced?"Idle":state.moving?"Walking":
           elapsed<gestureUntil?lastClip:"Idle";
         const clip=actions[desired]?desired:"Idle";
@@ -115,6 +120,7 @@ export default function TorAvatar({
           active=action;
         }
         if(!state.reduced&&!document.hidden)mixer.update(dt);
+        model.rotation.x=state.reduced?0:Math.sin(elapsed*.46)*.016;
         model.rotation.y=state.reduced?0:state.moving?
           Math.sin(elapsed*.7)*.35:Math.sin(elapsed*.3)*.08;
         const mouth=mouthLevel(elapsed,state.speaking,state.speechBeat,state.reduced);
@@ -137,7 +143,7 @@ export default function TorAvatar({
           headBox.getCenter(headCenter);
           projected.set(
             headCenter.x,
-            headBox.min.y+headSize.y*(face?.29:.78),
+            headBox.min.y+headSize.y*(face ? .29 : .78),
             headBox.max.z+.018,
           ).project(camera);
           const x=(projected.x*.5+.5)*180;
