@@ -156,7 +156,7 @@ test("signup and password-reset forms give confirmation guidance", async ({
   await page
     .getByRole("button", { name: "Create account", exact: true })
     .click();
-  await expect(page.getByRole("status")).toContainText("Check your email");
+  await expect(page.getByRole("status")).toContainText("Check your inbox");
   await page.getByRole("button", { name: "Forgot password?" }).click();
   await page.getByLabel("Email", { exact: true }).fill("a@example.com");
   await page.getByRole("button", { name: "Send reset link" }).click();
