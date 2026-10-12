@@ -2,11 +2,8 @@ import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { Settings } from "../lib/progress";
 import { readText, writeText } from "../lib/local-data";
 import { speakText, stopSpeech, commandFor, voiceError } from "../lib/voice";
-import {
-  coachAction,
-  cleanCoachRequest,
-  roastReply,
-} from "../lib/coach-commands.mjs";
+import { coachAction, cleanCoachRequest } from "../lib/coach-commands.mjs";
+import { TOR_LANGUAGES, localizedLesson, localizedFallback } from "../lib/tor-teaching.mjs";
 import { requestWorkspaceAction } from "../lib/coach-actions";
 import type { WorkspaceObservation } from "../lib/workspace-observation";
 import {
@@ -25,8 +22,12 @@ const tips: Record<string, string> = {
   learn:
     "Predict the output before you run the code. If your prediction differs, trace one statement at a time. Understanding the change is how you prepare for an exam.",
   home: "Pick a quest or open WinForms to build a form. I can explain controls, events, loops and validation. Drag my hologram out of your way, or use the arrow keys on my handle.",
+  terminal: "Pick a language, press Run, and inspect the preview and console. I can help debug your code.",
 };
-function answer(question: string, page: string) {
+function answer(question: string, page: string, language: string, spicy: boolean) {
+  const lesson=localizedLesson(question,language,spicy);
+  if(lesson)return lesson;
+  if(language!=="en-ZA")return localizedFallback(language);
   if (/label|textbox|text box/i.test(question))
     return "A Label displays information. A TextBox accepts input. Name is the identifier your C# code uses; Text is what the student sees. For example: lblResult.Text = txtName.Text;";
   if (/event|button|click/i.test(question))
@@ -49,7 +50,8 @@ export default function TorCoach({
   onNavigate: (page: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [roast, setRoast] = useState(settings.coach === "Spicy");
+  const [roast, setRoast] = useState(() => readText("cq-tor-roast", settings.coach === "Spicy" ? "true" : "false") === "true");
+  const [teachingLanguage, setTeachingLanguage] = useState(() => readText("cq-tor-teach-language", settings.language));
   const [observation, setObservation] = useState<WorkspaceObservation | null>(
     null,
   );
@@ -77,14 +79,14 @@ export default function TorCoach({
   const recognition = useRef<any>(null);
   const pendingAction = useRef<AbortController | null>(null);
   const voices = useVoices();
-  const englishVoices = voices.filter((v) =>
-    v.lang.toLowerCase().startsWith("en"),
+  const matchingVoices = voices.filter((v) =>
+    v.lang.toLowerCase().split("-")[0] === teachingLanguage.split("-")[0],
   );
   const [voice, setVoice] = useState(() =>
     readText("cq-tor-voice", settings.voice),
   );
   function say(text: string) {
-    speakText(text, voice, settings.rate, setStatus, accent);
+    speakText(text, voice, settings.rate, setStatus, teachingLanguage === "en-ZA" ? accent : teachingLanguage);
   }
   function respond(text: string) {
     setReply(text);
@@ -96,7 +98,7 @@ export default function TorCoach({
           : "happy",
     );
     setStatus("");
-    if (autoSpeak) say(roast ? roastReply(text) : text);
+    if (autoSpeak) say(text);
   }
   async function ask(text: string) {
     lastRequest.current = Date.now();
@@ -146,7 +148,7 @@ export default function TorCoach({
       );
       return;
     }
-    respond(answer(request, page));
+    respond(answer(request, page, teachingLanguage, roast));
   }
   function stop() {
     pendingAction.current?.abort();
@@ -174,7 +176,7 @@ export default function TorCoach({
     recognition.current?.abort();
     const r = new Recognition();
     recognition.current = r;
-    r.lang = settings.language || "en-ZA";
+    r.lang = teachingLanguage || "en-ZA";
     r.continuous = false;
     r.interimResults = false;
     r.onstart = () => {
@@ -311,11 +313,11 @@ export default function TorCoach({
   }, [roam, open, settings.reducedMotion, osReduced]);
   useEffect(() => {
     pendingAction.current?.abort();
-    setReply(tips[page] || tips.learn);
+    setReply(teachingLanguage === "en-ZA" ? (tips[page] || tips.learn) : localizedFallback(teachingLanguage));
     setObservation(null);
     previousObservation.current = null;
     setMood("ready");
-  }, [page]);
+  }, [page, teachingLanguage]);
   useEffect(() => {
     const resize = () => {
       const r = box.current?.getBoundingClientRect();
@@ -365,7 +367,7 @@ export default function TorCoach({
     accent,
     settings.rate,
   ]);
-  const message = roast ? roastReply(reply) : reply;
+  const message = reply;
   return (
     <aside
       ref={box}
@@ -547,7 +549,7 @@ export default function TorCoach({
             <input
               type="checkbox"
               checked={roast}
-              onChange={(e) => setRoast(e.target.checked)}
+              onChange={(e) => { setRoast(e.target.checked); writeText("cq-tor-roast", String(e.target.checked)); }}
             />{" "}
             Roast mode
           </label>
@@ -564,6 +566,24 @@ export default function TorCoach({
             Speak replies automatically
           </label>
           <label>
+            Tor teaching language
+            <select
+              aria-label="Tor teaching language"
+              value={teachingLanguage}
+              onChange={(e) => {
+                const next=e.target.value;
+                setTeachingLanguage(next);
+                writeText("cq-tor-teach-language",next);
+                setVoice("");writeText("cq-tor-voice","");
+                setReply(localizedFallback(next));
+                stopSpeech();
+              }}
+            >
+              {TOR_LANGUAGES.map(item=><option key={item.code} value={item.code}>{item.name}</option>)}
+            </select>
+          </label>
+          <small>Tor teaches key programming topics in this language. Full lessons and menus stay in English. Device speech and microphone support vary by browser.</small>
+          {teachingLanguage === "en-ZA" && <label>
             African English accent
             <select
               aria-label="African English accent"
@@ -587,8 +607,8 @@ export default function TorCoach({
                 </option>
               ))}
             </select>
-          </label>
-          {!voices.some(
+          </label>}
+          {teachingLanguage === "en-ZA" && !voices.some(
             (v) => v.lang.toLowerCase() === accent.toLowerCase(),
           ) && (
             <small>
@@ -607,8 +627,8 @@ export default function TorCoach({
                 writeText("cq-tor-voice", e.target.value);
               }}
             >
-              <option value="">Automatic · best available English voice</option>
-              {englishVoices.map((v) => (
+              <option value="">Automatic · matching device voice</option>
+              {matchingVoices.map((v) => (
                 <option key={v.voiceURI || v.name} value={v.name}>
                   {v.name} ({v.lang})
                 </option>
