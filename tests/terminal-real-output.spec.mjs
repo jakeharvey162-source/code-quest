@@ -55,3 +55,19 @@ test("phone shows readable result and preserves run/edit loop",async({page})=>{
  await expect(page.getByRole("region",{name:"Visible program output"})).toContainText("Phone test passed");
  expect(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2)).toBe(false);
 });
+
+
+test("fatal Python exceptions cannot be overwritten by a delayed finish signal",async({page})=>{
+ await page.goto("/#terminal");
+ await page.getByRole("combobox",{name:"Terminal programming language"}).selectOption("python");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ const frame=page.frameLocator('iframe[title="Isolated program preview"]');
+ await frame.locator("body").evaluate(()=>{
+  window.__cqSend("fatal","Simulated Python crash");
+  window.__cqSend("done","Python finished.");
+  window.__cqSend("status","Running Python...");
+ });
+ await expect(page.getByRole("log",{name:"Terminal console output"})).toContainText("Simulated Python crash");
+ await expect(page.locator(".cq-terminal-status")).toContainText("Python stopped after an error");
+ await expect(page.getByRole("button",{name:"Run terminal code"})).toBeEnabled();
+});
