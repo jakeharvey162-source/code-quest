@@ -51,6 +51,20 @@ export default function TorCoach({
   onNavigate: (page: string) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [presence,setPresence]=useState<"visible"|"departing"|"hidden"|"arriving">("visible");
+  const portalTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
+  function portal(action:"dismiss"|"summon") {
+    if(portalTimer.current)clearTimeout(portalTimer.current);
+    pendingAction.current?.abort();
+    setOpen(false);
+    setMoving(false);
+    setPresence(action==="dismiss"?"departing":"arriving");
+    const line=action==="dismiss"?"Alright, portal time. Call Tor when you need me.":"Now you need me? Let's pick up where we left off.";
+    setStatus(line);
+    if(autoSpeak)say(line);
+    portalTimer.current=setTimeout(()=>setPresence(action==="dismiss"?"hidden":"visible"),settings.reducedMotion||osReduced?0:1000);
+  }
+  useEffect(()=>()=>{if(portalTimer.current)clearTimeout(portalTimer.current);},[]);
   const [roast, setRoast] = useState(() => readText("cq-tor-roast", settings.coach === "Spicy" ? "true" : "false") === "true");
   const [teachingLanguage, setTeachingLanguage] = useState(() => readText("cq-tor-teach-language", settings.language));
   const [observation, setObservation] = useState<WorkspaceObservation | null>(
@@ -127,6 +141,12 @@ export default function TorCoach({
     pendingAction.current?.abort();
     const request = cleanCoachRequest(text);
     if (!request) return;
+    if (/^(?:tor[, ]+)?(?:get out|go away|disappear|hide|take a break)[.!?]*$/i.test(request)) {
+      portal("dismiss");return;
+    }
+    if (/^(?:hey )?tor[.!?]*$|^(?:tor[, ]+)?(?:come back|appear|show yourself)[.!?]*$/i.test(request)) {
+      portal("summon");return;
+    }
     const contextTopic = observation?.output && /error|failed|CS\d{4}/i.test(observation.output)?"debug error":page==="designer"?"button event":page==="terminal"?"debug error":"loop";
     if (/\b(roast me|roast my code|give me a roast)\b/i.test(request)) {
       respond(localizedLesson(contextTopic,teachingLanguage,true,++personalityTurn.current)||localizedFallback(teachingLanguage));
@@ -297,7 +317,7 @@ export default function TorCoach({
   useEffect(() => {
     if (
       !roam ||
-      open ||
+      open || presence!=="visible" ||
       innerWidth < 650 ||
       settings.reducedMotion ||
       osReduced
@@ -347,7 +367,7 @@ export default function TorCoach({
       cancelAnimationFrame(frame);
       if (movement.current) clearTimeout(movement.current);
     };
-  }, [roam, open, settings.reducedMotion, osReduced]);
+  }, [roam, open, presence, settings.reducedMotion, osReduced]);
   useEffect(() => {
     pendingAction.current?.abort();
     setReply(teachingLanguage === "en-ZA" ? (tips[page] || tips.learn) : localizedFallback(teachingLanguage));
@@ -409,11 +429,17 @@ export default function TorCoach({
     settings.rate,
   ]);
   const message = reply;
+  if(presence==="hidden")return <aside className="tor-summon" aria-label="Summon Tor">
+    <button onClick={()=>portal("summon")}>Call Tor</button>
+    <button onClick={listen} aria-label="Call Tor by voice">🎙</button>
+    <span role="status">{status}</span>
+  </aside>;
   return (
     <aside
       ref={box}
       className={`tor-coach ${open ? "expanded" : ""} ${speaking ? "speaking" : ""}`}
       aria-label="Tor hologram tutor"
+      data-presence={presence}
       data-moving={moving}
       data-mood={
         listening ? "listening" : speaking ? "speaking" : mood
@@ -424,6 +450,8 @@ export default function TorCoach({
           : undefined
       }
     >
+      {presence!=="visible"&&<div className="tor-portal" aria-hidden="true"/>}
+      <button className="tor-dismiss" aria-label="Dismiss Tor through portal" onClick={()=>portal("dismiss")}>✦</button>
       <button
         className="tor-handle"
         aria-label="Move Tor hologram"
