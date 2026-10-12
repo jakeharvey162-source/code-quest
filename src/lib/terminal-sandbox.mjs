@@ -1,5 +1,5 @@
 /** Opaque-origin code preview and share codec; never evaluate user code in the app origin. */
-export const LANGUAGES = Object.freeze(["javascript","html","css","python","python-turtle","csharp"]);
+export const LANGUAGES = Object.freeze(["javascript","typescript","html","css","python","python-turtle","csharp"]);
 const PYODIDE="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";
 export function validLanguage(value){return LANGUAGES.includes(value)}
 export function validateSource(code){
@@ -48,16 +48,16 @@ function pythonFrame(code,token){
  ' let result=await py.runPythonAsync(e.data.code);',
  ' if(result!==undefined&&result!==null){self.postMessage({kind:"log",text:String(result)});if(typeof result.destroy==="function")result.destroy();}',
  ' self.postMessage({kind:"done",text:"Python finished."});',
- ' }catch(err){self.postMessage({kind:"error",text:err.message||String(err)})}',
+ ' }catch(err){self.postMessage({kind:"fatal",text:err.message||String(err)})}',
  '};'
  ].join("\n");
  const bootstrap=[
  '(function(){try{const blob=new Blob(['+JSON.stringify(worker)+'],{type:"text/javascript"});',
  'const url=URL.createObjectURL(blob);const w=new Worker(url);URL.revokeObjectURL(url);',
- 'w.onmessage=e=>{const d=e.data||{};if(["log","error","status","done"].includes(d.kind))window.__cqSend(d.kind,d.text||"")};',
- 'w.onerror=e=>window.__cqSend("error",e.message||"Python worker blocked");',
+ 'w.onmessage=e=>{const d=e.data||{};if(["log","error","fatal","status","done"].includes(d.kind))window.__cqSend(d.kind,d.text||"")};',
+ 'w.onerror=e=>window.__cqSend("fatal",e.message||"Python worker blocked");',
  'w.postMessage({code:'+JSON.stringify(code)+'});',
- '}catch(err){window.__cqSend("error","Could not launch Python: "+String(err))}})();'
+ '}catch(err){window.__cqSend("fatal","Could not launch Python: "+String(err))}})();'
  ].join("");
  // No same-origin privilege: external runtime may only reach its pinned CDN.
  const policy="default-src 'none';script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net;connect-src https://cdn.jsdelivr.net;worker-src blob:;style-src 'unsafe-inline';img-src data:;base-uri 'none';form-action 'none'";
@@ -80,16 +80,42 @@ function turtleFrame(code,token){
   '(Sk.TurtleGraphics||(Sk.TurtleGraphics={})).target="mycanvas";',
   'Sk.misceval.asyncToPromise(()=>Sk.importMainWithBody("<stdin>",false,'+JSON.stringify(code)+',true))',
   '.then(()=>window.__cqSend("done","Python Turtle drawing finished."),',
-  'err=>window.__cqSend("error",String(err)));',
-  '}catch(err){window.__cqSend("error",String(err))}})();'
+  'err=>window.__cqSend("fatal",String(err)));',
+  '}catch(err){window.__cqSend("fatal",String(err))}})();'
  ].join("");
  return shell('<div id="mycanvas" style="min-height:100vh;background:black"></div>',STYLE,loader+"<script>"+bootstrap+"</script>",token,csp);
 }
+
+const TS_COMPILER="https://cdn.jsdelivr.net/npm/typescript@5.9.3/lib/typescript.js";
+function typescriptFrame(code,token){
+ // TS 7 ships no JavaScript compiler API. Compile with a pinned browser compiler
+ // inside an opaque-origin frame; never evaluate source in the CodeQuest origin.
+ const csp="default-src 'none';script-src 'unsafe-inline' https://cdn.jsdelivr.net;connect-src 'none';worker-src 'none';style-src 'unsafe-inline';img-src data: blob:;base-uri 'none';form-action 'none'";
+ const bootstrap=[
+  '(function(){try{',
+  'if(!window.ts||typeof window.ts.transpileModule!=="function")throw Error("TypeScript compiler could not load; check the internet connection.");',
+  'const ts=window.ts;',
+  'const source='+safeScript(JSON.stringify(code))+';',
+  'const parsed=ts.createSourceFile("main.ts",source,ts.ScriptTarget.ES2022,true,ts.ScriptKind.TS);',
+  'if(parsed.statements.some(node=>ts.isImportDeclaration(node)||ts.isExportDeclaration(node)||ts.isExportAssignment(node)||ts.isImportEqualsDeclaration(node)||node.modifiers?.some(mod=>mod.kind===ts.SyntaxKind.ExportKeyword)))throw Error("Module imports/exports are unsupported in this local preview. Use Canvas and console APIs.");',
+  'const compiled=ts.transpileModule(source,{fileName:"main.ts",reportDiagnostics:true,compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.None}});',
+  'const errors=[...(parsed.parseDiagnostics||[]),...(compiled.diagnostics||[])].filter(d=>d.category===ts.DiagnosticCategory.Error);',
+  'if(errors.length){for(const d of errors)window.__cqSend("error","TS"+d.code+": "+ts.flattenDiagnosticMessageText(d.messageText," "));window.__cqSend("fatal","TypeScript has syntax errors.");return;}',
+  'window.__cqSend("status","Running compiled TypeScript...");',
+  'const script=document.createElement("script");script.textContent=compiled.outputText;document.body.appendChild(script);',
+  'window.__cqSend("done","TypeScript loaded; animations may continue.");',
+  '}catch(err){window.__cqSend("fatal",err.message||String(err))}})();'
+ ].join("");
+ return shell('<canvas id="art" width="960" height="540"></canvas>',STYLE,
+  '<script src="'+TS_COMPILER+'"></script><script>'+bootstrap+'</script>',token,csp);
+}
+
 export function buildPreviewDocument(language,code,token){
  if(!validLanguage(language)||language==="csharp")throw Error("No browser preview for this language.");
  validateSource(code);
  if(typeof token!=="string"||!/^[a-f0-9-]{10,80}$/i.test(token))throw Error("Invalid preview token.");
  if(language==="python")return pythonFrame(code,token);
+ if(language==="typescript")return typescriptFrame(code,token);
  if(language==="python-turtle")return turtleFrame(code,token);
  if(language==="javascript"){
   return shell('<canvas id="art" width="960" height="540"></canvas>',STYLE,

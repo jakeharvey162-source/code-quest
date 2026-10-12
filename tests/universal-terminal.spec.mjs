@@ -112,3 +112,28 @@ test("CSS animation source appears in the restricted rendering surface",async({p
  await page.getByRole("button",{name:"Run terminal code"}).click();
  await expect(page.frameLocator('iframe[title="Isolated program preview"]').getByRole("heading",{name:"Style this page"})).toBeVisible();
 });
+
+test("TypeScript runs typed Canvas animation, reports syntax errors and allows correction",async({page})=>{
+ await page.goto("/#terminal");
+ await page.getByRole("combobox",{name:"Terminal programming language"}).selectOption("typescript");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ const frame=page.frameLocator('iframe[title="Isolated program preview"]');
+ await expect(frame.locator("canvas#art")).toBeVisible({timeout:60000});
+ await page.getByRole("textbox",{name:"Terminal code editor"}).fill("const broken: = 7;");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ await expect(page.getByRole("log",{name:"Terminal console output"})).toContainText(/TS\d+:/);
+ await expect(page.getByRole("button",{name:"Run terminal code"})).toBeEnabled();
+ await page.getByRole("textbox",{name:"Terminal code editor"}).fill("const answer: number = 42; console.log('Result: ' + answer);");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ await expect(page.getByRole("log",{name:"Terminal console output"})).toContainText("Result: 42");
+});
+test("a Python runtime error unlocks Run immediately",async({page})=>{
+ await page.goto("/#terminal");
+ await page.getByRole("combobox",{name:"Terminal programming language"}).selectOption("python");
+ await page.getByRole("button",{name:"Run terminal code"}).click();
+ const frame=page.frameLocator('iframe[title="Isolated program preview"]');
+ await frame.locator("body").evaluate(()=>window.__cqSend("fatal","Test Python runtime exception"));
+ await expect(page.getByRole("log",{name:"Terminal console output"})).toContainText("Test Python runtime exception");
+ await expect(page.getByRole("button",{name:"Run terminal code"})).toBeEnabled();
+ await expect(page.locator(".cq-terminal-status")).toContainText("Python stopped after an error");
+});
