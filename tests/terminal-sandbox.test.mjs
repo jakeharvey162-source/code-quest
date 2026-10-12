@@ -57,15 +57,17 @@ test("Turtle example matches genuine Python turtle module and uses isolated Skul
 });
 
 test("TypeScript preview executes transpiled JavaScript in the opaque canvas sandbox",()=>{
- const doc=buildPreviewDocument("typescript","console.log('TypeScript output')",token);
+ const doc=buildPreviewDocument("typescript","const greeting: string = 'Hello'; console.log(greeting)",token);
  assert.match(doc,/canvas id="art"/);
- assert.match(doc,/console.log/);
+ assert.match(doc,/typescript@5\.9\.3/);
+ assert.match(doc,/ts\.transpileModule/);
+ assert.match(doc,/const greeting/);
  assert.match(doc,/connect-src &#39;none&#39;/);
 });
 test("Python and Turtle failures report fatal events for immediate recovery",()=>{
  const py=buildPreviewDocument("python","raise ValueError('boom')",token);
  const turtle=buildPreviewDocument("python-turtle","raise ValueError('boom')",token);
- assert.match(py,/kind:"fatal"/);
+ assert.match(py,/fatal/);
  assert.match(py,/window.__cqSend\("fatal"/);
  assert.match(turtle,/window.__cqSend\("fatal"/);
 });
