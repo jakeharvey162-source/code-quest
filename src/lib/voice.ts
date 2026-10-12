@@ -107,6 +107,7 @@ export function commandFor(text: string) {
 let speechGeneration = 0;
 let pendingVoiceLoad: (() => void) | undefined;
 let activeUtterance: SpeechSynthesisUtterance | undefined;
+let activeMotion: ((speaking:boolean,wordIndex?:number)=>void) | undefined;
 export function speechToken() {
   return speechGeneration;
 }
@@ -116,6 +117,9 @@ export function stopSpeech(expectedToken?: number) {
   pendingVoiceLoad?.();
   pendingVoiceLoad = undefined;
   activeUtterance = undefined;
+  const notify=activeMotion;
+  activeMotion=undefined;
+  notify?.(false);
   window.speechSynthesis?.cancel();
 }
 export function speakText(
@@ -124,6 +128,7 @@ export function speakText(
   rate: number,
   onStatus: (s: string) => void,
   language = "en-ZA",
+  onMotion?: (speaking:boolean,wordIndex?:number)=>void,
 ) {
   if (
     !("speechSynthesis" in window) ||
@@ -141,6 +146,7 @@ export function speakText(
     return false;
   }
   const generation = speechGeneration;
+  activeMotion=onMotion;
   const synth = window.speechSynthesis;
   let chunkIndex=0;
   function play() {
@@ -148,6 +154,8 @@ export function speakText(
     const voices = synth.getVoices();
     const selected = selectDeviceVoice(voices, language, voiceName);
     if (!selected && language.split("-")[0] !== "en") {
+      if(activeMotion===onMotion) activeMotion=undefined;
+      onMotion?.(false);
       onStatus(
         `No ${language} voice is installed on this device. Install a matching speech voice in your device settings.`,
       );
@@ -161,7 +169,13 @@ export function speakText(
       u.rate = Number.isFinite(rate) ? Math.min(2, Math.max(0.5, rate)) : 1;
       u.pitch = 1;
       u.onstart = () => {
-        if (generation === speechGeneration) onStatus("Speaking…");
+        if (generation === speechGeneration && activeUtterance===u) {
+          onMotion?.(true);
+          onStatus("Speaking…");
+        }
+      };
+      u.onboundary = (e) => {
+        if (generation===speechGeneration && activeUtterance===u) onMotion?.(true, e.charIndex);
       };
       u.onend = () => {
         if (generation !== speechGeneration || activeUtterance !== u) return;
@@ -170,12 +184,16 @@ export function speakText(
           utter(voice, false);
         } else {
           activeUtterance = undefined;
+          if(activeMotion===onMotion)activeMotion=undefined;
+          onMotion?.(false);
           onStatus("Finished reading.");
         }
       };
       u.onerror = (e) => {
         if (generation !== speechGeneration) return;
         if (e.error === "canceled" || e.error === "interrupted") {
+          if(activeMotion===onMotion)activeMotion=undefined;
+          onMotion?.(false);
           onStatus("Reading stopped.");
           return;
         }
@@ -189,6 +207,8 @@ export function speakText(
           return;
         }
         activeUtterance = undefined;
+        if(activeMotion===onMotion)activeMotion=undefined;
+        onMotion?.(false);
         onStatus(
           "No working speech voice is available here. Try another voice, or Chrome/Edge with an installed English voice.",
         );
@@ -198,6 +218,8 @@ export function speakText(
         synth.speak(u);
       } catch {
         activeUtterance = undefined;
+        if(activeMotion===onMotion)activeMotion=undefined;
+        onMotion?.(false);
         onStatus(
           "The speech service couldn't start. Try another voice or browser.",
         );
