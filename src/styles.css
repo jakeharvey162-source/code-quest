@@ -3230,3 +3230,12 @@ button.primary:active {
  .cq-terminal-big-output pre{padding:12px;font-size:15px}
  .cq-terminal-language-notice button{width:100%}
 }
+.tor-summon{position:fixed;bottom:12px;right:12px;z-index:1000;display:flex;gap:8px;align-items:center;background:var(--panel,#101827);border-radius:20px;padding:8px;max-width:300px}
+.tor-summon span{font-size:11px}
+.tor-dismiss{position:absolute;right:8px;top:4px;z-index:3}
+.tor-portal{position:absolute;inset:25px 35px 20px;border:4px solid #8877ff;border-radius:50%;background:radial-gradient(ellipse,#091224 35%,#6654b7 65%,transparent 72%);box-shadow:0 0 28px #6b82ff;pointer-events:none;animation:tor-portal-pulse 1s ease both}
+.tor-coach[data-presence="departing"] .tor-avatar{animation:tor-portal-out 1s ease-in forwards}
+.tor-coach[data-presence="arriving"] .tor-avatar{animation:tor-portal-out 1s ease-out reverse backwards}
+@keyframes tor-portal-out{to{transform:translateY(45px) scale(.05);opacity:0}}
+@keyframes tor-portal-pulse{0%,100%{transform:scale(.3);opacity:0}35%,70%{transform:scale(1);opacity:1}}
+@media(prefers-reduced-motion:reduce){.tor-portal,.tor-coach[data-presence] .tor-avatar{animation:none!important}}
