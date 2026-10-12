@@ -213,17 +213,17 @@ export default function Settings({
                 })
               }
             >
-              <option value="device">Device voices — no API charge</option>
+              <option value="device">Built-in voices</option>
               <option value="elevenlabs">
-                ElevenLabs — limited cloud allowance
+                Expressive voices (when available)
               </option>
             </select>
           </label>
           <p className="muted">
-            ElevenLabs choice: {tutorVoices[s.language].name}. Cloud reading
-            requires a connected account and a server API key. Device reading
-            stays available when cloud reading cannot run. Cloud reading sends
-            the text being read to ElevenLabs.
+            Expressive voice: {tutorVoices[s.language].name}. These voices
+            need a signed-in account and may have usage limits. If they're not
+            available, CodeQuest can still read aloud using your device.
+            Choosing an expressive voice sends the text being read to an external speech service.
           </p>
           <label>
             Device voice
@@ -232,7 +232,7 @@ export default function Settings({
               value={s.voice}
               onChange={(e) => change({ voice: e.target.value })}
             >
-              <option value="">Automatic language match (free)</option>
+              <option value="">Match my language automatically</option>
               {voices.map((v) => (
                 <option key={v.voiceURI} value={v.name}>
                   {v.name} ({v.lang})

@@ -452,7 +452,7 @@ function App() {
                         </span>
                         <span>
                           <CheckCircle2 size={14} />
-                          No paid APIs
+                          No subscription required
                         </span>
                       </div>
                     </div>
