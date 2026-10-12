@@ -1,5 +1,5 @@
 /** Opaque-origin code preview and share codec; never evaluate user code in the app origin. */
-export const LANGUAGES = Object.freeze(["javascript","html","css","python","python-turtle","csharp"]);
+export const LANGUAGES = Object.freeze(["javascript","typescript","html","css","python","python-turtle","csharp"]);
 const PYODIDE="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";
 export function validLanguage(value){return LANGUAGES.includes(value)}
 export function validateSource(code){
@@ -48,16 +48,16 @@ function pythonFrame(code,token){
  ' let result=await py.runPythonAsync(e.data.code);',
  ' if(result!==undefined&&result!==null){self.postMessage({kind:"log",text:String(result)});if(typeof result.destroy==="function")result.destroy();}',
  ' self.postMessage({kind:"done",text:"Python finished."});',
- ' }catch(err){self.postMessage({kind:"error",text:err.message||String(err)})}',
+ ' }catch(err){self.postMessage({kind:"fatal",text:err.message||String(err)})}',
  '};'
  ].join("\n");
  const bootstrap=[
  '(function(){try{const blob=new Blob(['+JSON.stringify(worker)+'],{type:"text/javascript"});',
  'const url=URL.createObjectURL(blob);const w=new Worker(url);URL.revokeObjectURL(url);',
- 'w.onmessage=e=>{const d=e.data||{};if(["log","error","status","done"].includes(d.kind))window.__cqSend(d.kind,d.text||"")};',
- 'w.onerror=e=>window.__cqSend("error",e.message||"Python worker blocked");',
+ 'w.onmessage=e=>{const d=e.data||{};if(["log","error","fatal","status","done"].includes(d.kind))window.__cqSend(d.kind,d.text||"")};',
+ 'w.onerror=e=>window.__cqSend("fatal",e.message||"Python worker blocked");',
  'w.postMessage({code:'+JSON.stringify(code)+'});',
- '}catch(err){window.__cqSend("error","Could not launch Python: "+String(err))}})();'
+ '}catch(err){window.__cqSend("fatal","Could not launch Python: "+String(err))}})();'
  ].join("");
  // No same-origin privilege: external runtime may only reach its pinned CDN.
  const policy="default-src 'none';script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net;connect-src https://cdn.jsdelivr.net;worker-src blob:;style-src 'unsafe-inline';img-src data:;base-uri 'none';form-action 'none'";
@@ -80,8 +80,8 @@ function turtleFrame(code,token){
   '(Sk.TurtleGraphics||(Sk.TurtleGraphics={})).target="mycanvas";',
   'Sk.misceval.asyncToPromise(()=>Sk.importMainWithBody("<stdin>",false,'+JSON.stringify(code)+',true))',
   '.then(()=>window.__cqSend("done","Python Turtle drawing finished."),',
-  'err=>window.__cqSend("error",String(err)));',
-  '}catch(err){window.__cqSend("error",String(err))}})();'
+  'err=>window.__cqSend("fatal",String(err)));',
+  '}catch(err){window.__cqSend("fatal",String(err))}})();'
  ].join("");
  return shell('<div id="mycanvas" style="min-height:100vh;background:black"></div>',STYLE,loader+"<script>"+bootstrap+"</script>",token,csp);
 }
@@ -91,7 +91,7 @@ export function buildPreviewDocument(language,code,token){
  if(typeof token!=="string"||!/^[a-f0-9-]{10,80}$/i.test(token))throw Error("Invalid preview token.");
  if(language==="python")return pythonFrame(code,token);
  if(language==="python-turtle")return turtleFrame(code,token);
- if(language==="javascript"){
+ if(language==="javascript"||language==="typescript"){
   return shell('<canvas id="art" width="960" height="540"></canvas>',STYLE,
    '<script>try{\n'+safeScript(code)+'\n}catch(error){window.__cqSend("error",error.stack||String(error))}</script>'+
    '<script>window.__cqSend("done","JavaScript loaded; animations may continue.");</script>',token);
