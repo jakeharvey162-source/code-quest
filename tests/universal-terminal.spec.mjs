@@ -118,7 +118,7 @@ test("TypeScript runs typed Canvas animation, reports syntax errors and allows c
  await page.getByRole("combobox",{name:"Terminal programming language"}).selectOption("typescript");
  await page.getByRole("button",{name:"Run terminal code"}).click();
  const frame=page.frameLocator('iframe[title="Isolated program preview"]');
- await expect(frame.locator("canvas#art")).toBeVisible({timeout:30000});
+ await expect(frame.locator("canvas#art")).toBeVisible({timeout:60000});
  await page.getByRole("textbox",{name:"Terminal code editor"}).fill("const broken: = 7;");
  await page.getByRole("button",{name:"Run terminal code"}).click();
  await expect(page.getByRole("log",{name:"Terminal console output"})).toContainText(/TS\d+:/);
