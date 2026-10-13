@@ -123,7 +123,16 @@ export default function CodeChallenges({
             <select
               aria-label="Challenge difficulty"
               value={level}
-              onChange={(e) => setLevel(e.target.value)}
+              onChange={(e) => {
+                const next = e.target.value;
+                setLevel(next);
+                if (next !== "all" && challenge.level !== next) {
+                  setId(codeChallenges.find((c) => c.level === next)!.id);
+                  setHint(false);
+                  setResults([]);
+                  setStatus("Ready to test your solution.");
+                }
+              }}
               disabled={busy}
             >
               {["all", "easy", "intermediate", "advanced", "pro"].map((l) => (
