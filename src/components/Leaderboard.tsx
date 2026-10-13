@@ -25,6 +25,7 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
     [loading, setLoading] = useState(false),
     [mineRank, setMineRank] = useState<Entry | null>(null);
   const requestId = useRef(0);
+  const autoPublishAttempt = useRef("");
   const xp = xpFor(progress),
     completed = lessons.filter((l) => progress.completed.includes(l.id)).length;
   async function refresh() {
@@ -132,9 +133,14 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
   }
   useEffect(() => {
     if (!joined || !mineRank || busy || xp <= mineRank.xp) return;
-    const timer = setTimeout(() => void publish(true), 800);
+    const attempt = `${user?.id}:${xp}`;
+    if (autoPublishAttempt.current === attempt) return;
+    const timer = setTimeout(() => {
+      autoPublishAttempt.current = attempt;
+      void publish(true);
+    }, 800);
     return () => clearTimeout(timer);
-  }, [joined, mineRank?.xp, xp, busy]);
+  }, [joined, mineRank?.xp, xp, busy, user?.id]);
   const badges = [
     { xp: 100, title: "First spark", emoji: "⚡" },
     { xp: 500, title: "Bug hunter", emoji: "🐛" },
