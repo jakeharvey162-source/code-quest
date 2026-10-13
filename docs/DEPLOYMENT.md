@@ -6,7 +6,7 @@ The application supports local self-study without accounts. Supabase adds accoun
 
 - The connected Supabase organization already has its two active free projects. Create a **dedicated CodeQuest** project after freeing an active slot yourself, or use an explicitly approved paid plan. Do not apply the migration to another application's database.
 - The connected ElevenLabs account has **zero remaining credits**. Actual generation tests were rejected for quota exhaustion. Voice selections were searched in the library and estimated without charging; spoken quality still needs listening tests when credits reset.
-- The existing production project is available at https://code-quest-tau-woad.vercel.app/. GitHub updates are pushed to main. On October 13 the Vercel connector returned 403 for the project team, so automatic deployment and the current production commit could not be verified. Restore access to that project scope and confirm its Git integration targets main before redeploying.
+- Production is live at https://code-quest-tau-woad.vercel.app/. The October 13 GitHub update deployed successfully: Python and C# console input/output were verified on the public app, and Windows native-export CI passed. Direct Vercel API access currently returns 403 for the project team, while automatic GitHub-to-Vercel deployment works. Push tested changes to main; restore project-team access only if direct Vercel API operations are needed.
 
 ## Vercel deployment
 
