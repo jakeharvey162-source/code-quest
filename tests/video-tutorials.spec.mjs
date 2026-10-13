@@ -1,6 +1,7 @@
 import {test,expect} from "@playwright/test";
 
-test("curated videos launch hands-on WinForms challenge without loading YouTube by default",async ({page})=>{
+test("curated videos launch hands-on WinForms challenge without loading YouTube by default",async ({page,context})=>{
+ await context.route("https://www.youtube.com/**",route=>route.fulfill({contentType:"text/html",body:"<!doctype html><title>YouTube handoff</title>Video provider handoff"}));
  await page.goto("/#videos");
  await expect(page.getByRole("heading",{name:"Watch. Build. Break. Fix."})).toBeVisible();
  const player=page.locator(".tutorial-player");
@@ -13,7 +14,7 @@ test("curated videos launch hands-on WinForms challenge without loading YouTube 
  await expect(page.getByRole("heading",{name:"Tor's challenge"})).toBeVisible();
  await expect(page.getByRole("link",{name:/Open on YouTube/})).toHaveAttribute("href",/oOnyVPqssjg/);
  const [newTab]=await Promise.all([page.waitForEvent("popup"),page.getByRole("link",{name:"Play on YouTube"}).click()]);
- expect(new URL(newTab.url()).hostname).toBe("www.youtube.com");
+ await expect(newTab).toHaveURL(/^https:\/\/www[.]youtube[.]com\//);
  await newTab.close();
  await page.getByRole("button",{name:"Try embedded player"}).click();
  await expect(page.locator(".tutorial-player iframe")).toHaveAttribute("src",new RegExp("youtube[.]com/embed/oOnyVPqssjg"));

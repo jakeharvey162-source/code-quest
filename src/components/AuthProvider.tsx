@@ -28,10 +28,12 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
     }
     let active = true,
       events = 0;
+    let timedOut = false;
     let recoveryIntent =
       new URLSearchParams(location.search).get("auth") === "recovery";
     const timeout = window.setTimeout(() => {
       if (!active || events) return;
+      timedOut = true;
       setDataOwner(null);
       setState({
         user: null,
@@ -45,6 +47,9 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, session) => {
       if (!active) return;
+      // A late empty initial session must not erase the outage notice shown
+      // when we opened guest learning. A real recovered session still signs in.
+      if (timedOut && event === "INITIAL_SESSION" && !session) return;
       window.clearTimeout(timeout);
       if (event === "USER_UPDATED" || event === "SIGNED_OUT") {
         recoveryIntent = false;
@@ -71,6 +76,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       .getSession()
       .then(({ data, error }) => {
         if (!active || observed !== events) return;
+        if (timedOut && !data.session) return;
         window.clearTimeout(timeout);
         setDataOwner(data.session?.user.id || null);
         setState({
@@ -82,6 +88,7 @@ export default function AuthProvider({ children }: { children: ReactNode }) {
       })
       .catch(() => {
         if (!active || observed !== events) return;
+        if (timedOut) return;
         window.clearTimeout(timeout);
         setDataOwner(null);
         setState({

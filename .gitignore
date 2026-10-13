@@ -3,6 +3,7 @@ dist/
 playwright-report/
 test-results/
 public/compiler/
+public/runtimes/
 
 # Local environment and secrets
 .env

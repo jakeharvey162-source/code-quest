@@ -39,7 +39,7 @@ test("script close injection cannot break the script tag and all web previews ar
 test("Python loads worker-only Pyodide and cannot access CodeQuest's runtime origin",()=>{
  const doc=buildPreviewDocument("python",exampleFor("python").source,token);
  assert.match(doc,/new Worker\(url\)/);
- assert.match(doc,/pyodide\/v0\.27\.7\/full/);
+ assert.match(doc,/runtimes\/python\//);
  assert.match(doc,/indexURL/);
  assert.match(doc,/parent\.postMessage/);
  assert.match(doc,/worker-src blob:/);
@@ -50,7 +50,7 @@ test("Turtle example matches genuine Python turtle module and uses isolated Skul
  assert.match(example.source,/import turtle/);
  assert.match(example.source,/pen\.write/);
  const frame=buildPreviewDocument("python-turtle",example.source,token);
- assert.match(frame,/skulpt@1\.2\.0/);
+ assert.match(frame,/runtimes\/turtle\/skulpt/);
  assert.match(frame,/Sk\.TurtleGraphics/);
  assert.match(frame,/id="mycanvas"/);
  assert.match(frame,/default-src &#39;none&#39;/);
@@ -59,7 +59,7 @@ test("Turtle example matches genuine Python turtle module and uses isolated Skul
 test("TypeScript preview executes transpiled JavaScript in the opaque canvas sandbox",()=>{
  const doc=buildPreviewDocument("typescript","const greeting: string = 'Hello'; console.log(greeting)",token);
  assert.match(doc,/canvas id="art"/);
- assert.match(doc,/typescript@5\.9\.3/);
+ assert.match(doc,/runtimes\/typescript\.js/);
  assert.match(doc,/ts\.transpileModule/);
  assert.match(doc,/const greeting/);
  assert.match(doc,/connect-src &#39;none&#39;/);

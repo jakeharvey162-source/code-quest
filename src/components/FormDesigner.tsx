@@ -38,6 +38,7 @@ import { observeWorkspace } from "../lib/workspace-observation";
 import type { Settings } from "../lib/progress";
 import { gridColumns, gridRows } from "../lib/grid-data.mjs";
 import { reviewSource } from "../lib/assessment-engine.mjs";
+import { maskedInput } from "../lib/input-mask.mjs";
 export type Control = {
   id: string;
   type: string;
@@ -73,6 +74,7 @@ export type Control = {
   gridRows: string;
   readOnly: boolean;
   multiline: boolean;
+  mask?: string;
   eventSelectionChanged: string;
 };
 export function validControls(value: unknown): value is Control[] {
@@ -83,6 +85,7 @@ export function validControls(value: unknown): value is Control[] {
       (c) =>
         c &&
         toolbox.includes(c.type) &&
+        (c.mask === undefined || (typeof c.mask === "string" && c.mask.length<=64)) &&
         (c.parentId === undefined ||
           (typeof c.parentId === "string" && c.parentId.length < 100)) &&
         [
@@ -152,6 +155,7 @@ export function normalizeControls(value: unknown): Control[] | null {
           gridRows: "[]",
           readOnly: true,
           multiline: false,
+          mask: "",
           eventSelectionChanged: "",
           eventSelectedIndexChanged: "",
           eventCheckedChanged: "",
@@ -300,6 +304,11 @@ export function ControlView({
           }}
         />
       );
+    case "MaskedTextBox":
+      return <input style={style} aria-label={c.accessibleName||c.name} tabIndex={preview?0:-1}
+        inputMode="numeric" maxLength={c.mask?.length||undefined} placeholder={c.mask?.replaceAll("0","_")}
+        value={c.text} readOnly={!preview} disabled={!preview||!c.enabled}
+        onChange={e=>{onValue?.({text:maskedInput(e.target.value,c.mask||"")});if(c.eventTextChanged)onEvent?.(c.eventTextChanged);}}/>;
     case "DateTimePicker":
       return (
         <input
@@ -880,7 +889,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
     if (c.type === "DataGridView")
       return ["eventSelectionChanged", c.name + "_SelectionChanged"] as const;
     if (c.type === "Button") return ["eventClick", c.name + "_Click"] as const;
-    if (["TextBox", "RichTextBox"].includes(c.type))
+    if (["TextBox", "RichTextBox", "MaskedTextBox"].includes(c.type))
       return ["eventTextChanged", c.name + "_TextChanged"] as const;
     if (["ComboBox", "ListBox"].includes(c.type))
       return [
@@ -1091,6 +1100,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
       }}
     >
       <SystemWorkshop
+        initialOpen={settings.level==="pro"}
         onBusy={setGrading}
         controls={items}
         code={practicalCode}
@@ -1392,6 +1402,13 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                 button. Use meaningful control names.
               </p>
             </div>
+            <details className="tip">
+              <summary>C# tools & exception handling</summary>
+              <p>Controls go on the form. Classes and exception handlers go in your C# code.</p>
+              <button disabled={preview||grading} onClick={()=>{setWorkspace("code");setActiveSource("Form1.cs");setMessage("In an event method, type try then Tab twice for try/catch, or tryf then Tab twice for try/finally. Use int.TryParse or decimal.TryParse for expected invalid input.");}}>Practise try / catch / finally</button>
+              <p>Use Add class in the file explorer. F7 opens code; Shift+F7 returns to Design; F4 opens Properties; F5 runs; Shift+F5 stops.</p>
+              <a href="https://learn.microsoft.com/en-us/dotnet/desktop/winforms/get-started/create-app-visual-studio" target="_blank" rel="noreferrer">Microsoft WinForms guide ↗</a>
+            </details>
             <SourceExplorer
               files={sourceFiles}
               onChange={changeSources}
@@ -2126,6 +2143,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                     </label>
                   </Field>
                   <Field title="Behavior">
+                    {cur.type==="MaskedTextBox"&&<label>Mask (0 = required digit)<input aria-label="Control Mask" maxLength={64} value={cur.mask||""} onChange={e=>change({mask:e.target.value})}/><small>Use 00000000 for an eight-digit student number, or 000-000-0000 for a phone number.</small></label>}
                     {(["enabled", "visible"] as const).map((key) => (
                       <label className="check-label" key={key}>
                         <input

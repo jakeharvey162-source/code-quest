@@ -1,7 +1,9 @@
 import { gridColumns, gridRows } from "./lib/grid-data.mjs";
+import { validInputMask } from "./lib/input-mask.mjs";
 export const toolbox = [
   "Label",
   "TextBox",
+  "MaskedTextBox",
   "Button",
   "ComboBox",
   "ListBox",
@@ -52,6 +54,7 @@ const defaults = {
   gridRows: "[]",
   readOnly: true,
   multiline: false,
+  mask: "",
   eventSelectionChanged: "",
 };
 export function addControl(list, type) {
@@ -75,6 +78,7 @@ export function addControl(list, type) {
           ? "2026-01-01"
           : [
                 "TextBox",
+                "MaskedTextBox",
                 "RichTextBox",
                 "ComboBox",
                 "ListBox",
@@ -90,6 +94,7 @@ export function addControl(list, type) {
         ? 360
         : [
               "TextBox",
+              "MaskedTextBox",
               "RichTextBox",
               "ProgressBar",
               "TrackBar",
@@ -105,6 +110,7 @@ export function addControl(list, type) {
           ? 90
           : 34,
       ...defaults,
+      mask: type === "MaskedTextBox" ? "00000000" : "",
       tabIndex: list.length,
     },
   ];
@@ -180,6 +186,7 @@ export function validateForm(list) {
   if (new Set(names).size !== names.length)
     issues.push("Control names must be unique.");
   for (const c of list) {
+    if(c.type === "MaskedTextBox" && !validInputMask(c.mask||"")) issues.push(c.name+": preview masks support 0 for a required digit and separators () +./- only.");
     if (!toolbox.includes(c.type))
       issues.push(c.name + ": unsupported control type.");
     if (
@@ -357,6 +364,7 @@ export function designerCode(list) {
           lines.push(`${target}.Checked = ${!!c.checked};`);
         if (c.type === "TextBox")
           lines.push(`${target}.UseSystemPasswordChar = ${!!c.password};`);
+        if(c.type === "MaskedTextBox") lines.push(`${target}.Mask = ${quote(c.mask||"")};`);
         if (["TextBox", "RichTextBox"].includes(c.type))
           lines.push(
             `${target}.Multiline = ${c.type === "RichTextBox" || !!c.multiline};`,

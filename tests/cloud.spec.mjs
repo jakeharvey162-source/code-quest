@@ -6,13 +6,14 @@ async function mockCloud(page) {
   const snapshots = new Map(),
     history = new Map();
   let actor;
+  const profiles=new Map(), board=new Map();
   const user = (id) => ({
     id,
     email: id === A ? "a@example.com" : "b@example.com",
     aud: "authenticated",
     role: "authenticated",
     app_metadata: { provider: "email", providers: ["email"] },
-    user_metadata: {},
+    user_metadata: profiles.get(id)||{},
     created_at: new Date().toISOString(),
   });
   const token = (id) =>
@@ -40,7 +41,10 @@ async function mockCloud(page) {
           user: user(actor),
         };
       }
-    } else if (url.pathname.endsWith("/user")) result = user(actor);
+    } else if (url.pathname.endsWith("/user")) {
+      if(request.method()==="PUT") profiles.set(actor,{...profiles.get(actor),...body.data});
+      result = user(actor);
+    }
     else if (url.pathname.endsWith("/signup"))
       result = { user: user(A), session: null };
     await route.fulfill({
@@ -53,7 +57,11 @@ async function mockCloud(page) {
     const request = route.request(),
       path = new URL(request.url()).pathname;
     let result = [];
-    if (path.endsWith("/cq_save_snapshot")) {
+    if (path.endsWith("/cq_leaderboard")) {
+      if(request.method()==="POST"){board.set(actor,request.postDataJSON());result=null;}
+      else if(request.method()==="DELETE"){board.delete(actor);result=null;}
+      else {const url=new URL(request.url());result=[...board.values()].filter(r=>url.searchParams.has("user_id")?r.user_id===actor:r.visible).sort((a,b)=>b.xp-a.xp);}
+    } else if (path.endsWith("/cq_save_snapshot")) {
       const body = request.postDataJSON();
       snapshots.set(actor, {
         snapshot: body.payload,
@@ -83,6 +91,17 @@ async function signin(page, email = "a@example.com", password = "password123") {
   await page.getByLabel("Password", { exact: true }).fill(password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
 }
+test("signed-in learner saves account nickname and avatar, explicitly joins rankings, and can leave",async({page})=>{
+ await mockCloud(page);await page.goto('/#account');await signin(page);
+ await expect(page.getByRole('heading',{name:'a@example.com'})).toBeVisible();
+ await page.getByLabel('Your name',{exact:true}).fill('Student');await page.getByLabel('Nickname',{exact:true}).fill('BankBoss');await page.getByRole('button',{name:'Choose avatar 🦁'}).click();await page.getByRole('button',{name:'Save player profile'}).click();
+ await expect(page.getByRole('status').filter({hasText:'Profile saved to your account'})).toBeVisible();
+ await page.reload();await expect(page.getByLabel('Nickname',{exact:true})).toHaveValue('BankBoss');
+ await page.goto('/#leaderboard');await expect(page.getByRole('button',{name:'Join leaderboard'})).toBeVisible();await page.getByRole('button',{name:'Join leaderboard'}).click();
+ await expect(page.locator('.leaderboard-list')).toContainText('BankBoss · You');await expect(page.locator('.leaderboard-list')).not.toContainText('a@example.com');
+ await page.getByRole('button',{name:'Leave leaderboard'}).click();await expect(page.locator('.leaderboard-list')).toHaveCount(0);
+ await page.goto('/#account');await page.getByRole('button',{name:'Sign out',exact:true}).click();await signin(page,'b@example.com');await expect(page.getByLabel('Nickname',{exact:true})).toHaveValue('');
+});
 test("sign in errors, account-isolated local drafts, cloud save and explicit restore", async ({
   page,
 }) => {

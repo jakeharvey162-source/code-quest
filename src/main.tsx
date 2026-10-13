@@ -31,12 +31,16 @@ import {
 import type { Progress } from "./lib/progress";
 import QuestBoard from "./components/QuestBoard";
 import { workshopQuests } from "./lib/workshop-quests.mjs";
+import LearningPath from "./components/LearningPath";
+import ProfileAvatar from "./components/ProfileAvatar";
+import { validAvatar } from "./lib/profile";
 import CityMap from "./components/CityMap";
 import TorCoach from "./components/TorCoach";
 import { VoiceControls } from "./components/VoiceControls";
 import { reloadLatestWorkspace } from "./lib/workspace-recovery";
 import AuthProvider, { useAuth } from "./components/AuthProvider";
 const Account = lazy(() => import("./components/Account"));
+const Leaderboard = lazy(() => import("./components/Leaderboard"));
 const Classes = lazy(() => import("./components/Classes"));
 const Playground = lazy(() => import("./components/Playground"));
 const UniversalTerminal = lazy(() => import("./components/UniversalTerminal"));
@@ -53,6 +57,7 @@ const navigation = [
   { id: "terminal", title: "Code Terminal", icon: Terminal },
   { id: "designer", title: "WinForms", icon: PanelsTopLeft },
   { id: "assessment", title: "Assessment", icon: Flag },
+  { id: "leaderboard", title: "Leaderboard", icon: ChartNoAxesCombined },
   { id: "progress", title: "Progress", icon: ChartNoAxesCombined },
   { id: "settings", title: "Settings", icon: SettingsIcon },
   { id: "account", title: "Account", icon: House },
@@ -147,6 +152,7 @@ class ErrorBoundary extends Component<
   }
 }
 function App() {
+  const { user } = useAuth();
   const [progress, setProgress] = useState(loadProgress),
     [route, setRoute] = useState(() => location.hash.slice(1) || "home"),
     [filter, setFilter] = useState("all"),
@@ -156,6 +162,14 @@ function App() {
     [installPrompt, setInstallPrompt] = useState<any>(null),
     [updateReady, setUpdateReady] = useState<ServiceWorker | null>(null);
   const [questNotice, setQuestNotice] = useState("");
+  useEffect(()=>{
+    const m=user?.user_metadata;
+    if(!m)return;
+    setProgress(p=>({...p,settings:{...p.settings,
+      ...(typeof m.display_name==="string"?{name:m.display_name.slice(0,60)}:{}),
+      ...(typeof m.nickname==="string"?{nickname:m.nickname.slice(0,32)}:{}),
+      ...(validAvatar(m.avatar)?{avatar:m.avatar}:{})}}));
+  },[user?.id,user?.user_metadata?.display_name,user?.user_metadata?.nickname,user?.user_metadata?.avatar]);
   useEffect(() => {
     document.documentElement.dataset.theme = progress.settings.theme || "light";
   }, [progress.settings.theme]);
@@ -362,9 +376,9 @@ function App() {
             <button
               className="avatar"
               aria-label="Open learning profile"
-              onClick={() => navigate("settings")}
+              onClick={() => navigate("account")}
             >
-              {(progress.settings.name || "Q").slice(0, 1).toUpperCase()}
+              <ProfileAvatar value={progress.settings.avatar}/>
             </button>
           </div>
         </header>
@@ -423,6 +437,7 @@ function App() {
                       .
                     </span>
                   </div>
+                  <LearningPath progress={progress} update={update}/>
                   <div className="home-hero">
                     <div className="hero-copy">
                       <h1>
@@ -586,6 +601,7 @@ function App() {
                       />
                     </label>
                   </div>
+                  <LearningPath progress={progress} update={update}/>
                   <div className="filter-tabs">
                     {[{ id: "all", name: "All quests" }, ...tracks].map((t) => (
                       <button
@@ -649,6 +665,7 @@ function App() {
                         onClick={() => {
                           setSearch("");
                           setFilter("all");
+                          update(p=>({...p,settings:{...p.settings,level:"easy"}}));
                         }}
                       >
                         Show every quest
@@ -672,6 +689,8 @@ function App() {
                 />
               ) : page === "account" ? (
                 <Account progress={progress} update={update} />
+              ) : page === "leaderboard" ? (
+                <Leaderboard progress={progress}/>
               ) : page === "classes" ? (
                 <Classes progress={progress} onNavigate={navigate} />
               ) : page === "settings" ? (
@@ -695,7 +714,7 @@ function App() {
         </main>
         <TorCoach
           page={page}
-          settings={progress.settings}
+          settings={{...progress.settings,name:progress.settings.nickname||progress.settings.name}}
           onNavigate={navigate}
         />
         <footer className="app-footer">

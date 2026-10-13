@@ -12,8 +12,10 @@ export default function SystemWorkshop({
   disabled = false,
   onBusy,
   sourceFiles = [],
+  initialOpen = false,
 }: {
   sourceFiles?: { path: string; text: string }[];
+  initialOpen?: boolean;
   controls: Control[];
   code: string;
   onLoad: (project: any, worked: boolean) => void;
@@ -102,7 +104,7 @@ export default function SystemWorkshop({
     }
   }
   return (
-    <details className="system-workshop">
+    <details className="system-workshop" open={initialOpen}>
       <summary>System workshop · ATM, loans and banking</summary>
       <section aria-label="Build a complete system">
         <div>

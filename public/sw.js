@@ -12,6 +12,8 @@ self.addEventListener("install", (event) =>
       await cache.addAll([
         "/",
         "/index.html",
+        "/terminal-frame.html",
+        "/terminal-frame.js",
         "/manifest.webmanifest",
         "/icon.svg",
         "/icon-192.png",
@@ -40,14 +42,14 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/")) return;
   event.respondWith(
     (async () => {
-      const isCompiler = url.pathname.startsWith("/compiler/");
+      const isCompiler = url.pathname.startsWith("/compiler/") || url.pathname.startsWith("/runtimes/");
       const cache = await caches.open(isCompiler ? RUNTIME : SHELL);
       if (request.mode === "navigate") {
         try {
           const fresh = await fetch(request);
           if (fresh.ok) return fresh;
         } catch {}
-        return (await cache.match("/index.html")) || Response.error();
+        return (await cache.match(request)) || (await cache.match("/index.html")) || Response.error();
       }
       const cached = await cache.match(request, { ignoreVary: true });
       if (cached) return cached;
@@ -63,7 +65,7 @@ self.addEventListener("fetch", (event) => {
         const cached = await cache.match(request, { ignoreVary: true });
         if (cached) return cached;
         if (request.mode === "navigate")
-          return (await cache.match("/index.html")) || Response.error();
+          return (await cache.match(request)) || (await cache.match("/index.html")) || Response.error();
         return Response.error();
       }
     })(),

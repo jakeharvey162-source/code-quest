@@ -1,6 +1,6 @@
 /** Opaque-origin code preview and share codec; never evaluate user code in the app origin. */
 export const LANGUAGES = Object.freeze(["javascript","typescript","html","css","python","python-turtle","csharp"]);
-const PYODIDE="https://cdn.jsdelivr.net/pyodide/v0.27.7/full/";
+
 export function validLanguage(value){return LANGUAGES.includes(value)}
 export function validateSource(code){
  if(typeof code!=="string"||code.length>60000)throw Error("Keep your program under 60,000 characters.");
@@ -32,18 +32,20 @@ function shell(body,css,scripts,token,policy=POLICY){
  const bridge='(function(){const token='+JSON.stringify(token)+';const fmt=x=>{try{return typeof x==="string"?x:JSON.stringify(x)}catch{return String(x)}};const send=(kind,text)=>parent.postMessage({channel:"cq-terminal",token,kind,text:String(text).slice(0,5000)},"*");window.__cqSend=send;for(const kind of ["log","info","warn","error"])console[kind]=(...values)=>send(kind,values.map(fmt).join(" "));window.addEventListener("error",e=>{window.__cqRuntimeError=true;send("fatal",e.message||"Script error")});window.addEventListener("unhandledrejection",e=>{window.__cqRuntimeError=true;send("fatal",String(e.reason))});})();';
  return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta http-equiv="Content-Security-Policy" content="'+escapeHtml(policy)+'"><style>'+css+'</style><script>'+bridge+'</script></head><body>'+body+scripts+'</body></html>';
 }
-function pythonFrame(code,token){
+function pythonFrame(code,token,origin,input){
+ const runtime=origin+"/runtimes/python/";
  // Python runs in a disposable Web Worker created in a sandboxed, opaque-origin iframe.
  // It cannot access the parent app's cookies/storage and a stopped iframe kills its worker.
  const worker=[
- 'importScripts('+JSON.stringify(PYODIDE+"pyodide.js")+');',
+ 'importScripts('+JSON.stringify(runtime+"pyodide.js")+');',
  'let py=null;',
  'self.onmessage=async e=>{',
  ' try{',
- ' self.postMessage({kind:"status",text:"Loading Python runtime; internet required on first run..."});',
- ' py=py||await loadPyodide({indexURL:'+JSON.stringify(PYODIDE)+'});',
+ ' self.postMessage({kind:"status",text:"Loading self-hosted Python runtime..."});',
+ ' py=py||await loadPyodide({indexURL:'+JSON.stringify(runtime)+'});',
  ' py.setStdout({batched:text=>self.postMessage({kind:"log",text})});',
  ' py.setStderr({batched:text=>self.postMessage({kind:"error",text})});',
+ ' const lines=e.data.input.split(/\\r?\\n/);if(!e.data.input)lines.length=0;py.setStdin({stdin:()=>lines.shift()});',
  ' self.postMessage({kind:"status",text:"Running Python..."});',
  ' let result=await py.runPythonAsync(e.data.code);',
  ' if(result!==undefined&&result!==null){self.postMessage({kind:"log",text:String(result)});if(typeof result.destroy==="function")result.destroy();}',
@@ -56,19 +58,19 @@ function pythonFrame(code,token){
  'const url=URL.createObjectURL(blob);const w=new Worker(url);URL.revokeObjectURL(url);',
  'w.onmessage=e=>{const d=e.data||{};if(["log","error","fatal","status","done"].includes(d.kind))window.__cqSend(d.kind,d.text||"")};',
  'w.onerror=e=>window.__cqSend("fatal",e.message||"Python worker blocked");',
- 'w.postMessage({code:'+JSON.stringify(code)+'});',
+ 'w.postMessage({code:'+JSON.stringify(code)+',input:'+JSON.stringify(input)+'});',
  '}catch(err){window.__cqSend("fatal","Could not launch Python: "+String(err))}})();'
  ].join("");
- // No same-origin privilege: external runtime may only reach its pinned CDN.
- const policy="default-src 'none';script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' https://cdn.jsdelivr.net;connect-src https://cdn.jsdelivr.net;worker-src blob:;style-src 'unsafe-inline';img-src data:;base-uri 'none';form-action 'none'";
+ // No same-origin privilege: runtime assets may only be fetched from the CodeQuest host.
+ const policy="default-src 'none';script-src 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval' "+origin+";connect-src "+origin+";worker-src blob:;style-src 'unsafe-inline';img-src data:;base-uri 'none';form-action 'none'";
  return shell('<div id="display"><h2>Python console</h2><p>Standard input/output only. tkinter, pygame and OS windows are not available inside the browser.</p></div>',STYLE,
- '<script>'+bootstrap+'</script>',token,policy);
+ '<script>'+safeScript(bootstrap)+'</script>',token,policy);
 }
-function turtleFrame(code,token){
- const csp="default-src 'none';script-src 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net;connect-src https://cdn.jsdelivr.net;style-src 'unsafe-inline';img-src data: blob:;font-src data:;base-uri 'none';form-action 'none'";
+function turtleFrame(code,token,origin){
+ const csp="default-src 'none';script-src 'unsafe-inline' 'unsafe-eval' "+origin+";connect-src "+origin+";style-src 'unsafe-inline';img-src data: blob:;font-src data:;base-uri 'none';form-action 'none'";
  const loader=
- '<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt.min.js"></script>'+
- '<script src="https://cdn.jsdelivr.net/npm/skulpt@1.2.0/dist/skulpt-stdlib.js"></script>';
+ '<script src="'+origin+'/runtimes/turtle/skulpt.min.js"></script>'+
+ '<script src="'+origin+'/runtimes/turtle/skulpt-stdlib.js"></script>';
  const bootstrap=[
   '(function(){try{',
   'if(typeof Sk==="undefined")throw Error("Python Turtle runtime unavailable; check internet access.");',
@@ -83,14 +85,14 @@ function turtleFrame(code,token){
   'err=>window.__cqSend("fatal",String(err)));',
   '}catch(err){window.__cqSend("fatal",String(err))}})();'
  ].join("");
- return shell('<div id="mycanvas" style="min-height:100vh;background:black"></div>',STYLE,loader+"<script>"+bootstrap+"</script>",token,csp);
+ return shell('<div id="mycanvas" style="min-height:100vh;background:black"></div>',STYLE,loader+"<script>"+safeScript(bootstrap)+"</script>",token,csp);
 }
 
-const TS_COMPILER="https://cdn.jsdelivr.net/npm/typescript@5.9.3/lib/typescript.js";
-function typescriptFrame(code,token){
+
+function typescriptFrame(code,token,origin){
  // TS 7 ships no JavaScript compiler API. Compile with a pinned browser compiler
  // inside an opaque-origin frame; never evaluate source in the CodeQuest origin.
- const csp="default-src 'none';script-src 'unsafe-inline' https://cdn.jsdelivr.net;connect-src 'none';worker-src 'none';style-src 'unsafe-inline';img-src data: blob:;base-uri 'none';form-action 'none'";
+ const csp="default-src 'none';script-src 'unsafe-inline' "+origin+";connect-src 'none';worker-src 'none';style-src 'unsafe-inline';img-src data: blob:;base-uri 'none';form-action 'none'";
  const bootstrap=[
   '(function(){try{',
   'if(!window.ts||typeof window.ts.transpileModule!=="function")throw Error("TypeScript compiler could not load; check the internet connection.");',
@@ -107,16 +109,18 @@ function typescriptFrame(code,token){
   '}catch(err){window.__cqSend("fatal",err.message||String(err))}})();'
  ].join("");
  return shell('<canvas id="art" width="960" height="540"></canvas>',STYLE,
-  '<script src="'+TS_COMPILER+'"></script><script>'+bootstrap+'</script>',token,csp);
+  '<script src="'+origin+'/runtimes/typescript.js"></script><script>'+bootstrap+'</script>',token,csp);
 }
 
-export function buildPreviewDocument(language,code,token){
+export function buildPreviewDocument(language,code,token,origin="http://localhost",input=""){
+ if(typeof input!=="string"||input.length>20000)throw Error("Keep standard input below 20,000 characters.");
+ if(!/^https?:\/\/[^/]+$/.test(origin))throw Error("Invalid runtime origin");
  if(!validLanguage(language)||language==="csharp")throw Error("No browser preview for this language.");
  validateSource(code);
  if(typeof token!=="string"||!/^[a-f0-9-]{10,80}$/i.test(token))throw Error("Invalid preview token.");
- if(language==="python")return pythonFrame(code,token);
- if(language==="typescript")return typescriptFrame(code,token);
- if(language==="python-turtle")return turtleFrame(code,token);
+ if(language==="python")return pythonFrame(code,token,origin,input);
+ if(language==="typescript")return typescriptFrame(code,token,origin);
+ if(language==="python-turtle")return turtleFrame(code,token,origin);
  if(language==="javascript"){
   return shell('<canvas id="art" width="960" height="540"></canvas>',STYLE,
    '<script>try{\n'+safeScript(code)+'\n}catch(error){window.__cqRuntimeError=true;window.__cqSend("fatal",error.stack||String(error))}</script>'+

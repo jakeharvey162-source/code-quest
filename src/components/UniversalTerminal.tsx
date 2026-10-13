@@ -9,10 +9,11 @@ import {download} from "../lib/download";
 import {readText,writeText} from "../lib/local-data";
 import {requestQuest} from "../lib/workshop-quests.mjs";
 import {outputKind,languageMismatch,noOutputHint} from "../lib/terminal-output.mjs";
+import {terminalCSharpSource,terminalStdout} from "../lib/terminal-input.mjs";
 type Language="javascript"|"typescript"|"html"|"css"|"python"|"python-turtle"|"csharp";
 type Line={kind:string;text:string};
 type Session={token:string;doc:string};
-const LABELS:Record<Language,string>={javascript:"JavaScript + Canvas",typescript:"TypeScript + Canvas",html:"HTML + interactive page",css:"CSS animations",python:"Python console (online runtime)","python-turtle":"Python Turtle graphics",csharp:"C# console"};
+const LABELS:Record<Language,string>={javascript:"JavaScript + Canvas",typescript:"TypeScript + Canvas",html:"HTML + interactive page",css:"CSS animations",python:"Python console","python-turtle":"Python Turtle graphics",csharp:"C# console"};
 const EXT:Record<Language,string>={javascript:"js",typescript:"ts",html:"html",css:"css",python:"py","python-turtle":"py",csharp:"cs"};
 const MINIMUM_SOURCE=1;
 const MAX_LINES=130;
@@ -33,6 +34,8 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
  const [full,setFull]=useState(false);
  const [session,setSession]=useState<Session|null>(null);
  const [shareUrl,setShareUrl]=useState("");
+ const [standardInput,setStandardInput]=useState(()=>readText("cq-terminal-input",""));
+ useEffect(()=>{writeText("cq-terminal-input",standardInput)},[standardInput]);
  const [previewKind,setPreviewKind]=useState<"text"|"visual">("visual");
  const [languageNotice,setLanguageNotice]=useState<{language:string|null;label:string;message:string}|null>(null);
  const [lastRunFinished,setLastRunFinished]=useState(false);
@@ -110,7 +113,9 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   window.setTimeout(()=>resultsRef.current?.scrollIntoView({behavior:window.matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"}),120);
   if(language==="csharp"){
    try{
-    const result=await runCSharp(source,text=>{if(id===runRef.current)setStatus(text)});
+    const prepared=terminalCSharpSource(source,standardInput);
+    const raw=await runCSharp(prepared.source,text=>{if(id===runRef.current)setStatus(text)});
+    const result={...raw,stdOut:terminalStdout(raw.stdOut,prepared.marker)};
     if(id!==runRef.current)return;
     setConsoleLines(
       [...(result.stdOut?[{kind:"log",text:result.stdOut}]:[]),
@@ -128,7 +133,7 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   const token=crypto.randomUUID();
   tokenRef.current=token;
   try{
-   const doc=buildPreviewDocument(language,source,token);
+   const doc=buildPreviewDocument(language,source,token,location.origin,standardInput);
    setSession({token,doc});
    setStatus(language==="python"?"Preparing isolated Python runtime...":language==="typescript"?"Loading TypeScript compiler for isolated preview...":"Preview running.");
    const ms=language==="python"||language==="python-turtle"||language==="typescript"?90000:14000;
@@ -296,6 +301,10 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
     <label className="cq-terminal-editor-label" htmlFor="cq-universal-code">Code editor</label>
     <textarea id="cq-universal-code" className="cq-terminal-editor" aria-label="Terminal code editor" spellCheck={false}
       value={source} onChange={e=>edit(e.target.value)} autoCapitalize="off" autoCorrect="off"/>
+    {(language==="python"||language==="csharp")&&<label className="cq-standard-input">Standard input · one answer per line
+     <textarea aria-label="Terminal standard input" rows={3} maxLength={20000} value={standardInput} disabled={running} onChange={e=>setStandardInput(e.target.value)} placeholder="Inputs for input() or Console.ReadLine(), supplied before Run"/>
+     <small>Each input() / Console.ReadLine() reads the next line. Supply answers before Run.</small>
+    </label>}
     <div className="cq-terminal-footer">
      <label className="cq-terminal-file-button"><Upload size={16}/> Open a code file
       <input ref={fileRef} type="file" aria-label="Import terminal code file" accept=".js,.ts,.html,.css,.py,.cs,text/plain" onChange={e=>void importFile(e.target.files?.[0])}/>
@@ -308,7 +317,8 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
     <div className="cq-terminal-panel-title"><Heart size={16}/> OUTPUT <span>{canPreview?"GRAPHICS + CONSOLE":"CONSOLE"}</span></div>
     <div className="cq-terminal-visual" aria-label="Program visual preview">
      {session&&canPreview?<div className={"cq-terminal-stage "+(previewKind==="text"?"cq-terminal-text-stage":"")}>
-       <iframe key={session.token} ref={iframeRef} srcDoc={session.doc}
+       <iframe key={session.token} ref={iframeRef} src="/terminal-frame.html"
+        onLoad={()=>iframeRef.current?.contentWindow?.postMessage({channel:"cq-terminal-start",doc:session.doc},"*")}
         title="Isolated program preview" sandbox="allow-scripts" referrerPolicy="no-referrer"/>
        {previewKind==="text"&&<section className="cq-terminal-big-output" aria-label="Visible program output">
          <div className="cq-terminal-big-output-title"><Terminal size={20}/> Your program result</div>
@@ -334,6 +344,6 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   <p className="cq-terminal-status" role="status">{status}</p>
   {shareUrl&&<label className="cq-terminal-share">Shareable link (code only; never auto-runs)<input aria-label="Shareable terminal code link" readOnly value={shareUrl} onFocus={e=>e.currentTarget.select()}/></label>}
   <div className="cq-terminal-guidance"><ShieldCheck size={18}/><p>
-   Code runs locally in your browser. Web programs run in an isolated preview without access to your CodeQuest files or login; Python loads a free open-source runtime when online; Python Turtle uses the open-source Skulpt graphics interpreter. TypeScript downloads a free pinned compiler into an isolated preview on first run. C# uses CodeQuest's existing real compiler. This is not a full desktop operating-system terminal: installed packages, tkinter, pygame, native WinForms and other languages need their own runtime. <strong>Review unknown code before running it; never paste passwords or private keys.</strong></p></div>
+   Code runs locally in your browser. Web programs run in an isolated preview without access to your CodeQuest files or login; Python loads its bundled open-source runtime on demand; Python Turtle uses the open-source Skulpt graphics interpreter. TypeScript loads a bundled pinned compiler into an isolated preview on first run. C# uses CodeQuest's existing real compiler. This is not a full desktop operating-system terminal: installed packages, tkinter, pygame, native WinForms and other languages need their own runtime. <strong>Review unknown code before running it; never paste passwords or private keys.</strong></p></div>
  </section>;
 }

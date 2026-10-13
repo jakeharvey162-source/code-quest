@@ -26,6 +26,7 @@ export function formEventSource(
         (c) => `
     ${c.name}.Name = ${literal(c.name)};
     ${c.name}.Text = ${literal(c.text)};
+    ${c.type === "MaskedTextBox" ? `${c.name}.Mask = ${literal(c.mask||"")};` : ""}
     ${c.name}.Enabled = ${c.enabled ? "true" : "false"};
     ${c.name}.Visible = ${c.visible ? "true" : "false"};
     ${c.name}.Checked = ${c.checked ? "true" : "false"};
@@ -110,6 +111,10 @@ namespace System.Windows.Forms {
   public class TrackBar : Control { public new int Value {get;set;} public new int Minimum {get;set;} public new int Maximum {get;set;}=100; }
   public class DateTimePicker : Control { public new DateTime Value {get;set;} }
   public class Label : Control {} public class TextBox : Control {}
+  public class MaskedTextBox : TextBox {
+    public string Mask {get;set;}="";
+    public bool MaskCompleted {get { if(Mask.Length==0)return true;if(Text.Length!=Mask.Length)return false;for(int i=0;i<Mask.Length;i++){if(Mask[i]=='0'){if(Text[i]<'0'||Text[i]>'9')return false;}else if(Text[i]!=Mask[i])return false;}return true; } }
+  }
   public class RichTextBox : TextBox {} public class ProgressBar : Control {}
   public class Button : Control {} public class ComboBox : Control {}
   public class ListBox : Control {} public class RadioButton : Control {}
@@ -184,6 +189,7 @@ export function parseFormOutput(output, controls) {
   const changes = new Map();
   const messages = [];
   const grids = new Map();
+  /** @type {Record<string, {type:string,value:string}>} */
   const fields = {};
   for (const line of output.split(/\r?\n/)) {
     const bits = line.split("|");

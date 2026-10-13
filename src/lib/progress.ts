@@ -1,8 +1,13 @@
 import { readText, writeText } from "./local-data.ts";
 import { earnedQuestXp } from "./workshop-quests.mjs";
+import { validAvatar } from "./profile.ts";
+import { learningLevels, type LearningLevel } from "./learning-path.ts";
 export type Settings = {
   theme: "light" | "dark";
   name: string;
+  nickname: string;
+  avatar: string;
+  level: LearningLevel;
   voice: string;
   voiceProvider: "device" | "elevenlabs";
   rate: number;
@@ -34,6 +39,9 @@ export const freshProgress = (): Progress => ({
   settings: {
     theme: "light",
     name: "",
+    nickname: "",
+    avatar: "🤖",
+    level: "easy",
     voice: "",
     voiceProvider: "device",
     rate: 1,
@@ -81,6 +89,8 @@ export function validateProgress(value: unknown): value is Progress {
     ["light", "dark"].includes(String(s.theme)) &&
     typeof s.name === "string" &&
     s.name.length <= 60 &&
+    typeof s.nickname === "string" && s.nickname.length <= 32 &&
+    validAvatar(s.avatar) && learningLevels.some(l=>l.id===s.level) &&
     typeof s.voice === "string" &&
     ["device", "elevenlabs"].includes(String(s.voiceProvider)) &&
     typeof s.rate === "number" &&

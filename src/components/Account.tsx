@@ -5,6 +5,7 @@ import { migrateProgress, xpFor, type Progress } from "../lib/progress";
 import { readText, writeText, readBrief } from "../lib/local-data";
 import { normalizeControls } from "./FormDesigner";
 import type { UpdateProgress } from "./LessonView";
+import LearnerProfile from "./LearnerProfile";
 function friendlyAccountError(error: unknown): string {
   const message = error instanceof Error ? error.message : String((error as any)?.message || error || "");
   if (/invalid.login.credentials|invalid_credentials|invalid.*password/i.test(message)) return "Email or password is incorrect. Please try again.";
@@ -32,6 +33,7 @@ export default function Account({
     [history, setHistory] = useState<any[]>([]);
   const [revision, setRevision] = useState<number | null>(null),
     [restore, setRestore] = useState(false);
+  useEffect(()=>{if(authError)setMessage(authError)},[authError]);
   async function refresh() {
     if (!supabase || !user) return;
     const { data, error } = await supabase
@@ -81,7 +83,11 @@ export default function Account({
           ? await supabase.auth.signUp({
               email,
               password,
-              options: { emailRedirectTo: authRedirect() },
+              options: { emailRedirectTo: authRedirect(), data: {
+                display_name: progress.settings.name,
+                nickname: progress.settings.nickname,
+                avatar: progress.settings.avatar,
+              } },
             })
           : mode === "reset"
             ? await supabase.auth.resetPasswordForEmail(email, {
@@ -171,6 +177,7 @@ export default function Account({
           <p>Keep your learning safe and pick it up on another device.</p>
         </div>
       </div>
+      {!recovery && <LearnerProfile progress={progress} update={update}/>}
       {!supabase ? (
         <article className="settings-card">
           <h2>Jump into CodeQuest</h2>
