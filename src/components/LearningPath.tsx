@@ -64,6 +64,7 @@ export default function LearningPath({
             ? "Start " + current.title + " quest"
             : "Practise your assessment"}
       </button>
+      <a href="#challenges">Try a code challenge →</a>
       <a href="#leaderboard">View leaderboard and badges →</a>
     </section>
   );

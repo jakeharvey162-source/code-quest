@@ -2,11 +2,11 @@ import { test, expect } from "@playwright/test";
 import { freshProgress } from "../src/lib/progress.ts";
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
-async function mockCloud(page) {
+async function mockCloud(page,participants=[]) {
   const snapshots = new Map(),
     history = new Map();
   let actor;
-  const profiles=new Map(), board=new Map();
+  const profiles=new Map(), board=new Map(participants.map(p=>[p.user_id,p]));
   const user = (id) => ({
     id,
     email: id === A ? "a@example.com" : "b@example.com",
@@ -57,7 +57,11 @@ async function mockCloud(page) {
     const request = route.request(),
       path = new URL(request.url()).pathname;
     let result = [];
-    if (path.endsWith("/cq_leaderboard")) {
+    let responseHeaders={};
+    if(path.endsWith("/cq_rankings")) {
+      const url=new URL(request.url());const ranked=[...board.values()].filter(r=>r.visible).sort((a,b)=>b.xp-a.xp||b.completed-a.completed||a.user_id.localeCompare(b.user_id)).map((r,i,all)=>({...r,position:i+1,rank:all.findIndex(x=>x.xp===r.xp&&x.completed===r.completed)+1,xp_ahead:i?all[i-1].xp:null}));
+      const own=url.searchParams.get('user_id');const filtered=own?ranked.filter(r=>r.user_id===own.slice(3)):ranked;const start=Number(url.searchParams.get('offset')||0),limit=Number(url.searchParams.get('limit')||25);result=filtered.slice(start,start+limit);responseHeaders={'access-control-expose-headers':'content-range','content-range':`${start}-${start+result.length-1}/${filtered.length}`};
+    } else if (path.endsWith("/cq_leaderboard")) {
       if(request.method()==="POST"){board.set(actor,request.postDataJSON());result=null;}
       else if(request.method()==="DELETE"){board.delete(actor);result=null;}
       else {const url=new URL(request.url());result=[...board.values()].filter(r=>url.searchParams.has("user_id")?r.user_id===actor:r.visible).sort((a,b)=>b.xp-a.xp);}
@@ -80,12 +84,20 @@ async function mockCloud(page) {
     else if (path.endsWith("/cq_history")) result = history.get(actor) || [];
     await route.fulfill({
       status: 200,
+      headers:responseHeaders,
       contentType: "application/json",
       body: JSON.stringify(result),
     });
   });
   return { snapshots, history };
 }
+
+test("rankings include more than fifty students and Find my rank locates a student on page three",async({page})=>{
+ const roster=Array.from({length:105},(_,i)=>({user_id:i===66?A:'90000000-0000-4000-8000-'+String(i).padStart(12,'0'),nickname:'Builder '+i,avatar:'🤖',xp:1000-i*5,completed:0,visible:true}));
+ await mockCloud(page,roster);await page.goto('/#account');await signin(page);await page.goto('/#leaderboard');await expect(page.getByText('Your rank: #67',{exact:true})).toBeVisible();await expect(page.getByText(/105 players/).first()).toBeVisible();await page.getByRole('button',{name:'Find my rank'}).click();await expect(page.locator('.leaderboard-list')).toContainText('Builder 66 · You');await expect(page.locator('.rank-pagination')).toContainText('Page 3 of 5');
+ await page.getByRole('button',{name:'Next players'}).click();await page.getByRole('button',{name:'Next players'}).click();await expect(page.locator('.leaderboard-list li')).toHaveCount(5);await expect(page.locator('.leaderboard-list')).toContainText('Builder 104');
+});
+
 async function signin(page, email = "a@example.com", password = "password123") {
   await page.getByLabel("Email", { exact: true }).fill(email);
   await page.getByLabel("Password", { exact: true }).fill(password);

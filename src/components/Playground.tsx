@@ -3,6 +3,7 @@ import { Play, Square, Download, RotateCcw } from "lucide-react";
 import CodeEditor from "./CodeEditor";
 import ProjectReader from "./ProjectReader";
 import { VoiceControls } from "./VoiceControls";
+import {terminalCSharpSource,terminalStdout} from "../lib/terminal-input.mjs";
 import { runCSharp, cancelRun } from "../lib/compiler";
 import { observeWorkspace } from "../lib/workspace-observation";
 import { download } from "../lib/download";
@@ -29,6 +30,7 @@ export default function Playground({
     [output, setOutput] = useState("Your output will appear here."),
     [ok, setOk] = useState(true);
   const code = progress.drafts.scratchpad ?? starter;
+  const input=progress.drafts.scratchpadInput??"";
   const [files, setFiles] = useState(loadSourceFiles),
     [active, setActive] = useState("Program.cs"),
     [fileError, setFileError] = useState("");
@@ -86,8 +88,10 @@ export default function Playground({
   async function run() {
     setBusy(true);
     try {
-      const result = await runCSharp(compileProject(code, files), setOutput);
-      setOk(result.success);
+      const prepared=terminalCSharpSource(compileProject(code,files),input);
+      const raw = await runCSharp(prepared.source, setOutput);
+      const result={...raw,stdOut:terminalStdout(raw.stdOut,prepared.marker)};
+      setOk(result.success&&!result.stdErr);
       if (result.success) {
         requestQuest("first-run");
         if (
@@ -212,6 +216,7 @@ export default function Playground({
         onChange={edit}
         plain={progress.settings.editorMode === "plain"}
       />
+      <label>Standard input · one answer per line<textarea aria-label="Code Lab standard input" rows={3} maxLength={20000} disabled={busy} value={input} onChange={e=>update(p=>({...p,drafts:{...p.drafts,scratchpadInput:e.target.value}}))}/></label>
       <div className="editor-actions">
         <button onClick={() => setCode(starter)} disabled={busy}>
           <RotateCcw size={15} />
@@ -234,8 +239,7 @@ export default function Playground({
       </pre>
       <VoiceControls settings={progress.settings} text={output} />
       <p className="muted">
-        Console.WriteLine output is captured. Console.ReadLine interactive input
-        and native WinForms are not supported in the browser runtime. Your code
+        Console.WriteLine output is captured. Console.ReadLine reads the lines you supply before Run. Native WinForms run in the exported Windows project. Your code
         runs on your own device; programs stop after 10 seconds. The compiler
         loads about 40 MB on the first run.
       </p>

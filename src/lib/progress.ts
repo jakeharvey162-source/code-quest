@@ -1,4 +1,5 @@
 import { readText, writeText } from "./local-data.ts";
+import { challengeXp } from "./code-challenges.mjs";
 import { earnedQuestXp } from "./workshop-quests.mjs";
 import { validAvatar } from "./profile.ts";
 import { learningLevels, type LearningLevel } from "./learning-path.ts";
@@ -164,11 +165,11 @@ export function xpFor(progress: Progress) {
   return (
     Object.entries(progress.steps).reduce(
       (sum, [key, steps]) =>
-        sum + (key === "workshop-quests" ? 0 : new Set(steps).size * 20),
+        sum + (["workshop-quests", "code-challenges"].includes(key) ? 0 : new Set(steps).size * 20),
       0,
     ) +
     new Set(progress.completed).size * 60 +
-    earnedQuestXp(progress.steps)
+    earnedQuestXp(progress.steps) + challengeXp(progress.steps)
   );
 }
 export function streakFor(activity: string[], today = new Date()) {

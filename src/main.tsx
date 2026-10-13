@@ -39,6 +39,7 @@ import TorCoach from "./components/TorCoach";
 import { VoiceControls } from "./components/VoiceControls";
 import { reloadLatestWorkspace } from "./lib/workspace-recovery";
 import AuthProvider, { useAuth } from "./components/AuthProvider";
+const CodeChallenges = lazy(() => import("./components/CodeChallenges"));
 const Account = lazy(() => import("./components/Account"));
 const Leaderboard = lazy(() => import("./components/Leaderboard"));
 const Classes = lazy(() => import("./components/Classes"));
@@ -52,6 +53,7 @@ const SettingsPage = lazy(() => import("./components/Settings"));
 const navigation = [
   { id: "home", title: "World", icon: House },
   { id: "learn", title: "Lessons", icon: BookOpen },
+  { id: "challenges", title: "Code challenges", icon: Flag },
   { id: "videos", title: "Video tutorials", icon: Clapperboard },
   { id: "playground", title: "Code Lab", icon: Terminal },
   { id: "terminal", title: "Code Terminal", icon: Terminal },
@@ -673,6 +675,8 @@ function App() {
                     </div>
                   )}
                 </section>
+              ) : page === "challenges" ? (
+                <CodeChallenges progress={progress} update={update}/>
               ) : page === "videos" ? (
                 <TutorialLibrary onNavigate={navigate} />
               ) : page === "terminal" ? (

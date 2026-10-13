@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthProvider";
 import { xpFor, type Progress } from "../lib/progress";
@@ -10,6 +10,9 @@ type Entry = {
   avatar: string;
   xp: number;
   completed: number;
+  rank?: number;
+  position?: number;
+  xp_ahead?: number | null;
 };
 export default function Leaderboard({ progress }: { progress: Progress }) {
   const { user } = useAuth();
@@ -17,31 +20,59 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
     [joined, setJoined] = useState(false),
     [busy, setBusy] = useState(false),
     [message, setMessage] = useState("");
+  const [page, setPage] = useState(0),
+    [total, setTotal] = useState(0),
+    [loading, setLoading] = useState(false),
+    [mineRank, setMineRank] = useState<Entry | null>(null);
+  const requestId = useRef(0);
   const xp = xpFor(progress),
     completed = lessons.filter((l) => progress.completed.includes(l.id)).length;
   async function refresh() {
     if (!supabase) return;
-    const [ranking, mine] = await Promise.all([
-      supabase
-        .from("cq_leaderboard")
-        .select("user_id,nickname,avatar,xp,completed")
-        .eq("visible", true)
-        .order("xp", { ascending: false })
-        .order("completed", { ascending: false })
-        .order("user_id")
-        .limit(50),
-      user
-        ? supabase
-            .from("cq_leaderboard")
-            .select("visible")
-            .eq("user_id", user.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null, error: null }),
-    ]);
-    if (ranking.error) throw ranking.error;
-    if (mine.error) throw mine.error;
-    setRows(ranking.data || []);
-    setJoined(mine.data?.visible === true);
+    const request = ++requestId.current;
+    setLoading(true);
+    try {
+      const [ranking, mine, position] = await Promise.all([
+        supabase
+          .from("cq_rankings")
+          .select(
+            "user_id,nickname,avatar,xp,completed,rank,position,xp_ahead",
+            { count: "exact" },
+          )
+          .order("xp", { ascending: false })
+          .order("completed", { ascending: false })
+          .order("user_id")
+          .range(page * 25, page * 25 + 24),
+        user
+          ? supabase
+              .from("cq_leaderboard")
+              .select("visible")
+              .eq("user_id", user.id)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        user
+          ? supabase
+              .from("cq_rankings")
+              .select(
+                "user_id,nickname,avatar,xp,completed,rank,position,xp_ahead",
+              )
+              .eq("user_id", user.id)
+              .maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+      ]);
+      if (request !== requestId.current) return;
+      if (!mine.error) setJoined(mine.data?.visible === true);
+      if (ranking.error) throw ranking.error;
+      if (mine.error) throw mine.error;
+      if (position.error) throw position.error;
+      if (request !== requestId.current) return;
+      setMineRank(position.data);
+      setTotal(ranking.count ?? (ranking.data || []).length);
+      setRows(ranking.data || []);
+      setJoined(mine.data?.visible === true);
+    } finally {
+      if (request === requestId.current) setLoading(false);
+    }
   }
   useEffect(() => {
     let active = true;
@@ -56,8 +87,9 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
     });
     return () => {
       active = false;
+      requestId.current++;
     };
-  }, [user?.id]);
+  }, [user?.id, page]);
   async function publish(visible: boolean) {
     if (!supabase || !user || busy) return;
     setBusy(true);
@@ -71,19 +103,17 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
         return;
       }
       const result = visible
-        ? await supabase
-            .from("cq_leaderboard")
-            .upsert(
-              {
-                user_id: user.id,
-                nickname,
-                avatar: progress.settings.avatar,
-                xp: Math.min(100000, xp),
-                completed,
-                visible: true,
-              },
-              { onConflict: "user_id" },
-            )
+        ? await supabase.from("cq_leaderboard").upsert(
+            {
+              user_id: user.id,
+              nickname,
+              avatar: progress.settings.avatar,
+              xp: Math.min(100000, Math.max(xp, mineRank?.xp || 0)),
+              completed: Math.max(completed, mineRank?.completed || 0),
+              visible: true,
+            },
+            { onConflict: "user_id" },
+          )
         : await supabase.from("cq_leaderboard").delete().eq("user_id", user.id);
       if (result.error) throw result.error;
       await refresh();
@@ -100,6 +130,11 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
       setBusy(false);
     }
   }
+  useEffect(() => {
+    if (!joined || !mineRank || busy || xp <= mineRank.xp) return;
+    const timer = setTimeout(() => void publish(true), 800);
+    return () => clearTimeout(timer);
+  }, [joined, mineRank?.xp, xp, busy]);
   const badges = [
     { xp: 100, title: "First spark", emoji: "⚡" },
     { xp: 500, title: "Bug hunter", emoji: "🐛" },
@@ -115,44 +150,39 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
           <p>Celebrate practice XP with your fellow builders.</p>
         </div>
       </div>
+
       <article className="settings-card">
-        <div className="profile-preview">
-          <ProfileAvatar value={progress.settings.avatar} />
-          <div>
-            <h2>
-              {progress.settings.nickname ||
-                progress.settings.name ||
-                "Your adventure"}
-            </h2>
-            <b>
-              {xp} XP · {completed}/21 lessons · {progress.settings.level} path
-            </b>
-          </div>
-        </div>
-        <div className="reward-badges">
-          {badges.map((b) => (
-            <div key={b.title} className={xp >= b.xp ? "earned" : ""}>
-              <span>{b.emoji}</span>
-              <b>{b.title}</b>
-              <small>
-                {xp >= b.xp
-                  ? "Unlocked"
-                  : `${Math.max(0, b.xp - xp)} XP to unlock`}
-              </small>
-            </div>
-          ))}
-        </div>
+        <h2>Community rankings</h2>
         <p>
-          Earn XP from lesson steps and workshop quests. Badges unlock at 100,
-          500, 1,500 and 3,000 XP.
+          Every participating player has a place on the board. Browse all pages;
+          tied scores share a rank.
         </p>
-      </article>
-      <article className="settings-card">
-        <h2>Community top 50</h2>
+        {mineRank && (
+          <div className="rank-summary">
+            <strong>Your rank: #{mineRank.rank}</strong>
+            <span>
+              {mineRank.xp} published XP · {total} players
+            </span>
+            <span>
+              {mineRank.xp_ahead === null
+                ? "You are leading the board!"
+                : `${Math.max(1, (mineRank.xp_ahead ?? mineRank.xp) - mineRank.xp + 1)} XP to pass the next player`}
+            </span>
+            <button
+              onClick={() =>
+                setPage(Math.floor((Number(mineRank.position) - 1) / 25))
+              }
+              disabled={busy || loading}
+            >
+              Find my rank
+            </button>
+          </div>
+        )}
         <p>
           Joining makes your nickname, selected photo/avatar, practice XP and
-          lesson count public. Email and private code stay private. Scores are
-          self-study progress, not verified exam marks.
+          lesson count public. Your best XP updates when you visit this board.
+          Email and private code stay private. Scores are self-study progress,
+          not verified exam marks.
         </p>
         {!supabase ? (
           <p>
@@ -193,18 +223,40 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
           </button>
         )}
         <p role="status">{message}</p>
-        {rows.length ? (
+        {!loading && page === 0 && rows.length > 0 && (
+          <div className="rank-podium" aria-label="Top three players">
+            {rows
+              .filter((r) => Number(r.position) <= 3)
+              .map((r) => (
+                <div key={r.user_id}>
+                  <span>{["🏆", "🥈", "🥉"][Number(r.position) - 1]}</span>
+                  <ProfileAvatar value={r.avatar} />
+                  <b>{r.nickname}</b>
+                  <strong>{r.xp} XP</strong>
+                </div>
+              ))}
+          </div>
+        )}
+        {loading ? (
+          <p role="status">Loading player rankings…</p>
+        ) : rows.length ? (
           <ol className="leaderboard-list">
             {rows.map((r, i) => (
               <li
                 key={r.user_id}
                 className={r.user_id === user?.id ? "is-you" : ""}
               >
-                <b>#{i + 1}</b>
+                <b>#{r.rank ?? page * 25 + i + 1}</b>
                 <ProfileAvatar value={r.avatar} />
                 <span>
                   {r.nickname}
                   {r.user_id === user?.id ? " · You" : ""}
+                  {r.position && r.position <= 3
+                    ? " · " +
+                      ["🏆 Champion", "🥈 Trailblazer", "🥉 Rising star"][
+                        r.position - 1
+                      ]
+                    : ""}
                   <small>{r.completed}/21 lessons complete</small>
                 </span>
                 <strong>{r.xp} XP</strong>
@@ -213,9 +265,63 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
           </ol>
         ) : (
           <p>
-            No published scores to show yet. Be the first builder on the board.
+            {supabase
+              ? "No public players to show on this page yet."
+              : "Connect the account service to see real students here. No example players or invented ranks are shown."}
           </p>
         )}
+        {total > 25 && (
+          <nav className="rank-pagination" aria-label="Leaderboard pages">
+            <button
+              disabled={page === 0 || loading || busy}
+              onClick={() => setPage((p) => p - 1)}
+            >
+              Previous players
+            </button>
+            <span>
+              Page {page + 1} of {Math.ceil(total / 25)} · {total} players
+            </span>
+            <button
+              disabled={(page + 1) * 25 >= total || loading || busy}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next players
+            </button>
+          </nav>
+        )}
+        <a href="#challenges">Earn your next XP in a code challenge →</a>
+      </article>
+      <article className="settings-card">
+        <div className="profile-preview">
+          <ProfileAvatar value={progress.settings.avatar} />
+          <div>
+            <h2>
+              {progress.settings.nickname ||
+                progress.settings.name ||
+                "Your adventure"}
+            </h2>
+            <b>
+              {xp} XP · {completed}/21 lessons · {progress.settings.level} path
+            </b>
+          </div>
+        </div>
+        <div className="reward-badges">
+          {badges.map((b) => (
+            <div key={b.title} className={xp >= b.xp ? "earned" : ""}>
+              <span>{b.emoji}</span>
+              <b>{b.title}</b>
+              <small>
+                {xp >= b.xp
+                  ? "Unlocked"
+                  : `${Math.max(0, b.xp - xp)} XP to unlock`}
+              </small>
+            </div>
+          ))}
+        </div>
+        <p>
+          Earn XP from lesson steps and workshop quests. Badges unlock at 100,
+          500, 1,500 and 3,000 XP.
+        </p>
       </article>
     </section>
   );
