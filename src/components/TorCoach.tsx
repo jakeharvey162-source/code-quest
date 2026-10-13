@@ -306,6 +306,7 @@ export default function TorCoach({
     () => readText("cq-tor-roam", "true") === "true",
   );
   const movement = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const manualMoveUntil = useRef(0);
   const box = useRef<HTMLElement>(null);
   const drag = useRef<{
     x: number;
@@ -315,9 +316,11 @@ export default function TorCoach({
   } | null>(null);
   function move(x: number, y: number) {
     const rect = box.current?.getBoundingClientRect();
+    const maxY = Math.max(8, innerHeight - (rect?.height || 160) - 8);
+    const minY = Math.min(maxY, (document.querySelector(".app-header")?.getBoundingClientRect().bottom || 0) + 8);
     const p = {
       x: Math.max(8, Math.min(x, innerWidth - (rect?.width || 130) - 8)),
-      y: Math.max(8, Math.min(y, innerHeight - (rect?.height || 160) - 8)),
+      y: Math.max(minY, Math.min(y, maxY)),
     };
     setPosition(p);
     writeText("cq-tor-position", JSON.stringify(p));
@@ -339,8 +342,14 @@ export default function TorCoach({
       target = 0,
       top = 0;
     const walk = (time: number) => {
-      if (!box.current || document.hidden || drag.current) {
+      if (!box.current || document.hidden) {
         setMoving(false);
+        return;
+      }
+      if (drag.current || Date.now() < manualMoveUntil.current) {
+        setMoving(false);
+        start = 0;
+        movement.current = setTimeout(() => { frame = requestAnimationFrame(walk); }, Math.max(1000, manualMoveUntil.current - Date.now()));
         return;
       }
       if (!start) {
@@ -468,6 +477,7 @@ export default function TorCoach({
         title="Drag to move. Arrow keys move 16 pixels."
         onPointerDown={(e) => {
           if (e.button !== 0) return;
+          manualMoveUntil.current = Date.now() + 15000;
           const r = box.current!.getBoundingClientRect();
           drag.current = {
             x: e.clientX,
@@ -496,6 +506,7 @@ export default function TorCoach({
           };
           if (delta[e.key]) {
             e.preventDefault();
+            manualMoveUntil.current = Date.now() + 15000;
             const r = box.current!.getBoundingClientRect();
             move(r.left + delta[e.key][0], r.top + delta[e.key][1]);
           }

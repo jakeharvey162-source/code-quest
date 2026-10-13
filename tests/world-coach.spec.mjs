@@ -1,5 +1,10 @@
 import { test, expect } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+test('manual Tor movement takes priority over an automatic walk and stays below the toolbar',async({page})=>{
+ await page.goto('/#home');const tor=page.getByRole('complementary',{name:'Tor hologram tutor'});await expect(tor).toBeVisible();await page.waitForTimeout(12500);
+ const before=await tor.evaluate(el=>el.getBoundingClientRect().top);await page.getByRole('button',{name:'Move Tor hologram',exact:true}).press('ArrowUp');await page.waitForTimeout(500);
+ const after=await tor.evaluate(el=>el.getBoundingClientRect().top);expect(after).toBeLessThanOrEqual(before-15);expect(after).toBeGreaterThanOrEqual(await page.locator('.app-header').evaluate(el=>el.getBoundingClientRect().bottom));
+});
 test('World owns the learning path, lessons stay focused and Tor explains simply',async({page})=>{
  await page.goto('/#home');await expect(page.getByRole('region',{name:'Easy to pro learning path'})).toHaveCount(1);
  await page.goto('/#learn');await expect(page.getByRole('heading',{name:'Build a little. Learn a lot.'})).toBeVisible();await expect(page.getByRole('region',{name:'Easy to pro learning path'})).toHaveCount(0);
