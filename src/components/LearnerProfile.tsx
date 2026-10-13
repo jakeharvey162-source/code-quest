@@ -20,7 +20,7 @@ export default function LearnerProfile({
     [message, setMessage] = useState("");
   const uploadVersion = useRef(0);
   useEffect(() => {
-    const m = user?.user_metadata;
+    const m = user?.user_metadata?.cq_profile;
     setName(
       typeof m?.display_name === "string"
         ? m.display_name.slice(0, 60)
@@ -44,11 +44,11 @@ export default function LearnerProfile({
       const profile = { name: name.trim(), nickname: nickname.trim(), avatar };
       if (user && supabase) {
         const { error } = await supabase.auth.updateUser({
-          data: {
+          data: { cq_profile: {
             display_name: profile.name,
             nickname: profile.nickname,
             avatar,
-          },
+          } },
         });
         if (error) throw error;
       }

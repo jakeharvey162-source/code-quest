@@ -1,9 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
-const url = import.meta.env.VITE_SUPABASE_URL?.trim();
-const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim();
+import { cloudConfig } from "./cloud-config";
+const url = import.meta.env.VITE_SUPABASE_URL?.trim() || cloudConfig.url;
+const key = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY?.trim() || cloudConfig.publishableKey;
 let configurationError = "";
 function configuredClient() {
-  if (!url || !key) return null;
+  if (import.meta.env.VITE_SUPABASE_DISABLED === "true" || !url || !key) return null;
   try {
     return createClient(url, key, {
       auth: {

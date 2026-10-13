@@ -1,3 +1,4 @@
+import { explainProblem } from "./tor-summary.mjs";
 export function observationReply(now, before) {
   if (!before || now.page !== before.page) return null;
   if (
@@ -6,7 +7,7 @@ export function observationReply(now, before) {
   )
     return {
       mood: "concerned",
-      text: `I saw the run hit a problem: ${now.output}. Check the first error before changing anything else.`,
+      text: explainProblem(now.output),
       roast:
         "Your button called for backup and nobody answered. Let's fix the wiring.",
     };
@@ -19,7 +20,7 @@ export function observationReply(now, before) {
   if (now.output !== before.output && /executed\./.test(now.output))
     return {
       mood: "happy",
-      text: `Your C# handler ran: ${now.output}. Try an empty input and an invalid number next. Passing one example is only the start.`,
+      text: "Your button's code ran. Try an empty input and an invalid number next. Passing one example is only the start.",
       roast: "Okay, that code cooked. Now test the awkward inputs.",
     };
   if (now.controls > before.controls)

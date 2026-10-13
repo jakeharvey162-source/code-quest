@@ -83,11 +83,11 @@ export default function Account({
           ? await supabase.auth.signUp({
               email,
               password,
-              options: { emailRedirectTo: authRedirect(), data: {
+              options: { emailRedirectTo: authRedirect(), data: { cq_profile: {
                 display_name: progress.settings.name,
                 nickname: progress.settings.nickname,
                 avatar: progress.settings.avatar,
-              } },
+              } } },
             })
           : mode === "reset"
             ? await supabase.auth.resetPasswordForEmail(email, {

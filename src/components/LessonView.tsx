@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import CodeEditor from "./CodeEditor";
 import { VoiceControls } from "./VoiceControls";
+import { lessonSummary } from "../lib/tor-summary.mjs";
 import { runCSharp, cancelRun } from "../lib/compiler";
 import { completeStep } from "../lib/progress";
 import type { Progress } from "../lib/progress";
@@ -293,21 +294,11 @@ export default function LessonView({
                 : "You’ve got this."}
           </h2>
           <p>
-            {stage === 4
-              ? "Transfer the idea to this new task. Use the tests to check your understanding."
-              : lesson.concept}
+            {lessonSummary(lesson.id, stage, feedback)}
           </p>
           <VoiceControls
             settings={progress.settings}
-            text={
-              (stage === 1
-                ? lesson.prediction!.question
-                : stage > 1
-                  ? challenge!.task
-                  : lesson.concept) +
-              " " +
-              feedback
-            }
+            text={lessonSummary(lesson.id, stage, feedback)}
           />
           {stage > 1 && (
             <>

@@ -12,6 +12,7 @@ import {
 } from "../lib/coach-observation.mjs";
 import { useVoices } from "./VoiceControls";
 import {chooseTorReaction,reactionLine} from "../lib/tor-performance.mjs";
+import { lessonSummary, workspaceSummary } from "../lib/tor-summary.mjs";
 const TorAvatar = lazy(() => import("./TorAvatar"));
 const tips: Record<string, string> = {
   designer:
@@ -45,10 +46,12 @@ export default function TorCoach({
   page,
   settings,
   onNavigate,
+  lessonId,
 }: {
   page: string;
   settings: Settings;
   onNavigate: (page: string) => void;
+  lessonId?: string;
 }) {
   const [open, setOpen] = useState(false);
   const [presence,setPresence]=useState<"visible"|"departing"|"hidden"|"arriving">("visible");
@@ -81,6 +84,7 @@ export default function TorCoach({
   );
   const previousObservation = useRef<WorkspaceObservation | null>(null);
   const lastRequest = useRef(0);
+  const lastProactive = useRef(0);
   const personalityTurn = useRef(0);
   const [accent, setAccent] = useState(() =>
     readText("cq-tor-accent", "en-ZA"),
@@ -141,6 +145,10 @@ export default function TorCoach({
     pendingAction.current?.abort();
     const request = cleanCoachRequest(text);
     if (!request) return;
+    if (/\b(summari[sz]e|summary|simpler|simply|break it down|what.*next)\b/i.test(request)) {
+      respond(teachingLanguage !== "en-ZA" ? localizedFallback(teachingLanguage) : lessonId ? lessonSummary(lessonId) : workspaceSummary(observation, page));
+      return;
+    }
     if (/^(?:tor[, ]+)?(?:get out|go away|disappear|hide|take a break)[.!?]*$/i.test(request)) {
       portal("dismiss");return;
     }
@@ -198,7 +206,7 @@ export default function TorCoach({
       observation
     ) {
       respond(
-        `${describeObservation(observation)}. ${observation.output ? `Latest output: ${observation.output}. ` : ""}${observation.issues.length ? `Check: ${observation.issues.join(" ")}` : "Your control properties are valid. Run the app and test the inputs."}`,
+        workspaceSummary(observation, page),
       );
       return;
     }
@@ -404,10 +412,12 @@ export default function TorCoach({
         !reaction ||
         listening ||
         pendingAction.current ||
+        Date.now() - lastProactive.current < 8000 ||
         Date.now() - lastRequest.current < 2000
       )
         return;
       const text = roast ? `${reaction.roast} ${reaction.text}` : reaction.text;
+      lastProactive.current = Date.now();
       setMood(reaction.mood);
       const performance=chooseTorReaction(reaction.mood==="happy"?"celebrate":reaction.mood==="concerned"?"nope":"wow");
       setGestureClip(performance.clip);
@@ -604,6 +614,7 @@ export default function TorCoach({
             <button type="button" onClick={()=>react("nope")} aria-label="Make Tor act shocked">!? Plot twist</button>
           </div>
           <div className="tor-quick-quests" aria-label="Tor fun learning shortcuts">
+            <button type="button" onClick={() => void ask("Explain this simply")}>Explain simply</button>
             <button type="button" onClick={() => void ask("Roast my code")}>Roast my code</button>
             <button type="button" onClick={() => void ask("Challenge me")}>Give me a challenge</button>
           </div>

@@ -165,16 +165,17 @@ function App() {
     [updateReady, setUpdateReady] = useState<ServiceWorker | null>(null);
   const [questNotice, setQuestNotice] = useState("");
   useEffect(()=>{
-    const m=user?.user_metadata;
+    const m=user?.user_metadata?.cq_profile;
     if(!m)return;
     setProgress(p=>({...p,settings:{...p.settings,
       ...(typeof m.display_name==="string"?{name:m.display_name.slice(0,60)}:{}),
       ...(typeof m.nickname==="string"?{nickname:m.nickname.slice(0,32)}:{}),
       ...(validAvatar(m.avatar)?{avatar:m.avatar}:{})}}));
-  },[user?.id,user?.user_metadata?.display_name,user?.user_metadata?.nickname,user?.user_metadata?.avatar]);
+  },[user?.id,user?.user_metadata?.cq_profile]);
   useEffect(() => {
     document.documentElement.dataset.theme = progress.settings.theme || "light";
-  }, [progress.settings.theme]);
+    document.documentElement.dataset.motion = progress.settings.reducedMotion ? "reduced" : "normal";
+  }, [progress.settings.theme, progress.settings.reducedMotion]);
   useEffect(() => {
     const earned = (e: Event) => {
       const quest = workshopQuests.find(
@@ -439,7 +440,6 @@ function App() {
                       .
                     </span>
                   </div>
-                  <LearningPath progress={progress} update={update}/>
                   <div className="home-hero">
                     <div className="hero-copy">
                       <h1>
@@ -487,6 +487,7 @@ function App() {
                       </span>
                     </div>
                   </div>
+                  <LearningPath progress={progress} update={update}/>
                   <div className="world-section-heading">
                     <div>
                       <p className="eyebrow">CHOOSE YOUR NEIGHBOURHOOD</p>
@@ -603,7 +604,7 @@ function App() {
                       />
                     </label>
                   </div>
-                  <LearningPath progress={progress} update={update}/>
+                  <p className="library-path-link"><a href="#home">Choose your learning level in World →</a></p>
                   <div className="filter-tabs">
                     {[{ id: "all", name: "All quests" }, ...tracks].map((t) => (
                       <button
@@ -717,6 +718,7 @@ function App() {
           </ErrorBoundary>
         </main>
         <TorCoach
+          lessonId={selectedLesson?.id}
           page={page}
           settings={{...progress.settings,name:progress.settings.nickname||progress.settings.name}}
           onNavigate={navigate}

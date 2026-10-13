@@ -17,15 +17,15 @@ export default function LearningPath({
   return (
     <section className="learning-path" aria-label="Easy to pro learning path">
       <div>
-        <p className="eyebrow">YOUR ROAD TO A WORKING WINDOWS APP</p>
-        <h2>Easy → Intermediate → Advanced → Pro</h2>
+        <p className="eyebrow">YOUR LEARNING PATH</p>
+        <h2>One milestone at a time.</h2>
         <p>
-          Choose your starting point. Every level stays open; your work and XP
-          carry forward.
+          Start where you feel comfortable. Build your skills, then ship a Windows app.
+          Switch levels anytime; your progress stays saved.
         </p>
       </div>
       <div className="level-cards">
-        {learningLevels.map((l) => (
+        {learningLevels.map((l, index) => (
           <button
             key={l.id}
             aria-pressed={l.id === current.id}
@@ -36,6 +36,7 @@ export default function LearningPath({
               }))
             }
           >
+            <span className="level-step" aria-hidden="true">0{index + 1}</span>
             <strong>{l.title}</strong>
             <span>{l.subtitle}</span>
             <small>
@@ -43,10 +44,12 @@ export default function LearningPath({
                 ? "3 system projects"
                 : `${progress.completed.filter((id) => (l.ids as readonly string[]).includes(id)).length}/${l.ids.length} quests complete`}
             </small>
+            {l.id !== "pro" && <span className="level-progress" aria-hidden="true"><span style={{ width: `${100 * progress.completed.filter((id) => (l.ids as readonly string[]).includes(id)).length / l.ids.length}%` }} /></span>}
           </button>
         ))}
       </div>
-      <p>{current.description}</p>
+      <div className="path-next-step">
+      <p><strong>{current.title}: your next step</strong><br />{current.description}</p>
       <button
         className="primary"
         onClick={() => {
@@ -66,6 +69,7 @@ export default function LearningPath({
       </button>
       <a href="#challenges">Try a code challenge →</a>
       <a href="#leaderboard">View leaderboard and badges →</a>
+      </div>
     </section>
   );
 }

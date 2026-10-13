@@ -3251,3 +3251,52 @@ button.primary:active {
 .challenge-layout{display:grid;grid-template-columns:245px minmax(0,1fr);gap:24px}.challenge-picker{display:flex;flex-direction:column;gap:10px;align-self:start}.challenge-picker button{text-align:left;padding:16px;border-radius:12px;display:flex;flex-direction:column;gap:8px}.challenge-picker button[aria-pressed=true]{border:2px solid #248269}.challenge-picker label{display:flex;flex-direction:column;gap:8px}.challenge-workspace{min-width:0}.challenge-brief{padding:24px;background:var(--paper);border:1px solid var(--line);border-radius:16px;margin-bottom:16px}.challenge-brief code{display:block;white-space:pre-wrap;overflow-wrap:anywhere;margin:16px 0}.challenge-hint{padding:14px;border-left:3px solid #248269}.challenge-results{list-style:none;padding:0;display:grid;gap:10px}.challenge-results li{display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid var(--line);border-radius:12px;overflow-wrap:anywhere}.challenge-results code{white-space:pre-wrap}.rank-summary{display:flex;gap:16px;align-items:center;flex-wrap:wrap;padding:16px;border:1px solid var(--line);border-radius:12px;margin:16px 0}.rank-pagination{display:flex;gap:16px;justify-content:center;align-items:center;flex-wrap:wrap;margin:20px 0}.challenge-page textarea,.playground-page>label textarea{width:100%;max-width:100%}@media(max-width:800px){.challenge-layout{grid-template-columns:1fr}.challenge-picker{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.challenge-picker label{grid-column:1/-1}.challenge-picker button{padding:12px}.challenge-brief{padding:16px}.rank-summary{gap:10px}}
 
 .rank-podium{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}.rank-podium>div{display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px;background:var(--paper);border:1px solid var(--line);border-radius:14px;overflow-wrap:anywhere;text-align:center}.rank-podium>div>span{font-size:24px}.rank-podium img{width:40px;height:40px;object-fit:cover;border-radius:50%}@media(max-width:500px){.rank-podium{gap:6px}.rank-podium>div{padding:10px 6px;font-size:12px}}
+
+/* World owns the learning path; lesson pages stay focused on their task. */
+.learning-path{background:var(--surface);border-color:var(--line);padding:28px!important;margin:0 0 32px}
+.learning-path h2{font-size:clamp(22px,2.4vw,30px);margin:6px 0 10px}
+.learning-path>div:first-child>p:last-child{max-width:680px;color:var(--muted);line-height:1.6}
+.level-cards{gap:14px;margin:24px 0}
+.level-cards button{position:relative;align-items:stretch;justify-content:flex-start;min-height:172px;padding:20px;background:var(--paper);border-color:var(--line);color:var(--ink);line-height:1.45}
+.level-cards button:hover{border-color:#248269;transform:translateY(-2px)}
+.level-cards button[aria-pressed=true]{box-shadow:0 0 0 1px #248269}
+.level-cards .level-step{font:700 12px Consolas,monospace;letter-spacing:2px;color:var(--muted)}
+.level-cards small{color:inherit;margin-top:auto}
+.level-progress{display:block;height:5px;border-radius:20px;overflow:hidden;background:#acbdb6;margin-top:8px}
+.level-progress>span{display:block;height:100%;background:#17624d;border-radius:20px}
+.path-next-step{display:flex;align-items:center;gap:18px;flex-wrap:wrap;padding-top:20px;border-top:1px solid var(--line)}
+.path-next-step p{flex:1 1 100%;line-height:1.65;margin-bottom:0;max-width:880px}
+.path-next-step a,.library-path-link a{font-size:13px;font-weight:600;text-underline-offset:4px}
+.library-path-link{margin-bottom:20px}
+html{scroll-padding-top:84px;scroll-behavior:smooth}
+#content{scroll-margin-top:84px}
+.app-sidebar,.toolbox,.properties-panel,.tor-panel{overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#718c80 transparent}
+.tor-panel button{color:#ecfcff;background:#123c4b;border-color:#7197a6}
+.tor-panel button:hover{background:#245566}
+.tor-panel .tor-reply{color:#ecfcff;line-height:1.65;max-height:190px}
+[data-theme=dark]{--card:var(--surface);--border:var(--line)}
+[data-theme=dark] :is(.home-footer-card,.hero-details,.learning-path,.challenge-brief,.challenge-results li,.rank-summary,.rank-podium>div,.build-panel,.hint,.prediction-card,.question-card,.quiz-option,.voice-controls){color:var(--ink);border-color:var(--line)}
+[data-theme=dark] :is(.home-footer-card,.hint,.prediction-card,.question-card,.quiz-option){background:var(--surface)}
+[data-theme=dark] .level-cards button{background:#182733;color:#e5f0f5;border-color:#67818e}
+[data-theme=dark] .level-cards button[aria-pressed=true]{background:#173f35;color:#d7ffee;border-color:#78d5b7}
+[data-theme=dark] .level-cards .level-step{color:#c5d5df}
+[data-theme=dark] .level-progress{background:#53706c}
+[data-theme=dark] .level-progress>span{background:#78d5b7}
+[data-theme=dark] :is(.district small,.district p,.district-progress span,.hero-details,.welcome-line span,.lesson-row small,.lesson-meta,.stage-progress,.stage-label){color:#c5d5df}
+[data-theme=dark] .district-number{color:#f7e8b0}
+[data-theme=dark] :is(.hero-copy em,.home-footer-card h3,.text-button,.filter-tabs button.active){color:#ffd875}
+[data-theme=dark] .filter-tabs button.active{background:#283d48}
+[data-theme=dark] :is(.lesson-stage button,.quiz-options button,.choice-option){color:var(--ink);border-color:#718896}
+[data-theme=dark] :is(.lesson-stage button[aria-pressed=true],.quiz-options button[aria-pressed=true]){background:#244a40;color:#d7ffee}
+[data-theme=dark] :is(.run-feedback.success,.feedback.correct){background:#183f35;color:#c3ffdc}
+[data-theme=dark] :is(.run-feedback.error,.feedback.incorrect){background:#462c2d;color:#ffe0d9}
+[data-theme=dark] :is(input,textarea)::placeholder{color:#adbfc9;opacity:1}
+[data-theme=dark] :is(button,a,input,textarea,select):focus-visible{outline-color:#ffd875}
+@media(max-width:700px){.learning-path{padding:18px!important}.level-cards button{min-height:150px;padding:14px}.path-next-step{gap:14px}.path-next-step .primary{width:100%}.path-next-step a{flex:1 1 100%}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.level-cards button:hover{transform:none}}
+.reduce-motion{scroll-behavior:auto!important}.reduce-motion .level-cards button:hover{transform:none}
+[data-theme=dark] :is(.map-sticker,.district-number,.lesson-stages>.active){color:#182c27}
+[data-theme=dark] .map-pin{background:#fff9e6;color:#203b2e}
+[data-theme=dark] .map-pin:hover{background:#f8e7b9;color:#203b2e}
+[data-theme=dark] .worked-example{background:var(--surface);color:var(--ink);border-color:var(--line)}
+html[data-motion=reduced]{scroll-behavior:auto!important}
