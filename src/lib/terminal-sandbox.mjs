@@ -79,7 +79,7 @@ function turtleFrame(code,token,origin){
   'Sk.configure({output:text=>window.__cqSend("log",text),read:filename=>{',
   'if(!Sk.builtinFiles||!Sk.builtinFiles.files[filename])throw Error("Python library not found: "+filename);',
   'return Sk.builtinFiles.files[filename];},__future__:Sk.python3});',
-  '(Sk.TurtleGraphics||(Sk.TurtleGraphics={})).target="mycanvas";',
+  'Object.assign(Sk.TurtleGraphics||(Sk.TurtleGraphics={}),{target:"mycanvas",width:Math.max(1,innerWidth),height:Math.max(1,innerHeight),worldWidth:480,worldHeight:480});',
   'Sk.misceval.asyncToPromise(()=>Sk.importMainWithBody("<stdin>",false,'+JSON.stringify(code)+',true))',
   '.then(()=>window.__cqSend("done","Python Turtle drawing finished."),',
   'err=>window.__cqSend("fatal",String(err)));',
