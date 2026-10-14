@@ -35,7 +35,7 @@ import LearningPath from "./components/LearningPath";
 import ProfileAvatar from "./components/ProfileAvatar";
 import { validAvatar } from "./lib/profile";
 import CityMap from "./components/CityMap";
-import TorCoach from "./components/TorCoach";
+const TorCoach = lazy(() => import("./components/TorCoach"));
 import { VoiceControls } from "./components/VoiceControls";
 import { reloadLatestWorkspace } from "./lib/workspace-recovery";
 import AuthProvider, { useAuth } from "./components/AuthProvider";
@@ -198,6 +198,10 @@ function App() {
   }, []);
   const [page, lessonId] = route.split("/");
   const selectedLesson = lessons.find((l) => l.id === lessonId);
+  useEffect(() => {
+    const title = selectedLesson?.title || navigation.find(item => item.id === page)?.title || "Explore";
+    document.title = `${title} · CodeQuest`;
+  }, [page, selectedLesson?.title]);
   const xp = xpFor(progress),
     streak = streakFor(progress.activity);
   const next =
@@ -327,13 +331,7 @@ function App() {
             <br />
             Rooted in Africa. Open to everyone.
           </p>
-          <a
-            href="https://github.com/jakeharvey162-source/code-quest"
-            target="_blank"
-            rel="noreferrer"
-          >
-            Open source ↗
-          </a>
+
         </div>
       </aside>
       <div className="main-column">
@@ -717,12 +715,14 @@ function App() {
             </Suspense>
           </ErrorBoundary>
         </main>
+        <Suspense fallback={null}>
         <TorCoach
           lessonId={selectedLesson?.id}
           page={page}
           settings={{...progress.settings,name:progress.settings.nickname||progress.settings.name}}
           onNavigate={navigate}
         />
+        </Suspense>
         <footer className="app-footer">
           <span>CodeQuest / Built for understanding.</span>
           <span>
@@ -861,7 +861,9 @@ function SessionApp() {
   return <App key={user?.id || "guest"} />;
 }
 createRoot(document.getElementById("root")!).render(
-  <AuthProvider>
-    <SessionApp />
-  </AuthProvider>,
+  <ErrorBoundary>
+    <AuthProvider>
+      <SessionApp />
+    </AuthProvider>
+  </ErrorBoundary>,
 );

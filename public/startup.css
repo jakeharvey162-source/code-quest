@@ -1,0 +1,11 @@
+body { margin: 0; }
+.startup { box-sizing: border-box; min-height: 100svh; padding: 48px 24px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; background: #101b16; color: #f1f7ed; font-family: system-ui, sans-serif; }
+.startup h1 { font-size: clamp(1.6rem, 5vw, 2.5rem); max-width: 24ch; }
+.startup p { max-width: 48ch; line-height: 1.6; color: #c8d7cc; }
+.startup-mark { color: #aee5b2; font-size: 3rem; font-weight: 800; }
+.startup-track { width: min(240px, 80vw); height: 4px; background: #35483c; overflow: hidden; border-radius: 4px; }
+.startup-track span { display: block; width: 45%; height: 100%; background: #aee5b2; animation: startup-slide 1.6s ease-in-out infinite alternate; }
+.startup button { min-height: 44px; padding: 12px 20px; border: 0; border-radius: 10px; background: #aee5b2; color: #101b16; font: inherit; font-weight: 700; cursor: pointer; }
+.startup button:focus-visible { outline: 3px solid white; outline-offset: 4px; }
+@keyframes startup-slide { to { transform: translateX(125%); } }
+@media (prefers-reduced-motion: reduce) { .startup-track span { animation: none; width: 100%; } }

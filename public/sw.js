@@ -12,6 +12,8 @@ self.addEventListener("install", (event) =>
       await cache.addAll([
         "/",
         "/index.html",
+        "/startup.css",
+        "/startup.js",
         "/terminal-frame.html",
         "/terminal-frame.js",
         "/manifest.webmanifest",

@@ -8,13 +8,33 @@
       name="description"
       content="Learn C#, WinForms and OOP through 21 free interactive quests. Compile real C#, build forms and make the idea yours."
     />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="CodeQuest — Make code yours" />
+    <meta property="og:description" content="Free C#, WinForms and OOP quests, a real code terminal, and Tor, your coding companion." />
+    <meta property="og:image" content="https://code-quest-tau-woad.vercel.app/icon-512.png" />
+    <meta property="og:url" content="https://code-quest-tau-woad.vercel.app/" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="stylesheet" href="/startup.css" />
+    <script defer src="/startup.js"></script>
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="icon" href="/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <title>CodeQuest — Build your understanding</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <main class="startup" aria-labelledby="startup-title">
+        <span class="startup-mark" aria-hidden="true">cq+</span>
+        <h1 id="startup-title">Your next adventure is loading.</h1>
+        <p id="startup-message" role="status">Getting CodeQuest ready. One idea at a time.</p>
+        <div class="startup-track" aria-hidden="true"><span></span></div>
+        <div id="startup-recovery" hidden>
+          <p>Your saved progress stays on this device. Check your connection, then try again.</p>
+          <button id="startup-retry" type="button">Try loading again</button>
+        </div>
+        <noscript><p>CodeQuest needs JavaScript to run its interactive lessons and compiler. Enable JavaScript in your browser, then reload.</p></noscript>
+      </main>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

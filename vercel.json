@@ -67,11 +67,26 @@
           "value": "public, max-age=86400"
         }
       ]
+    },
+    {
+      "source": "/index.html",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-cache"
+        }
+      ]
     }
   ],
   "functions": {
     "api/voice.mjs": {
       "maxDuration": 60
     }
-  }
+  },
+  "rewrites": [
+    {
+      "source": "/:page(home|dashboard|login|account|learn|lessons|challenges|videos|playground|terminal|designer|winforms|assessment|leaderboard|progress|settings|classes)/:path*",
+      "destination": "/index.html"
+    }
+  ]
 }
