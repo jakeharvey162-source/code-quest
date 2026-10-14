@@ -48,7 +48,9 @@ export function workspaceSummary(now, page = "home") {
   if (now.page === "designer") {
     if (now.mode === "Running Form1") return "Your form is running. Try a normal value, an empty value and an invalid value; each should get a sensible response.";
     if (!now.controls) return "Start with a textbox for input, a button for the action and a label for the answer. Connect the button's Click event, then test it.";
-    if (/label|lbl/i.test(now.selected)) return "This label is your app's answer area. Text is the message people see; Name is the reference your code uses. Update its Text inside the button's Click event.";
+    const selected = String(now.selected || "").slice(0,80);
+    const caption = now.caption ? ` It displays “${String(now.caption).slice(0,120)}”.` : "";
+    if (/label|lbl/i.test(now.selected)) return `Selected ${selected}.${caption} This label is your app's answer area. Text is the message people see; Name is the reference your code uses. Update its Text inside the button's Click event.`;
     if (/button|btn/i.test(now.selected)) return "Give this button one clear job. In its Click event, validate the input, do the calculation, then show the result.";
     return "Think input → action → result. Give each control one job, connect an event, then test both valid and invalid input.";
   }

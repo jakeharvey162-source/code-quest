@@ -11,16 +11,19 @@ import type { UpdateProgress } from "./LessonView";
 export default function CodeChallenges({
   progress,
   update,
+  initialId,
 }: {
+  initialId?: string;
   progress: Progress;
   update: UpdateProgress;
 }) {
-  const [id, setId] = useState(codeChallenges[0].id),
+  const [id, setId] = useState(codeChallenges.find(c => c.id === initialId)?.id || codeChallenges[0].id),
     [level, setLevel] = useState("all"),
     [busy, setBusy] = useState(false),
     [status, setStatus] = useState("Choose a challenge. Predict, code, test."),
     [results, setResults] = useState<{ passed: boolean; actual: string }[]>([]),
     [hint, setHint] = useState(false);
+  useEffect(()=>{ if(initialId && codeChallenges.some(c=>c.id===initialId)){setId(initialId);setResults([]);setHint(false);} },[initialId]);
   const generation = useRef(0);
   const lock = useRef(false);
   useEffect(

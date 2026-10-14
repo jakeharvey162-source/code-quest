@@ -190,6 +190,19 @@ export default function UniversalTerminal({sharedCode}:{sharedCode?:string}){
   tokenRef.current="";clearTimer();cancelRun();runRef.current++;
  },[]);
  useEffect(()=>{
+  const raw=readText("cq-community-editor-import");
+  if(!raw)return;
+  try{
+   const item=JSON.parse(raw);
+   if(!validLanguage(item.language)||typeof item.code!=="string")return;
+   validateSource(item.code);stop();setLanguage(item.language as Language);setSource(item.code);setExampleId("");
+   setStatus("Community snippet loaded. Review it, then press Run. Code is never run automatically.");
+   writeText("cq-terminal-language",item.language);
+   writeText("cq-terminal-source-"+item.language,item.code);
+   writeText("cq-community-editor-import","");
+  }catch{setStatus("The shared snippet could not be opened. Try copying it from Community.");}
+ },[]);
+ useEffect(()=>{
   if(!sharedCode)return;
   try{
    const shared=decodeSharedProgram(sharedCode);

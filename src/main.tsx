@@ -18,8 +18,10 @@ import {
   Menu,
   Clapperboard,
   Heart,
+  MessagesSquare,
 } from "lucide-react";
 import "./styles.css";
+import "./community/community.css";
 import { lessons, tracks } from "./curriculum";
 import {
   loadProgress,
@@ -39,6 +41,7 @@ const TorCoach = lazy(() => import("./components/TorCoach"));
 import { VoiceControls } from "./components/VoiceControls";
 import { reloadLatestWorkspace } from "./lib/workspace-recovery";
 import AuthProvider, { useAuth } from "./components/AuthProvider";
+const Community = lazy(() => import("./community/Community"));
 const CodeChallenges = lazy(() => import("./components/CodeChallenges"));
 const Account = lazy(() => import("./components/Account"));
 const Leaderboard = lazy(() => import("./components/Leaderboard"));
@@ -59,6 +62,7 @@ const navigation = [
   { id: "terminal", title: "Code Terminal", icon: Terminal },
   { id: "designer", title: "WinForms", icon: PanelsTopLeft },
   { id: "assessment", title: "Assessment", icon: Flag },
+  { id: "community", title: "Community", icon: MessagesSquare },
   { id: "leaderboard", title: "Leaderboard", icon: ChartNoAxesCombined },
   { id: "progress", title: "Progress", icon: ChartNoAxesCombined },
   { id: "settings", title: "Settings", icon: SettingsIcon },
@@ -272,7 +276,7 @@ function App() {
   return (
     <div
       className={
-        "app-shell " +
+        "app-shell " + (page === "community" ? "community-active " : "") +
         (progress.settings.reducedMotion ? "reduce-motion " : "") +
         (progress.settings.highContrast ? "high-contrast" : "")
       }
@@ -674,8 +678,10 @@ function App() {
                     </div>
                   )}
                 </section>
+              ) : page === "community" ? (
+                <Community progress={progress} onNavigate={navigate} />
               ) : page === "challenges" ? (
-                <CodeChallenges progress={progress} update={update}/>
+                <CodeChallenges progress={progress} update={update} initialId={lessonId}/>
               ) : page === "videos" ? (
                 <TutorialLibrary onNavigate={navigate} />
               ) : page === "terminal" ? (
@@ -716,13 +722,18 @@ function App() {
           </ErrorBoundary>
         </main>
         <Suspense fallback={null}>
+        <div className={page === "community" ? "community-tor-dock" : undefined}>
         <TorCoach
           lessonId={selectedLesson?.id}
           page={page}
           settings={{...progress.settings,name:progress.settings.nickname||progress.settings.name}}
           onNavigate={navigate}
         />
+        </div>
         </Suspense>
+        <nav className="mobile-learning-nav" aria-label="Quick navigation">
+          {navigation.filter(item => ["home","learn","terminal","community","account"].includes(item.id)).map(({id,title,icon:Icon}) => <button key={id} onClick={()=>navigate(id)} aria-current={page===id?"page":undefined}><Icon size={18}/><span>{title}</span></button>)}
+        </nav>
         <footer className="app-footer">
           <span>CodeQuest / Built for understanding.</span>
           <span>

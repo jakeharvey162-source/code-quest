@@ -163,3 +163,9 @@ Code challenges provide seven graduated C# problems with real scenario tests, fa
 Community rankings use the security-invoker cq_rankings view from the community_rankings migration. Every public participant is ranked across the full roster; pages show 25 players, personal rank is fetched independently, ties share rank, and Find my rank uses a stable row position. Best XP can update on returning to the board. Private/opted-out users are excluded. Production is connected to the user-approved existing Supabase project via public client configuration in src/lib/cloud-config.ts. CodeQuest uses isolated cq_ tables and cq_profile metadata; only players who explicitly join appear in rankings. VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY can override this connection for another deployment. No service-role key is bundled.
 
 World now owns the four milestone cards below the introduction; Lessons stays focused on its quest list. Dark-mode contrast is tested across World, Lessons, Code challenges, Leaderboard, Account, Settings and Tor. Tor gives concise concept analogies and next steps, translates common compiler errors into guidance, and throttles proactive speech. Smooth anchor scrolling respects reduced-motion preferences.
+
+## Community development module
+
+The Community module adds public channels, consent-based private messaging, friends, class discussions, code sharing and an IndexedDB outbox. It is an additive development feature; review its migration and hosted staging checks before release.
+
+See [Community setup and rollback](docs/COMMUNITY.md) and the [verification report and screenshots](docs/COMMUNITY-VERIFICATION.md). Run `npm run test:community` for the dedicated browser suite. It uses local test identities, real Postgres permission checks and simulated provider transport; hosted Supabase Auth/Realtime verification is a separate release check.
