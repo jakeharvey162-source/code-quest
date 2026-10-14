@@ -3335,3 +3335,11 @@ html[data-motion=reduced]{scroll-behavior:auto!important}
   .app-sidebar nav.tools-expanded{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;}
   .app-sidebar nav.tools-expanded button{min-width:0;white-space:normal;}
 }
+@media(max-width:900px){
+  .tor-coach .tor-avatar{position:relative;}
+  .tor-coach:not(.expanded) .tor-model{width:96px;height:64px;max-width:100%;}
+  .tor-coach:not(.expanded) .tor-model canvas{max-width:100%;height:auto!important;}
+}
+@media(max-width:900px){
+  .tor-coach.expanded .tor-avatar,.tor-coach.expanded .tor-avatar span{color:#ecfcff!important;background:#12313c;}
+}

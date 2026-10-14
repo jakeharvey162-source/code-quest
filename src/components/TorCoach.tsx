@@ -23,7 +23,7 @@ const tips: Record<string, string> = {
     "Trace the code on paper first. Write each variable's value after every statement. For a loop, check the starting value, condition and update separately.",
   learn:
     "Predict the output before you run the code. If your prediction differs, trace one statement at a time. Understanding the change is how you prepare for an exam.",
-  home: "Pick a quest or open WinForms to build a form. I can explain controls, events, loops and validation. Drag my hologram out of your way, or use the arrow keys on my handle.",
+  home: "Pick a quest or open WinForms to build a form. I can explain controls, events, loops and validation. Open my panel for help, then minimise it to keep your workspace clear.",
   terminal: "Pick a language, press Run, and inspect the preview and console. I can help debug your code.",
 };
 function answer(question: string, page: string, language: string, spicy: boolean, variation=0) {

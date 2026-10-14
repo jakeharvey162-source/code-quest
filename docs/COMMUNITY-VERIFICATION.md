@@ -10,17 +10,17 @@ The shared brief asks for an isolated implementation and pull request before pro
 | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ |
 | Baseline before changes              | 118 unit/database tests, type check and production build passed                                                          |
 | Final unit/database suite            | 130 passed; includes real Postgres RLS/trigger tests through PGlite                                                      |
-| Existing browser regression          | Initial complete run: 90 passed, 1 failed, 1 skipped out of 92                                                           |
+| Existing browser regression          | Earlier module run: 90 passed, 1 failed, 1 skipped out of 92                                                             |
 | Tor caption regression fix           | Fixed the failure; both tests in `runtime-coach.spec.mjs` passed on rerun                                                |
-| Previously skipped 3D Tor test       | Passed separately with `CODEQUEST_WEBGL_TEST=1` and software WebGL                                                       |
-| Existing account/cloud fixture suite | All 9 passed                                                                                                             |
+| Previously skipped 3D Tor test       | Passed again in the final nine-check software WebGL run                                                                  |
+| Existing account/cloud fixture suite | All 12 passed after account and Classroom updates                                                                        |
 | Community browser suite              | All 11 passed                                                                                                            |
 | Snippet download follow-up           | 1440px case passed again with an explicit `.js` filename assertion                                                       |
 | TypeScript / production build        | Passed; final production build restores the real client configuration                                                    |
 | Formatting                           | Existing Prettier checks passed for the new module/tests/config/docs; no separate ESLint setup exists in this repository |
 | Patch hygiene                        | `git diff --check` passed                                                                                                |
 
-Across the completed regression run and the focused reruns, all 92 existing browser checks were exercised successfully. The normal non-WebGL run still skips the opt-in 3D case by design; CI now also runs that case explicitly with software WebGL. Do not misread the initial failing run as a clean first pass: it found and led to the Tor caption fix.
+The later complete Classroom regression run exercised 97 checks: 95 passed, one failed on Classroom horizontal overflow and one opt-in 3D check was skipped. The overflow was fixed and the all-route phone/accessibility check passed on rerun. Across the completed regression runs and the focused reruns, all 92 original browser checks were exercised successfully. The normal non-WebGL run still skips the opt-in 3D case by design; CI now also runs that case explicitly with software WebGL. Do not misread the initial failing run as a clean first pass: it found and led to the Tor caption fix.
 
 ## What the Community browser checks verified
 
@@ -74,3 +74,23 @@ These screenshots show local fixture accounts and test messages, not real produc
 ## Release status
 
 Ready for source review as a **draft PR**. Do not describe the Community feature as deployed to production. Follow the staging checklist and rollback plan in [COMMUNITY.md](COMMUNITY.md), then review the CI results and hosted two-account checks before recommending merge/release.
+
+## Classroom and Android follow-up
+
+The subsequent user feedback moved Community and private messaging into Classroom behind sign-in. Existing `#community` links enter the same authenticated Classroom hub. Guest learning and code tools remain available. Class owners create/join classes, assign quests and view only progress that learners explicitly share; the product does not supply a lecturer or live lessons.
+
+The Android screenshot led to a bounded phone tutor panel, a compact closed avatar, a visible All tools menu, and fixes for overlapping Tor buttons and an absolutely positioned hidden 3D loading container that caused horizontal overflow on Classroom. The expanded tutor header retains readable light text. Tests cover 360px and 412px viewports, saved desktop positions, panel minimisation and the phone menu.
+
+WinForms now opens/focuses the default C# Click handler for labels as well as buttons, including touch double-taps. Opening it twice reuses the method. Inert design surfaces prevent nested disabled controls intercepting pointer gestures. Design-time buttons no longer fade selected colours; colour changes are handled during input, persisted, displayed at runtime and exported with visual-style background overrides disabled. LinkLabel respects an explicitly selected black foreground.
+
+Read-only production investigation confirmed the live bundle uses the configured Supabase project, signups are enabled and email confirmation is automatic. Aggregate account logs contained invalid-credential and already-registered responses. This supports the repeat-signup/password confusion, but does not prove the cause for a particular user's account. No passwords, email addresses or tokens were retrieved, and no existing account settings or passwords were changed. The client now normalises email, permits older short passwords at sign-in, provides explicit password visibility, and explains that repeat signup does not change an existing password. Duplicate-registration errors are handled with either structured codes or legacy message responses. Password recovery delivery still requires a real hosted email round trip.
+
+The final software WebGL run passed all nine selected checks: all-route phone layout/accessibility, button and label handler opening/focus/reuse and real C# click execution, colour persistence/undo/redo/runtime, 360px and 412px Tor layout, touch double-tap, the phone tool menu, and authored 3D Tor rendering/movement/reduced motion.
+
+The latest account/cloud suite passed all 12 tests. The updated Community suite passed all 11 tests, including the authenticated Classroom gate and preserving version-1 IndexedDB data under its original account. These runs used the test transports described above.
+
+### Android World and tutor panel after the follow-up
+
+![Android World with compact Tor and All tools menu](community-screenshots/android-412-world.webp)
+
+![Bounded and scrollable Android tutor panel](community-screenshots/android-412-tor-open.webp)

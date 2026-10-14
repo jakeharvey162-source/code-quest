@@ -164,8 +164,8 @@ Community rankings use the security-invoker cq_rankings view from the community_
 
 World now owns the four milestone cards below the introduction; Lessons stays focused on its quest list. Dark-mode contrast is tested across World, Lessons, Code challenges, Leaderboard, Account, Settings and Tor. Tor gives concise concept analogies and next steps, translates common compiler errors into guidance, and throttles proactive speech. Smooth anchor scrolling respects reduced-motion preferences.
 
-## Community development module
+## Classroom and Community development module
 
-The Community module adds public channels, consent-based private messaging, friends, class discussions, code sharing and an IndexedDB outbox. It is an additive development feature; review its migration and hosted staging checks before release.
+Classroom groups class assignments and a signed-in Community area with public channels, consent-based private messaging, friends, class discussions, code sharing and an IndexedDB outbox. It is an additive development feature; review its migration and hosted staging checks before release.
 
 See [Community setup and rollback](docs/COMMUNITY.md) and the [verification report and screenshots](docs/COMMUNITY-VERIFICATION.md). Run `npm run test:community` for the dedicated browser suite. It uses local test identities, real Postgres permission checks and simulated provider transport; hosted Supabase Auth/Realtime verification is a separate release check.

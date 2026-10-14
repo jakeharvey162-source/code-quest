@@ -101,28 +101,50 @@ test("learner completes all five stages with real compilation, no replay XP", as
     page.getByText("Quest complete.", { exact: true }),
   ).toBeVisible();
 });
-test("fourth C# lesson Stage 4 resumes, runs tests and unlocks Stage 5", async ({page}) => {
+test("fourth C# lesson Stage 4 resumes, runs tests and unlocks Stage 5", async ({
+  page,
+}) => {
   test.setTimeout(150000);
-  const progress=freshProgress();
-  progress.settings.editorMode="plain";
-  progress.steps.logic=["0","1","2"];
-  await page.addInitScript((state)=>{if(!localStorage.getItem("cq-progress-v1"))localStorage.setItem("cq-progress-v1",JSON.stringify(state))},progress);
+  const progress = freshProgress();
+  progress.settings.editorMode = "plain";
+  progress.steps.logic = ["0", "1", "2"];
+  await page.addInitScript((state) => {
+    if (!localStorage.getItem("cq-progress-v1"))
+      localStorage.setItem("cq-progress-v1", JSON.stringify(state));
+  }, progress);
   await page.goto("/#learn/logic");
-  await expect(page.getByRole("heading",{name:/Stage 4: Find the mistake/})).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: /Stage 4: Find the mistake/ }),
+  ).toBeVisible();
   await expect(page.getByText(/Stuck on Stage 4/)).toBeVisible();
   await expect(page.getByText(/Expected output/)).toBeVisible();
-  await page.getByRole("textbox",{name:"C# code editor"}).fill(lessons.find(l=>l.id==="logic").build.solution);
-  await page.getByRole("button",{name:"Run tests",exact:true}).click();
-  await expect(page.locator(".run-feedback")).toContainText("All test cases passed",{timeout:90000});
-  await expect(page.getByRole("button",{name:/Continue to Stage 5/})).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "C# code editor" })
+    .fill(lessons.find((l) => l.id === "logic").build.solution);
+  await page.getByRole("button", { name: "Run tests", exact: true }).click();
+  await expect(page.locator(".run-feedback")).toContainText(
+    "All test cases passed",
+    { timeout: 90000 },
+  );
+  await expect(
+    page.getByRole("button", { name: /Continue to Stage 5/ }),
+  ).toBeVisible();
   await page.reload();
-  await page.getByRole("button",{name:/Break & fix/}).click();
-  await expect(page.getByRole("button",{name:/Continue to Stage 5/})).toBeVisible();
-  await page.getByRole("button",{name:/Continue to Stage 5/}).click();
-  await expect(page.getByText("YOUR TURN, WITHOUT A WALKTHROUGH")).toBeVisible();
-  await page.getByRole("textbox",{name:"C# code editor"}).fill(lessons.find(l=>l.id==="logic").apply.solution);
-  await page.getByRole("button",{name:"Run tests",exact:true}).click();
-  await expect(page.getByText("Quest complete.",{exact:true})).toBeVisible({timeout:90000});
+  await page.getByRole("button", { name: /Break & fix/ }).click();
+  await expect(
+    page.getByRole("button", { name: /Continue to Stage 5/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /Continue to Stage 5/ }).click();
+  await expect(
+    page.getByText("YOUR TURN, WITHOUT A WALKTHROUGH"),
+  ).toBeVisible();
+  await page
+    .getByRole("textbox", { name: "C# code editor" })
+    .fill(lessons.find((l) => l.id === "logic").apply.solution);
+  await page.getByRole("button", { name: "Run tests", exact: true }).click();
+  await expect(page.getByText("Quest complete.", { exact: true })).toBeVisible({
+    timeout: 90000,
+  });
 });
 test("scratchpad runs actual C#, reports errors and stops infinite loops", async ({
   page,
@@ -249,12 +271,18 @@ test("voice selection, read-aloud, stop, permission error and navigation hooks",
     };
   });
   await page.goto("/#settings");
-  await page.getByRole("combobox", { name: "Read-aloud service" }).selectOption("elevenlabs");
+  await page
+    .getByRole("combobox", { name: "Read-aloud service" })
+    .selectOption("elevenlabs");
   await page.getByRole("button", { name: "Read aloud", exact: true }).click();
-  await expect(page.locator(".voice-status")).toContainText("Cloud voices are not configured on this deployment");
+  await expect(page.locator(".voice-status")).toContainText(
+    "Cloud voices are not configured on this deployment",
+  );
   expect(await page.evaluate(() => window.__spoken)).toHaveLength(0);
   await page.getByRole("button", { name: "Stop voice", exact: true }).click();
-  await page.getByRole("combobox", { name: "Read-aloud service" }).selectOption("device");
+  await page
+    .getByRole("combobox", { name: "Read-aloud service" })
+    .selectOption("device");
   await page
     .getByRole("combobox", { name: "Device voice" })
     .selectOption("Test English");
@@ -338,7 +366,19 @@ test("all routes fit a phone and have no serious accessibility errors", async ({
     const overflow = await page.evaluate(
       () => document.documentElement.scrollWidth > window.innerWidth,
     );
-    expect(overflow, route).toBe(false);
+    const overflowing = overflow
+      ? await page.evaluate(() =>
+          [...document.querySelectorAll("body *")]
+            .filter((el) => el.getBoundingClientRect().right > innerWidth + 0.5)
+            .slice(-15)
+            .map((el) => ({
+              tag: el.tagName,
+              cls: el.className,
+              right: el.getBoundingClientRect().right,
+            })),
+        )
+      : [];
+    expect(overflow, route + " " + JSON.stringify(overflowing)).toBe(false);
     const results = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21aa"])
       .analyze();
@@ -620,15 +660,23 @@ test("designer double-click creates a default WinForms event handler", async ({
   );
   await page.reload();
   const failures = [];
-  page.on("pageerror", error => failures.push(error.message));
+  page.on("pageerror", (error) => failures.push(error.message));
   for (let attempt = 0; attempt < 3; attempt++) {
-    await page.getByRole("button", { name: "Form1.cs [Design]", exact: true }).first().click();
-    await page.getByRole("button", { name: "Select btnLogin", exact: true }).dblclick();
-    await expect(page.getByRole("textbox", { name: "Form1.cs event code", exact: true })).toContainText("btnLogin_Click");
-    await expect(page.getByRole("heading", { name: "Make something useful." })).toBeVisible();
+    await page
+      .getByRole("button", { name: "Form1.cs [Design]", exact: true })
+      .first()
+      .click();
+    await page
+      .getByRole("button", { name: "Select btnLogin", exact: true })
+      .dblclick();
+    await expect(
+      page.getByRole("textbox", { name: "Form1.cs event code", exact: true }),
+    ).toContainText("btnLogin_Click");
+    await expect(
+      page.getByRole("heading", { name: "Make something useful." }),
+    ).toBeVisible();
   }
   expect(failures).toEqual([]);
-
 });
 
 test("designer resize handle changes size and undo restores it", async ({
@@ -713,7 +761,9 @@ test.describe("workspace download recovery", () => {
     await expect(
       page.getByRole("heading", { name: "Let’s get you back on track." }),
     ).toBeVisible();
-    await expect(page.getByRole("button", { name: "Load latest workspace" })).toBeEnabled();
+    await expect(
+      page.getByRole("button", { name: "Load latest workspace" }),
+    ).toBeEnabled();
     blocked = false;
     await page.getByRole("button", { name: "Load latest workspace" }).click();
     await expect(
@@ -727,35 +777,53 @@ test.describe("workspace download recovery", () => {
   });
 });
 
-
-test("designer supports Visual Studio-style toolbox drag drop and grid placement", async ({ page }) => {
+test("designer supports Visual Studio-style toolbox drag drop and grid placement", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1440, height: 1100 });
   await page.goto("/#designer");
-  const toolboxButton = page.getByRole("button", { name: "Button", exact: true }).first();
+  const toolboxButton = page
+    .getByRole("button", { name: "Button", exact: true })
+    .first();
   const canvas = page.locator(".form-canvas");
   await toolboxButton.dragTo(canvas, { targetPosition: { x: 240, y: 160 } });
   await expect(page.locator(".placed-control")).toHaveCount(1);
   const control = page.locator(".placed-control").first();
-  const left = await control.evaluate((el) => Number.parseInt(el.style.left, 10));
+  const left = await control.evaluate((el) =>
+    Number.parseInt(el.style.left, 10),
+  );
   const top = await control.evaluate((el) => Number.parseInt(el.style.top, 10));
   expect(left % 8).toBe(0);
   expect(top % 8).toBe(0);
-  await expect(page.locator(".form-validation")).toContainText("8 px grid snap");
+  await expect(page.locator(".form-validation")).toContainText(
+    "8 px grid snap",
+  );
   await page.getByRole("button", { name: "TextBox", exact: true }).dblclick();
   await expect(page.locator(".placed-control")).toHaveCount(2);
   await page.getByRole("button", { name: "Start / F5", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Stop debugging", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Stop debugging", exact: true }).press("Shift+F5");
-  await expect(page.getByRole("button", { name: "Start / F5", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Stop debugging", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Stop debugging", exact: true })
+    .press("Shift+F5");
+  await expect(
+    page.getByRole("button", { name: "Start / F5", exact: true }),
+  ).toBeVisible();
   await page.getByRole("textbox", { name: "Control Text" }).press("F5");
-  await expect(page.getByRole("button", { name: "Stop debugging", exact: true })).toBeVisible();
-  await expect(page.locator(".form-validation")).toContainText("C# event logic runs in the exported Windows project");
+  await expect(
+    page.getByRole("button", { name: "Stop debugging", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".form-validation")).toContainText(
+    "C# event logic runs in the exported Windows project",
+  );
 });
-
 
 test.describe("automatic stale workspace recovery", () => {
   test.use({ serviceWorkers: "block" });
-  test("lazy WinForms chunk failure triggers one automatic recovery and keeps progress", async ({ page }) => {
+  test("lazy WinForms chunk failure triggers one automatic recovery and keeps progress", async ({
+    page,
+  }) => {
     let failedOnce = false;
     await page.route("**/assets/FormDesigner-*.js", async (route) => {
       if (!failedOnce) {
@@ -765,18 +833,21 @@ test.describe("automatic stale workspace recovery", () => {
         await route.continue();
       }
     });
-    await page.addInitScript((state) => {
-      if (!localStorage.getItem("cq-progress-v1"))
-        localStorage.setItem("cq-progress-v1", JSON.stringify(state));
-    }, {
-      ...freshProgress(),
-      settings: { ...freshProgress().settings, name: "Student QA" },
-    });
+    await page.addInitScript(
+      (state) => {
+        if (!localStorage.getItem("cq-progress-v1"))
+          localStorage.setItem("cq-progress-v1", JSON.stringify(state));
+      },
+      {
+        ...freshProgress(),
+        settings: { ...freshProgress().settings, name: "Student QA" },
+      },
+    );
     await page.goto("/");
     await page.getByRole("button", { name: "WinForms", exact: true }).click();
-    await expect.poll(async () =>
-      page.evaluate(() => location.hash)
-    ).toBe("#designer");
+    await expect
+      .poll(async () => page.evaluate(() => location.hash))
+      .toBe("#designer");
     await expect(
       page.getByRole("heading", { name: "Make something useful." }),
     ).toBeVisible();
@@ -790,7 +861,9 @@ test.describe("automatic stale workspace recovery", () => {
 
 test.describe("persistent workspace failures", () => {
   test.use({ serviceWorkers: "block" });
-  test("a persistent download failure retries once and leaves manual recovery usable", async ({ page }) => {
+  test("a persistent download failure retries once and leaves manual recovery usable", async ({
+    page,
+  }) => {
     let blocked = true;
     let requests = 0;
     await page.route("**/assets/FormDesigner-*.js", (route) => {
@@ -798,29 +871,50 @@ test.describe("persistent workspace failures", () => {
       return blocked ? route.abort("failed") : route.continue();
     });
     await page.goto("/#designer");
-    const retry = page.getByRole("button", { name: "Load latest workspace", exact: true });
+    const retry = page.getByRole("button", {
+      name: "Load latest workspace",
+      exact: true,
+    });
     await expect(retry).toBeEnabled();
     expect(requests).toBe(2);
-    await page.getByRole("button", { name: "Return to World", exact: true }).click();
-    await expect(page.getByRole("heading", { name: /Make it yours/ })).toBeVisible();
+    await page
+      .getByRole("button", { name: "Return to World", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: /Make it yours/ }),
+    ).toBeVisible();
     expect(requests).toBe(2);
     await page.getByRole("button", { name: "WinForms", exact: true }).click();
     await expect(retry).toBeEnabled();
     blocked = false;
     await retry.click();
-    await expect(page.getByRole("heading", { name: "Make something useful." })).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Make something useful." }),
+    ).toBeVisible();
   });
 
-  test("unavailable session storage leaves the failure screen and navigation usable", async ({ page }) => {
+  test("unavailable session storage leaves the failure screen and navigation usable", async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       Object.defineProperty(window, "sessionStorage", {
-        get() { throw new DOMException("Storage is blocked", "SecurityError"); },
+        get() {
+          throw new DOMException("Storage is blocked", "SecurityError");
+        },
       });
     });
-    await page.route("**/assets/FormDesigner-*.js", (route) => route.abort("failed"));
+    await page.route("**/assets/FormDesigner-*.js", (route) =>
+      route.abort("failed"),
+    );
     await page.goto("/#designer");
-    await expect(page.getByRole("button", { name: "Load latest workspace", exact: true })).toBeEnabled();
-    await page.getByRole("button", { name: "Return to World", exact: true }).click();
-    await expect(page.getByRole("heading", { name: /Make it yours/ })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Load latest workspace", exact: true }),
+    ).toBeEnabled();
+    await page
+      .getByRole("button", { name: "Return to World", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: /Make it yours/ }),
+    ).toBeVisible();
   });
 });

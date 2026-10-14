@@ -27,6 +27,17 @@ for (const type of ["Button", "Label"])
     expect(
       (await editor.innerText()).split(`void ${name}_Click(`),
     ).toHaveLength(2);
+    await editor.fill(
+      `private void ${name}_Click(object sender, EventArgs e) { ${name}.Text = "Clicked successfully"; }`,
+    );
+    await page.keyboard.press("F5");
+    const running = page.getByRole("dialog", {
+      name: "Running Form1 application",
+    });
+    await running.getByText(name, { exact: true }).click();
+    await expect(running).toContainText("Clicked successfully", {
+      timeout: 90000,
+    });
   });
 test("colour edits render accurately and survive refresh and running the form", async ({
   page,
@@ -48,6 +59,10 @@ test("colour edits render accurately and survive refresh and running the form", 
   await expect(control).toHaveCSS("background-color", "rgb(18, 58, 188)");
   await expect(control).toHaveCSS("color", "rgb(255, 255, 255)");
   await expect(control).toHaveCSS("opacity", "1");
+  await page.getByRole("button", { name: "Undo", exact: true }).click();
+  await expect(control).not.toHaveCSS("background-color", "rgb(18, 58, 188)");
+  await page.getByRole("button", { name: "Redo", exact: true }).click();
+  await expect(control).toHaveCSS("background-color", "rgb(18, 58, 188)");
   await page.reload();
   await expect(control).toHaveCSS("background-color", "rgb(18, 58, 188)");
   await page.keyboard.press("F5");
@@ -83,7 +98,9 @@ for (const width of [360, 412])
     expect(box.y).toBeGreaterThanOrEqual(0);
     expect(box.y + box.height).toBeLessThanOrEqual(800);
     await tor.getByLabel("Ask about C# or your form").fill("What is a label?");
-    await page.screenshot({path: `test-results/android-${width}-tor-open.png`});
+    await page.screenshot({
+      path: `test-results/android-${width}-tor-open.png`,
+    });
     await page.getByRole("button", { name: "Minimise Tor" }).click();
     await expect(tor.locator(".tor-panel")).toHaveCount(0);
     expect(

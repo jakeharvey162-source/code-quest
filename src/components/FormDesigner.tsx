@@ -919,7 +919,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
       return ["eventClick", c.name + "_Click"] as const;
     if (c.type === "DataGridView")
       return ["eventSelectionChanged", c.name + "_SelectionChanged"] as const;
-    if (["Button", "Label", "Panel", "GroupBox"].includes(c.type))
+    if (["Button", "Label"].includes(c.type))
       return ["eventClick", c.name + "_Click"] as const;
     if (["TextBox", "RichTextBox", "MaskedTextBox"].includes(c.type))
       return ["eventTextChanged", c.name + "_TextChanged"] as const;
@@ -2197,9 +2197,6 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                           type="color"
                           aria-label="Foreground colour"
                           value={cur.foreColor}
-                          onInput={(e) =>
-                            change({ foreColor: e.currentTarget.value })
-                          }
                           onChange={(e) =>
                             change({ foreColor: e.target.value })
                           }
@@ -2211,9 +2208,6 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                           type="color"
                           aria-label="Background colour"
                           value={cur.backColor}
-                          onInput={(e) =>
-                            change({ backColor: e.currentTarget.value })
-                          }
                           onChange={(e) =>
                             change({ backColor: e.target.value })
                           }

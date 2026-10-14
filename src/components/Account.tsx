@@ -121,7 +121,9 @@ export default function Account({
       if (result.error) {
         if (
           mode === "signup" &&
-          /user_already_exists|email_exists/.test(result.error.code || "")
+          /user_already_exists|email_exists|already.*registered/i.test(
+            `${result.error.code || ""} ${result.error.message}`,
+          )
         )
           setMode("signin");
         throw result.error;
