@@ -606,3 +606,12 @@ test("registered-address signup explains that the original password is unchanged
     page.getByRole("heading", { name: "Welcome back", exact: true }),
   ).toBeVisible();
 });
+
+test('automatic backup persists edits and pauses on a cross-device conflict',async({page})=>{
+ const cloud=await mockCloud(page);await page.clock.install();await page.goto('/#account');await signin(page);
+ await page.getByRole('button',{name:'Save & enable automatic backup',exact:true}).click();await expect(page.getByRole('status')).toContainText('Automatic backup is on');
+ await page.goto('/#settings');await page.getByLabel('Your name',{exact:true}).fill('Auto saved learner');await page.clock.fastForward(61000);
+ await expect(page.locator('.cloud-backup-status')).toContainText('Cloud backup saved');expect(cloud.snapshots.get(A).snapshot.progress.settings.name).toBe('Auto saved learner');
+ await page.route('**/rest/v1/rpc/cq_save_snapshot',route=>route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({message:'Cloud save changed on another device'})}));
+ await page.getByLabel('Your name',{exact:true}).fill('Preserve this local draft');await page.clock.fastForward(61000);await expect(page.locator('.cloud-backup-status')).toContainText('Cloud backup paused');await expect(page.getByLabel('Your name',{exact:true})).toHaveValue('Preserve this local draft');
+});

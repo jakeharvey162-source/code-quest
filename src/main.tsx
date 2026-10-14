@@ -40,6 +40,7 @@ import CityMap from "./components/CityMap";
 const TorCoach = lazy(() => import("./components/TorCoach"));
 import { VoiceControls } from "./components/VoiceControls";
 import { reloadLatestWorkspace } from "./lib/workspace-recovery";
+import CloudBackup from "./components/CloudBackup";
 import AuthProvider, { useAuth } from "./components/AuthProvider";
 const Classroom = lazy(() => import("./components/Classroom"));
 const CodeChallenges = lazy(() => import("./components/CodeChallenges"));
@@ -423,6 +424,7 @@ function App() {
           </div>
         )}
         <main id="content" tabIndex={-1}>
+          <CloudBackup userId={user?.id} progress={progress} />
           <ErrorBoundary key={route}>
             <Suspense
               fallback={

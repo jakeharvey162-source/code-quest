@@ -5,6 +5,7 @@ import { migrateProgress, xpFor, type Progress } from "../lib/progress";
 import { readText, writeText, readBrief } from "../lib/local-data";
 import { normalizeControls } from "./FormDesigner";
 import type { UpdateProgress } from "./LessonView";
+import { backupPreference } from "./CloudBackup";
 import LearnerProfile from "./LearnerProfile";
 function friendlyAccountError(error: unknown): string {
   const message = `${(error as { code?: string })?.code || ""} ${error instanceof Error ? error.message : String((error as { message?: string })?.message || error || "")}`;
@@ -153,7 +154,8 @@ export default function Account({
       );
     });
   }
-  async function save() {
+  async function save(auto = false) {
+    backupPreference(false);
     if (!supabase || !user) return;
     if (revision === null)
       throw new Error(
@@ -177,9 +179,11 @@ export default function Account({
     });
     if (error) throw error;
     await refresh();
-    setMessage("Saved to your account. Cloud history updated.");
+    const enabled = auto && backupPreference(true, revision + 1);
+    setMessage(enabled ? "Saved. Automatic backup is on for this device. Restore your cloud save before continuing on another device." : "Saved to your account. Cloud history updated." );
   }
   async function load() {
+    backupPreference(false);
     if (!supabase || !user) return;
     const { data, error } = await supabase
       .from("cq_snapshots")
@@ -351,12 +355,14 @@ export default function Account({
           <article className="settings-card">
             <h2>{user.email}</h2>
             <p>
-              Cloud saves are manual. Save before changing devices; restore to
+              Save manually or enable automatic backup every 60 seconds while this app is open. Save before closing or changing devices; restore to
               load your last cloud save. Class sharing does not include your
               private code drafts.
             </p>
             <div className="button-row">
-              <button disabled={busy} onClick={() => action(save)}>
+              <button disabled={busy} onClick={() => action(() => save(true))}>Save & enable automatic backup</button>
+              <button disabled={busy} onClick={() => { backupPreference(false); setMessage("Automatic backup turned off on this device."); }}>Turn off automatic backup</button>
+              <button disabled={busy} onClick={() => action(() => save())}>
                 Save to cloud
               </button>
               <button disabled={busy} onClick={() => setRestore(true)}>

@@ -3343,3 +3343,10 @@ html[data-motion=reduced]{scroll-behavior:auto!important}
 @media(max-width:900px){
   .tor-coach.expanded .tor-avatar,.tor-coach.expanded .tor-avatar span{color:#ecfcff!important;background:#12313c;}
 }
+
+.continuous-practice { margin-bottom: 1.5rem; max-width: 100%; min-width: 0; }
+.continuous-practice select { display: block; max-width: 100%; margin-top: .5rem; }
+.continuous-practice pre { white-space: pre-wrap; overflow-wrap: anywhere; overflow-x: auto; }
+.practice-choices { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)); gap: .65rem; margin: 1rem 0; }
+.practice-choices button { min-height: 48px; white-space: normal; overflow-wrap: anywhere; text-align: left; }
+.practice-choices button[aria-pressed="true"] { outline: 3px solid var(--accent,#c89400); outline-offset: 2px; }

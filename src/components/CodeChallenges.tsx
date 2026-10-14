@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from "react";
+import ContinuousPractice from "./ContinuousPractice";
 import CodeEditor from "./CodeEditor";
 import {
   codeChallenges,
+  codingRemix,
   challengeProgram,
   challengeResults,
 } from "../lib/code-challenges.mjs";
@@ -33,7 +35,8 @@ export default function CodeChallenges({
     },
     [],
   );
-  const challenge = codeChallenges.find((c) => c.id === id)!;
+  const remixRound = Math.max(0, Math.min(1e9, Number(progress.drafts["coding-remix-round"]) || 0));
+  const challenge = id === "practice-remix" ? codingRemix(remixRound) : codeChallenges.find((c) => c.id === id)!;
   const source = progress.drafts["challenge-" + id] ?? challenge.starter;
   function edit(value: string) {
     if (lock.current) return;
@@ -119,8 +122,13 @@ export default function CodeChallenges({
         </div>
         <a href="#leaderboard">Compare your rank →</a>
       </div>
+      <ContinuousPractice progress={progress} update={update} />
       <div className="challenge-layout">
         <aside className="challenge-picker">
+          <button disabled={busy} onClick={() => {
+            update(p => {const drafts: Record<string,string> = {...p.drafts,"coding-remix-round":String((remixRound+1)%1e9)};delete drafts["challenge-practice-remix"];return {...p,drafts};});
+            setId("practice-remix");setResults([]);setHint(false);setLevel("all");setStatus("New coding remix. Fill in the method and test the edge cases.");
+          }}>New coding remix →</button>
           <label>
             Difficulty
             <select

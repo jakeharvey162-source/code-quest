@@ -192,8 +192,10 @@ export function useCommunity() {
   latestLoad.current = loadMessages;
   const refreshRef = useRef(refresh);
   refreshRef.current = refresh;
+  const syncing = useRef(false);
   const synchronize = useCallback(async () => {
-    if (!user || !navigator.onLine) return;
+    if (!user || !navigator.onLine || syncing.current) return;
+    syncing.current = true;
     setSending(true);
     try {
       let delivered = 0;
@@ -217,6 +219,7 @@ export function useCommunity() {
             : `${delivered} messages delivered.`,
         );
     } finally {
+      syncing.current = false;
       if (active.current) setSending(false);
     }
   }, [user?.id, owner, store, reloadOutbox, showError]);
@@ -260,15 +263,18 @@ export function useCommunity() {
     };
     window.addEventListener("online", connect);
     window.addEventListener("offline", connect);
-    const tick = setInterval(() => {
-      if (document.visibilityState === "visible" && navigator.onLine)
-        void synchronize().catch(showError);
-    }, 15000);
-    return () => {
-      window.removeEventListener("online", connect);
-      window.removeEventListener("offline", connect);
-      clearInterval(tick);
+    let cancelled = false, failures = 0;
+    let tick: ReturnType<typeof setTimeout>;
+    const poll = async () => {
+      if (document.visibilityState === "visible" && navigator.onLine) {
+        try { await synchronize(); failures = 0; }
+        catch(error) { failures = Math.min(4, failures + 1); showError(error); }
+      }
+      if (!cancelled) tick = setTimeout(poll, Math.min(120000,15000 * 2 ** failures) + Math.random()*5000);
     };
+    tick = setTimeout(poll,15000 + Math.random()*5000);
+    return () => { cancelled = true; window.removeEventListener("online",connect);window.removeEventListener("offline",connect);clearTimeout(tick); };
+
   }, [synchronize, showError]);
   useEffect(() => {
     setMessages([]);
@@ -292,7 +298,7 @@ export function useCommunity() {
     };
   }, [selected, store]);
   useEffect(() => {
-    if (!user) return;
+    if (!user || import.meta.env.VITE_COMMUNITY_REALTIME === "false") return;
     const channel = client()
       .channel("cq-community:" + user.id)
       .on(

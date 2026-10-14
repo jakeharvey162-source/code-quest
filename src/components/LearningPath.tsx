@@ -35,6 +35,7 @@ export default function LearningPath({
           <p>Predict it. Run it. Change one value and explain what happens. A new pick every day.</p>
         </div>
         <a className="primary" href={"#learn/" + remix.id}>Take today’s quest →</a>
+        <a href="#challenges">Continue with fresh practice quests →</a>
       </aside>}
       <div className="level-cards">
         {learningLevels.map((l, index) => (

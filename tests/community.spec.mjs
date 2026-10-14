@@ -704,3 +704,13 @@ test("offline storage upgrades preserve old drafts and snippets without loading 
     await service.close();
   }
 });
+
+test('member search finds a learner beyond the first 200 downloaded profiles',async({page})=>{
+ const service=await fixture();
+ try{
+ await service.db.exec(`reset role;
+ insert into auth.users(id) select ('90000000-0000-4000-8000-' || lpad(i::text,12,'0'))::uuid from generate_series(1,405) i;
+ insert into cq_community_profiles(user_id,nickname,allow_requests) select ('90000000-0000-4000-8000-' || lpad(i::text,12,'0'))::uuid,'Learner ' || lpad(i::text,3,'0'),true from generate_series(1,405) i;`);
+ await service.attach(page);await signin(page,'a@community.test');await page.getByRole('button',{name:'People & friends',exact:true}).click();await page.getByLabel('Find a Community member').fill('Learner 405');await expect(page.locator('.community-person').filter({hasText:'Learner 405'})).toHaveCount(0);await page.getByRole('button',{name:'Search all members',exact:true}).click();await expect(page.locator('.community-person').filter({hasText:'Learner 405'})).toBeVisible();
+ }finally{await service.close();}
+});

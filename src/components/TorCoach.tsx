@@ -78,6 +78,7 @@ export default function TorCoach({
   const [speechBeat,setSpeechBeat]=useState(0);
   const [gestureId,setGestureId]=useState(0);
   const [gestureClip,setGestureClip]=useState("");
+  const lastSpokenObservation = useRef(0);
   const [reactionLabel,setReactionLabel]=useState("");
   const [proactive, setProactive] = useState(
     () => readText("cq-tor-observe", "true") === "true",
@@ -421,7 +422,6 @@ export default function TorCoach({
         !reaction ||
         listening ||
         pendingAction.current ||
-        Date.now() - lastProactive.current < 8000 ||
         Date.now() - lastRequest.current < 2000
       )
         return;
@@ -433,7 +433,7 @@ export default function TorCoach({
       setReactionLabel(performance.title);
       setGestureId(n=>n+1);
       setReply(text);
-      if (autoSpeak) say(text);
+      if (autoSpeak && Date.now() - lastSpokenObservation.current >= 8000) { lastSpokenObservation.current = Date.now(); say(text); }
     };
     window.addEventListener("cq-workspace-observation", see);
     return () => window.removeEventListener("cq-workspace-observation", see);

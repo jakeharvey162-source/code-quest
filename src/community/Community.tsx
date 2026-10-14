@@ -84,6 +84,10 @@ export default function Community({
     [interests, setInterests] = useState(""),
     [requests, setRequests] = useState(false),
     [presence, setPresence] = useState(false);
+  const [foundPeople, setFoundPeople] = useState<Profile[]>([]);
+  const [peopleNotice, setPeopleNotice] = useState("");
+  const peopleRequest = useRef(0);
+  const directory = [...new Map([...c.profiles,...foundPeople].map(p=>[p.user_id,p])).values()];
   const [attachments, setAttachments] = useState(false);
   const [inlineEditor, setInlineEditor] = useState<string | null>(null);
   const [chatWidth, setChatWidth] = useState(45);
@@ -96,7 +100,7 @@ export default function Community({
   const draftKey = c.selected || "personal";
   const peerFor = (room: any) =>
     room.member_a === c.user?.id ? room.member_b : room.member_a;
-  const profileFor = (id: string) => c.profiles.find((p) => p.user_id === id);
+  const profileFor = (id: string) => directory.find((p) => p.user_id === id);
   const roomName = (room: any) =>
     room.kind === "dm"
       ? profileFor(peerFor(room))?.nickname || "Private conversation"
@@ -293,6 +297,19 @@ export default function Community({
     const timer = setInterval(heartbeat, 45000);
     return () => clearInterval(timer);
   }, [own?.show_presence, c.user?.id]);
+  async function searchPeople() {
+    const request = ++peopleRequest.current;
+    const term = peopleSearch.trim().slice(0,60);
+    if (term.length < 2) {setPeopleNotice("Type at least two characters to search all members.");return;}
+    setPeopleNotice("Searching members…");
+    const pattern = "%" + term.replace(/[\\%_]/g,"\\$&") + "%";
+    try {
+      const batches = await Promise.all(["nickname","interests"].map(field=>result<Profile[]>(client().from("cq_community_profiles").select("*").ilike(field,pattern).order("nickname").order("user_id").limit(50))));
+      if(request!==peopleRequest.current)return;
+      const rows=[...new Map(batches.flat().map(p=>[p.user_id,p])).values()];
+      setFoundPeople(rows);setPeopleNotice(rows.length ? `${rows.length} matching members downloaded. Refine the search if needed; each field returns up to 50 matches.` : "No matching members found.");
+    } catch(error) {if(request===peopleRequest.current){setPeopleNotice("Search failed. Downloaded members remain available.");c.showError(error);}}
+  }
   async function searchHistory() {
     const request = ++searchRequest.current;
     if (!c.selected || !messageSearch.trim() || busy) return;
@@ -1204,10 +1221,12 @@ export default function Community({
             Find a Community member
             <input
               value={peopleSearch}
-              onChange={(e) => setPeopleSearch(e.target.value)}
-              placeholder="Search the first 200 profiles by nickname or interests"
+              onChange={(e) => {setPeopleSearch(e.target.value);peopleRequest.current++;setFoundPeople([]);setPeopleNotice("");}}
+              placeholder="Nickname or interests"
             />
           </label>
+          <button disabled={!c.online} onClick={() => void searchPeople()}>Search all members</button>
+          <p aria-live="polite">{peopleNotice}</p>
           {invitations.length > 0 && (
             <section>
               <h3>Friend requests</h3>
@@ -1273,7 +1292,7 @@ export default function Community({
               public channel.
             </p>
           )}
-          {c.profiles
+          {directory
             .filter(
               (p) =>
                 connected(p.user_id) &&
@@ -1281,7 +1300,7 @@ export default function Community({
             )
             .map(person)}
           <h3>Discover builders</h3>
-          {c.profiles
+          {directory
             .filter(
               (p) =>
                 (p.nickname + " " + p.interests)
@@ -1290,7 +1309,7 @@ export default function Community({
                 !connected(p.user_id),
             )
             .map(person)}
-          {!c.profiles.length && (
+          {!directory.length && (
             <p>
               No downloaded profiles yet. Sign in and sync to meet other
               builders.
