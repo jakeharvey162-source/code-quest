@@ -12,6 +12,10 @@ async function signin(page, email) {
   ).toBeVisible();
   await page
     .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Classroom", exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "Classroom sections" })
     .getByRole("button", { name: "Community", exact: true })
     .click();
   await expect(
@@ -94,10 +98,7 @@ test("two accounts exchange persistent public messages and code; consent gates D
     await bCard
       .getByRole("button", { name: "Add friend", exact: true })
       .click();
-    await b
-      .getByRole("navigation", { name: "Main navigation" })
-      .getByRole("button", { name: "Community", exact: true })
-      .click();
+    await b.goto("/#community");
     await b.getByRole("button", { name: /People & friends/ }).click();
     await expect(
       b.getByRole("button", { name: "Accept request", exact: true }),
@@ -354,23 +355,24 @@ for (const width of [320, 360, 412, 1440])
     }
   });
 
-test("guest notebook, draft and challenge invitation navigation do not require a community account", async ({
+test("Classroom and legacy community links require sign-in; challenges stay available", async ({
   page,
 }) => {
-  await page.goto("/#community");
-  await expect(
-    page.getByRole("heading", { name: "Community", exact: true }),
-  ).toBeVisible();
-  await page
-    .getByRole("textbox", { name: "Community message", exact: true })
-    .fill("Private guest draft");
-  await expect(
-    page.getByRole("status").filter({ hasText: "Draft saved on this device." }),
-  ).toBeVisible();
-  await page.reload();
-  await expect(
-    page.getByRole("textbox", { name: "Community message", exact: true }),
-  ).toHaveValue("Private guest draft");
+  for (const path of ["classes", "community"]) {
+    await page.goto("/#" + path);
+    await expect(
+      page.getByRole("heading", { name: "Classroom", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: "Community message", exact: true }),
+    ).toHaveCount(0);
+    await page
+      .getByRole("button", { name: "Open account", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Welcome back", exact: true }),
+    ).toBeVisible();
+  }
   await page.goto("/#challenges/atm-balance");
   await expect(
     page.getByRole("heading", {
@@ -614,76 +616,91 @@ test("desktop code opens beside the chat, resizes without overlap and runs only 
 test("offline storage upgrades preserve old drafts and snippets without loading other accounts into the list", async ({
   page,
 }) => {
-  await page.goto("/startup.css");
-  await page.evaluate(async () => {
-    const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open("codequest-community-v1", 1);
-      request.onupgradeneeded = () =>
-        request.result.createObjectStore("records", { keyPath: "id" });
-      request.onsuccess = () => resolve(request.result);
-      request.onerror = () => reject(request.error);
-    });
-    const tx = db.transaction("records", "readwrite"),
-      store = tx.objectStore("records");
-    for (const [owner, kind, key, value] of [
-      [
-        "guest",
-        "draft",
-        "personal",
-        {
-          body: "Legacy offline draft",
-          code: "",
-          language: "csharp",
-          challenge_id: null,
-        },
-      ],
-      [
-        "guest",
-        "snippet",
-        "legacy",
-        {
-          id: "legacy",
-          title: "Legacy snippet",
-          code: "Console.WriteLine(7);",
-          language: "csharp",
-        },
-      ],
-      [
-        "other-account",
-        "snippet",
-        "private",
-        {
-          id: "private",
-          title: "Other account must stay private",
-          code: "secret",
-          language: "csharp",
-        },
-      ],
-    ])
-      store.put({
-        id: JSON.stringify([owner, kind, key]),
-        owner,
-        kind,
-        key,
-        value,
-      });
-    await new Promise((resolve, reject) => {
-      tx.oncomplete = resolve;
-      tx.onerror = reject;
-    });
-    db.close();
-  });
-  await page.goto("/#community");
-  await expect(
-    page.getByRole("textbox", { name: "Community message", exact: true }),
-  ).toHaveValue("Legacy offline draft");
-  await page
-    .getByRole("button", { name: "Code notebook", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Legacy snippet", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByText("Other account must stay private", { exact: true }),
-  ).toHaveCount(0);
+  const service = await fixture();
+  await service.attach(page);
+  const room = (
+    await service.as(
+      A,
+      "select id from cq_community_rooms where slug='general'",
+    )
+  ).rows[0].id;
+  try {
+    await page.goto("/startup.css");
+    await page.evaluate(
+      async ({ ownerId, room }) => {
+        const db = await new Promise((resolve, reject) => {
+          const request = indexedDB.open("codequest-community-v1", 1);
+          request.onupgradeneeded = () =>
+            request.result.createObjectStore("records", { keyPath: "id" });
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        const tx = db.transaction("records", "readwrite"),
+          store = tx.objectStore("records");
+        for (const [owner, kind, key, value] of [
+          [
+            ownerId,
+            "draft",
+            room,
+            {
+              body: "Legacy offline draft",
+              code: "",
+              language: "csharp",
+              challenge_id: null,
+            },
+          ],
+          [
+            ownerId,
+            "snippet",
+            "legacy",
+            {
+              id: "legacy",
+              title: "Legacy snippet",
+              code: "Console.WriteLine(7);",
+              language: "csharp",
+            },
+          ],
+          [
+            "other-account",
+            "snippet",
+            "private",
+            {
+              id: "private",
+              title: "Other account must stay private",
+              code: "secret",
+              language: "csharp",
+            },
+          ],
+        ])
+          store.put({
+            id: JSON.stringify([owner, kind, key]),
+            owner,
+            kind,
+            key,
+            value,
+          });
+        await new Promise((resolve, reject) => {
+          tx.oncomplete = resolve;
+          tx.onerror = reject;
+        });
+        db.close();
+      },
+      { ownerId: A, room },
+    );
+    await signin(page, "a@community.test");
+    await expect(
+      page.getByRole("textbox", { name: "Community message", exact: true }),
+    ).toHaveValue("Legacy offline draft");
+    await page
+      .getByRole("button", { name: "Code notebook", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", { name: "Legacy snippet", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Other account must stay private", { exact: true }),
+    ).toHaveCount(0);
+  } finally {
+    await service.close();
+  }
 });

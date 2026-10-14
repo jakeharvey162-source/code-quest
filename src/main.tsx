@@ -41,11 +41,11 @@ const TorCoach = lazy(() => import("./components/TorCoach"));
 import { VoiceControls } from "./components/VoiceControls";
 import { reloadLatestWorkspace } from "./lib/workspace-recovery";
 import AuthProvider, { useAuth } from "./components/AuthProvider";
-const Community = lazy(() => import("./community/Community"));
+const Classroom = lazy(() => import("./components/Classroom"));
 const CodeChallenges = lazy(() => import("./components/CodeChallenges"));
 const Account = lazy(() => import("./components/Account"));
 const Leaderboard = lazy(() => import("./components/Leaderboard"));
-const Classes = lazy(() => import("./components/Classes"));
+
 const Playground = lazy(() => import("./components/Playground"));
 const UniversalTerminal = lazy(() => import("./components/UniversalTerminal"));
 const LessonView = lazy(() => import("./components/LessonView"));
@@ -62,12 +62,11 @@ const navigation = [
   { id: "terminal", title: "Code Terminal", icon: Terminal },
   { id: "designer", title: "WinForms", icon: PanelsTopLeft },
   { id: "assessment", title: "Assessment", icon: Flag },
-  { id: "community", title: "Community", icon: MessagesSquare },
   { id: "leaderboard", title: "Leaderboard", icon: ChartNoAxesCombined },
   { id: "progress", title: "Progress", icon: ChartNoAxesCombined },
   { id: "settings", title: "Settings", icon: SettingsIcon },
   { id: "account", title: "Account", icon: House },
-  { id: "classes", title: "Classes", icon: BookOpen },
+  { id: "classes", title: "Classroom", icon: MessagesSquare },
 ];
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
@@ -168,6 +167,7 @@ function App() {
     [installPrompt, setInstallPrompt] = useState<any>(null),
     [updateReady, setUpdateReady] = useState<ServiceWorker | null>(null);
   const [questNotice, setQuestNotice] = useState("");
+  const [toolsExpanded, setToolsExpanded] = useState(false);
   useEffect(()=>{
     const m=user?.user_metadata?.cq_profile;
     if(!m)return;
@@ -211,6 +211,7 @@ function App() {
   const next =
     lessons.find((l) => !progress.completed.includes(l.id)) || lessons[0];
   function navigate(path: string) {
+    setToolsExpanded(false);
     location.hash = path;
   }
   function update(fn: (p: Progress) => Progress) {
@@ -276,7 +277,7 @@ function App() {
   return (
     <div
       className={
-        "app-shell " + (page === "community" ? "community-active " : "") +
+        "app-shell " + (["community", "classes"].includes(page) ? "community-active " : "") +
         (progress.settings.reducedMotion ? "reduce-motion " : "") +
         (progress.settings.highContrast ? "high-contrast" : "")
       }
@@ -305,13 +306,14 @@ function App() {
             CodeQuest<small>BUILD YOUR UNDERSTANDING</small>
           </span>
         </button>
+        <button className="mobile-tools-toggle" aria-expanded={toolsExpanded} aria-controls="main-tools" onClick={() => setToolsExpanded(!toolsExpanded)}><Menu size={18}/>{toolsExpanded ? "Close tools" : "All tools"}</button>
         <p className="sidebar-label">YOUR ADVENTURE</p>
-        <nav aria-label="Main navigation">
+        <nav id="main-tools" className={toolsExpanded ? "tools-expanded" : undefined} aria-label="Main navigation">
           {navigation.map(({ id, title, icon: Icon }) => (
             <button
               key={id}
-              className={page === id ? "active" : ""}
-              aria-current={page === id ? "page" : undefined}
+              className={page === id || (page === "community" && id === "classes") ? "active" : ""}
+              aria-current={page === id || (page === "community" && id === "classes") ? "page" : undefined}
               onClick={() => navigate(id)}
             >
               <Icon size={19} />
@@ -342,7 +344,7 @@ function App() {
         <header className="app-header">
           <span className="breadcrumb">
             YOUR WORLD <span>/</span>{" "}
-            {navigation.find((n) => n.id === page)?.title.toUpperCase() ||
+            {navigation.find((n) => n.id === (page === "community" ? "classes" : page))?.title.toUpperCase() ||
               "LESSON"}
           </span>
           <div className="header-stats">
@@ -679,7 +681,7 @@ function App() {
                   )}
                 </section>
               ) : page === "community" ? (
-                <Community progress={progress} onNavigate={navigate} />
+                <Classroom community progress={progress} onNavigate={navigate} />
               ) : page === "challenges" ? (
                 <CodeChallenges progress={progress} update={update} initialId={lessonId}/>
               ) : page === "videos" ? (
@@ -701,7 +703,7 @@ function App() {
               ) : page === "leaderboard" ? (
                 <Leaderboard progress={progress}/>
               ) : page === "classes" ? (
-                <Classes progress={progress} onNavigate={navigate} />
+                <Classroom progress={progress} onNavigate={navigate} />
               ) : page === "settings" ? (
                 <SettingsPage
                   progress={progress}
@@ -722,7 +724,7 @@ function App() {
           </ErrorBoundary>
         </main>
         <Suspense fallback={null}>
-        <div className={page === "community" ? "community-tor-dock" : undefined}>
+        <div className={["community", "classes"].includes(page) ? "community-tor-dock" : undefined}>
         <TorCoach
           lessonId={selectedLesson?.id}
           page={page}
@@ -732,7 +734,7 @@ function App() {
         </div>
         </Suspense>
         <nav className="mobile-learning-nav" aria-label="Quick navigation">
-          {navigation.filter(item => ["home","learn","terminal","community","account"].includes(item.id)).map(({id,title,icon:Icon}) => <button key={id} onClick={()=>navigate(id)} aria-current={page===id?"page":undefined}><Icon size={18}/><span>{title}</span></button>)}
+          {navigation.filter(item => ["home","learn","terminal","classes","account"].includes(item.id)).map(({id,title,icon:Icon}) => <button key={id} onClick={()=>navigate(id)} aria-current={page===id?"page":undefined}><Icon size={18}/><span>{title}</span></button>)}
         </nav>
         <footer className="app-footer">
           <span>CodeQuest / Built for understanding.</span>

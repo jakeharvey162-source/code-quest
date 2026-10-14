@@ -1,6 +1,6 @@
 # CodeQuest Community
 
-Community is an additive module in the existing React/Vite application. It uses the existing Supabase client and sign-in flow. Learning progress, compiler workers, WinForms exports and account storage formats are unchanged.
+Community is an additive module in the existing React/Vite application. It uses the existing Supabase client and sign-in flow. Classroom now groups classes/assignments and Community (including friend-only private chat). Both Classroom routes require sign-in; existing #community links remain supported. Guest learning and the standalone code tools remain available. Learning progress, compiler workers, WinForms exports and account storage formats are unchanged.
 
 ## Product behaviour
 
@@ -15,7 +15,7 @@ Community is an additive module in the existing React/Vite application. It uses 
 
 ## Offline contract
 
-`CommunityStore` uses IndexedDB database `codequest-community-v1`. Schema version 2 adds an owner/type index and preserves version-1 records, so listing the outbox or snippets does not load every cached conversation into memory. Every record key includes the authenticated account ID or `guest`, record type and item key. Guest drafts and notebooks cannot appear in signed-in profiles, and accounts cannot see one another's caches through the UI.
+`CommunityStore` uses IndexedDB database `codequest-community-v1`. Schema version 2 adds an owner/type index and preserves version-1 records, so listing the outbox or snippets does not load every cached conversation into memory. Every record key includes the authenticated account ID or `guest`, record type and item key. Legacy guest caches remain preserved but are not exposed through the signed-in Classroom. Guest drafts and notebooks cannot appear in signed-in profiles, and accounts cannot see one another's caches through the UI.
 
 Downloaded room lists, profiles and the latest synchronized message pages can be read offline. Earlier online history remains available through pagination/search; it is not all pre-downloaded automatically. Drafts and private snippets can be edited/saved offline. Queued messages use stable client-generated UUIDs. A message is removed from the outbox only after an authenticated server acknowledgement. An interrupted request can safely be replayed: the database accepts the same UUID/payload once and rejects changing a reused identifier.
 

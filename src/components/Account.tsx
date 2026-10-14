@@ -7,13 +7,23 @@ import { normalizeControls } from "./FormDesigner";
 import type { UpdateProgress } from "./LessonView";
 import LearnerProfile from "./LearnerProfile";
 function friendlyAccountError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String((error as any)?.message || error || "");
-  if (/invalid.login.credentials|invalid_credentials|invalid.*password/i.test(message)) return "Email or password is incorrect. Please try again.";
-  if (/email.not.confirmed|email_not_confirmed/i.test(message)) return "Please check your inbox to confirm your email before signing in.";
-  if (/already.registered|user_already_exists/i.test(message)) return "This email is already registered. Try signing in instead.";
-  if (/rate.limit|too.many.requests/i.test(message)) return "Too many attempts. Please try again a little later.";
-  if (/network|failed.to.fetch|timed.out|fetch error/i.test(message)) return "We could not connect right now. Check your connection and try again.";
-  if (/revision|conflict|already.changed/i.test(message)) return "Your saved work changed on another device. Refresh your saves before trying again.";
+  const message = `${(error as { code?: string })?.code || ""} ${error instanceof Error ? error.message : String((error as { message?: string })?.message || error || "")}`;
+  if (
+    /invalid.login.credentials|invalid_credentials|invalid.*password/i.test(
+      message,
+    )
+  )
+    return "Email or password is incorrect. Please try again.";
+  if (/email.not.confirmed|email_not_confirmed/i.test(message))
+    return "Please check your inbox to confirm your email before signing in.";
+  if (/already.*registered|user_already_exists|email_exists/i.test(message))
+    return "This email is already registered. Creating an account again does not change its password. Use your original password or Forgot password? to reset it.";
+  if (/rate.limit|too.many.requests/i.test(message))
+    return "Too many attempts. Please try again a little later.";
+  if (/network|failed.to.fetch|timed.out|fetch error/i.test(message))
+    return "We could not connect right now. Check your connection and try again.";
+  if (/revision|conflict|already.changed/i.test(message))
+    return "Your saved work changed on another device. Refresh your saves before trying again.";
   return "Something went wrong. Please try again. Your work on this device has not been deleted.";
 }
 
@@ -28,12 +38,15 @@ export default function Account({
   const [mode, setMode] = useState("signin"),
     [email, setEmail] = useState(""),
     [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState(authError),
     [history, setHistory] = useState<any[]>([]);
   const [revision, setRevision] = useState<number | null>(null),
     [restore, setRestore] = useState(false);
-  useEffect(()=>{if(authError)setMessage(authError)},[authError]);
+  useEffect(() => {
+    if (authError) setMessage(authError);
+  }, [authError]);
   async function refresh() {
     if (!supabase || !user) return;
     const { data, error } = await supabase
@@ -81,27 +94,57 @@ export default function Account({
         ? await supabase.auth.updateUser({ password })
         : mode === "signup"
           ? await supabase.auth.signUp({
-              email,
+              email: email.trim().toLowerCase(),
               password,
-              options: { emailRedirectTo: authRedirect(), data: { cq_profile: {
-                display_name: progress.settings.name,
-                nickname: progress.settings.nickname,
-                avatar: progress.settings.avatar,
-              } } },
+              options: {
+                emailRedirectTo: authRedirect(),
+                data: {
+                  cq_profile: {
+                    display_name: progress.settings.name,
+                    nickname: progress.settings.nickname,
+                    avatar: progress.settings.avatar,
+                  },
+                },
+              },
             })
           : mode === "reset"
-            ? await supabase.auth.resetPasswordForEmail(email, {
-                redirectTo: authRedirect("recovery"),
-              })
-            : await supabase.auth.signInWithPassword({ email, password });
-      if (result.error) throw result.error;
+            ? await supabase.auth.resetPasswordForEmail(
+                email.trim().toLowerCase(),
+                {
+                  redirectTo: authRedirect("recovery"),
+                },
+              )
+            : await supabase.auth.signInWithPassword({
+                email: email.trim().toLowerCase(),
+                password,
+              });
+      if (result.error) {
+        if (
+          mode === "signup" &&
+          /user_already_exists|email_exists/.test(result.error.code || "")
+        )
+          setMode("signin");
+        throw result.error;
+      }
+      if (
+        mode === "signup" &&
+        "user" in result.data &&
+        (result.data.user as { identities?: unknown[] } | null)?.identities
+          ?.length === 0
+      ) {
+        setMode("signin");
+        setMessage(
+          "This address may already have an account. Sign in with your original password or use Forgot password? to reset it.",
+        );
+        return;
+      }
       setMessage(
         recovery
           ? "Password updated. Sign out and sign in with your new password."
           : mode === "signup"
-            ? (result.data && "session" in result.data && !!result.data.session)
+            ? result.data && "session" in result.data && !!result.data.session
               ? "Your account is ready. You are signed in."
-              : "Your account was created. Check your inbox for the confirmation link."
+              : "Check your inbox for the confirmation link before signing in. If this address is already registered, use your original password or Forgot password?."
             : mode === "reset"
               ? "If the address has an account, a reset link will arrive by email."
               : "Signed in.",
@@ -177,24 +220,38 @@ export default function Account({
           <p>Keep your learning safe and pick it up on another device.</p>
         </div>
       </div>
-      {!recovery && <LearnerProfile progress={progress} update={update}/>}
+      {!recovery && <LearnerProfile progress={progress} update={update} />}
       {!supabase ? (
         <article className="settings-card">
           <h2>Jump into CodeQuest</h2>
           <p>
-            You can learn, run code and save your progress on this device without
-            signing in. Account sign-in is temporarily unavailable, but your
-            learning journey does not have to stop.
+            You can learn, run code and save your progress on this device
+            without signing in. Account sign-in is temporarily unavailable, but
+            your learning journey does not have to stop.
           </p>
           <div className="button-row">
-            <button type="button" className="primary" onClick={() => { location.hash = "learn"; }}>
+            <button
+              type="button"
+              className="primary"
+              onClick={() => {
+                location.hash = "learn";
+              }}
+            >
               Start learning
             </button>
-            <button type="button" onClick={() => { location.hash = "settings"; }}>
+            <button
+              type="button"
+              onClick={() => {
+                location.hash = "settings";
+              }}
+            >
               Back up my progress
             </button>
           </div>
-          <p className="muted">If you clear your browser data or switch devices, you may lose progress unless you save a backup.</p>
+          <p className="muted">
+            If you clear your browser data or switch devices, you may lose
+            progress unless you save a backup.
+          </p>
         </article>
       ) : !user || recovery ? (
         <form className="settings-card" onSubmit={submit}>
@@ -224,19 +281,28 @@ export default function Account({
             <label>
               Password
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 autoComplete={
                   recovery || mode === "signup"
                     ? "new-password"
                     : "current-password"
                 }
-                minLength={8}
+                minLength={recovery || mode === "signup" ? 8 : 1}
                 maxLength={128}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </label>
+          )}
+          {(recovery || mode !== "reset") && (
+            <button
+              type="button"
+              aria-pressed={showPassword}
+              onClick={() => setShowPassword(!showPassword)}
+            >
+              {showPassword ? "Hide password" : "Show password"}
+            </button>
           )}
           <button className="primary" disabled={busy}>
             {busy

@@ -32,12 +32,15 @@ export default function CodeEditor({
   onChange,
   plain = false,
   label = "C# code editor",
+  focusTarget,
 }: {
   value: string;
   onChange: (v: string) => void;
   plain?: boolean;
   label?: string;
+  focusTarget?: { name: string; request: number };
 }) {
+  const plainEditor = useRef<HTMLTextAreaElement>(null);
   const host = useRef<HTMLDivElement>(null),
     editor = useRef<EditorView | null>(null),
     callback = useRef(onChange);
@@ -198,8 +201,29 @@ export default function CodeEditor({
         changes: { from: 0, to: view.state.doc.length, insert: value },
       });
   }, [value]);
+  useEffect(() => {
+    if (!focusTarget) return;
+    const signature = `void ${focusTarget.name}(`;
+    const index = value.indexOf(signature);
+    if (index < 0) return;
+    const opening = value.indexOf("{", index);
+    const at = opening >= 0 ? opening + 1 : index;
+    const view = editor.current;
+    if (view) {
+      view.dispatch({
+        selection: { anchor: at },
+        effects: EditorView.scrollIntoView(at, { y: "center" }),
+      });
+      view.focus();
+    } else if (plainEditor.current) {
+      plainEditor.current.focus();
+      plainEditor.current.setSelectionRange(at, at);
+    }
+    (view?.dom || plainEditor.current)?.scrollIntoView({ block: "center" });
+  }, [focusTarget, plain]);
   return plain ? (
     <textarea
+      ref={plainEditor}
       className="plain-editor"
       aria-label={label}
       value={value}
