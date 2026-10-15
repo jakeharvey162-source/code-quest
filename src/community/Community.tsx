@@ -60,12 +60,14 @@ function CodePreview({ code, language }: { code: string; language: string }) {
 export default function Community({
   progress,
   onNavigate,
+  defaultTab = "channels",
 }: {
   progress: Progress;
   onNavigate: (path: string) => void;
+  defaultTab?: "channels" | "people";
 }) {
   const c = useCommunity();
-  const [tab, setTab] = useState("channels"),
+  const [tab, setTab] = useState(defaultTab),
     [roomSearch, setRoomSearch] = useState(""),
     [peopleSearch, setPeopleSearch] = useState(""),
     [messageSearch, setMessageSearch] = useState("");
