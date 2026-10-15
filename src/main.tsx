@@ -18,8 +18,10 @@ import {
   Menu,
   Clapperboard,
   Heart,
+  MessagesSquare,
 } from "lucide-react";
 import "./styles.css";
+import "./community/community.css";
 import { lessons, tracks } from "./curriculum";
 import {
   loadProgress,
@@ -35,14 +37,18 @@ import LearningPath from "./components/LearningPath";
 import ProfileAvatar from "./components/ProfileAvatar";
 import { validAvatar } from "./lib/profile";
 import CityMap from "./components/CityMap";
+const TorStudyDesk = lazy(() => import("./components/TorStudyDesk"));
 const TorCoach = lazy(() => import("./components/TorCoach"));
 import { VoiceControls } from "./components/VoiceControls";
 import { reloadLatestWorkspace } from "./lib/workspace-recovery";
+import CloudBackup from "./components/CloudBackup";
 import AuthProvider, { useAuth } from "./components/AuthProvider";
+const Classroom = lazy(() => import("./components/Classroom"));
+const BeginnerConsole = lazy(() => import("./components/BeginnerConsole"));
 const CodeChallenges = lazy(() => import("./components/CodeChallenges"));
 const Account = lazy(() => import("./components/Account"));
 const Leaderboard = lazy(() => import("./components/Leaderboard"));
-const Classes = lazy(() => import("./components/Classes"));
+
 const Playground = lazy(() => import("./components/Playground"));
 const UniversalTerminal = lazy(() => import("./components/UniversalTerminal"));
 const LessonView = lazy(() => import("./components/LessonView"));
@@ -63,7 +69,8 @@ const navigation = [
   { id: "progress", title: "Progress", icon: ChartNoAxesCombined },
   { id: "settings", title: "Settings", icon: SettingsIcon },
   { id: "account", title: "Account", icon: House },
-  { id: "classes", title: "Classes", icon: BookOpen },
+  { id: "classes", title: "Classroom", icon: MessagesSquare },
+  { id: "tor", title: "Tor study desk", icon: MessagesSquare },
 ];
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
@@ -163,7 +170,14 @@ function App() {
     [saveError, setSaveError] = useState(false),
     [installPrompt, setInstallPrompt] = useState<any>(null),
     [updateReady, setUpdateReady] = useState<ServiceWorker | null>(null);
+  const [workspaceVersion, setWorkspaceVersion] = useState(0);
+  useEffect(() => {
+    const restored = () => setWorkspaceVersion(v => v + 1);
+    window.addEventListener("cq-cloud-restored", restored);
+    return () => window.removeEventListener("cq-cloud-restored", restored);
+  }, []);
   const [questNotice, setQuestNotice] = useState("");
+  const [toolsExpanded, setToolsExpanded] = useState(false);
   useEffect(()=>{
     const m=user?.user_metadata?.cq_profile;
     if(!m)return;
@@ -207,6 +221,7 @@ function App() {
   const next =
     lessons.find((l) => !progress.completed.includes(l.id)) || lessons[0];
   function navigate(path: string) {
+    setToolsExpanded(false);
     location.hash = path;
   }
   function update(fn: (p: Progress) => Progress) {
@@ -272,7 +287,7 @@ function App() {
   return (
     <div
       className={
-        "app-shell " +
+        "app-shell " + (["community", "classes"].includes(page) ? "community-active " : "") +
         (progress.settings.reducedMotion ? "reduce-motion " : "") +
         (progress.settings.highContrast ? "high-contrast" : "")
       }
@@ -301,13 +316,14 @@ function App() {
             CodeQuest<small>BUILD YOUR UNDERSTANDING</small>
           </span>
         </button>
+        <button className="mobile-tools-toggle" aria-expanded={toolsExpanded} aria-controls="main-tools" onClick={() => setToolsExpanded(!toolsExpanded)}><Menu size={18}/>{toolsExpanded ? "Close tools" : "All tools"}</button>
         <p className="sidebar-label">YOUR ADVENTURE</p>
-        <nav aria-label="Main navigation">
+        <nav id="main-tools" className={toolsExpanded ? "tools-expanded" : undefined} aria-label="Main navigation">
           {navigation.map(({ id, title, icon: Icon }) => (
             <button
               key={id}
-              className={page === id ? "active" : ""}
-              aria-current={page === id ? "page" : undefined}
+              className={page === id || (page === "community" && id === "classes") ? "active" : ""}
+              aria-current={page === id || (page === "community" && id === "classes") ? "page" : undefined}
               onClick={() => navigate(id)}
             >
               <Icon size={19} />
@@ -338,7 +354,7 @@ function App() {
         <header className="app-header">
           <span className="breadcrumb">
             YOUR WORLD <span>/</span>{" "}
-            {navigation.find((n) => n.id === page)?.title.toUpperCase() ||
+            {navigation.find((n) => n.id === (page === "community" ? "classes" : page))?.title.toUpperCase() ||
               "LESSON"}
           </span>
           <div className="header-stats">
@@ -417,6 +433,7 @@ function App() {
           </div>
         )}
         <main id="content" tabIndex={-1}>
+          <CloudBackup userId={user?.id} progress={progress} update={update} />
           <ErrorBoundary key={route}>
             <Suspense
               fallback={
@@ -674,16 +691,20 @@ function App() {
                     </div>
                   )}
                 </section>
+              ) : page === "community" ? (
+                <Classroom community progress={progress} onNavigate={navigate} />
+              ) : page === "tor" ? (
+                <TorStudyDesk progress={progress} update={update}/>
               ) : page === "challenges" ? (
-                <CodeChallenges progress={progress} update={update}/>
+                lessonId === "console" ? <BeginnerConsole progress={progress} update={update}/> : <CodeChallenges progress={progress} update={update} initialId={lessonId}/>
               ) : page === "videos" ? (
                 <TutorialLibrary onNavigate={navigate} />
               ) : page === "terminal" ? (
-                <UniversalTerminal sharedCode={route.startsWith("terminal/share/")?route.split("/").slice(2).join("/"):undefined}/>
+                <UniversalTerminal key={workspaceVersion} sharedCode={route.startsWith("terminal/share/")?route.split("/").slice(2).join("/"):undefined}/>
               ) : page === "playground" ? (
-                <Playground progress={progress} update={update} />
+                <Playground key={workspaceVersion} progress={progress} update={update} />
               ) : page === "designer" ? (
-                <FormDesigner settings={progress.settings} />
+                <FormDesigner key={workspaceVersion} settings={progress.settings} />
               ) : page === "assessment" ? (
                 <Assessment
                   progress={progress}
@@ -695,7 +716,7 @@ function App() {
               ) : page === "leaderboard" ? (
                 <Leaderboard progress={progress}/>
               ) : page === "classes" ? (
-                <Classes progress={progress} onNavigate={navigate} />
+                <Classroom progress={progress} onNavigate={navigate} />
               ) : page === "settings" ? (
                 <SettingsPage
                   progress={progress}
@@ -716,13 +737,18 @@ function App() {
           </ErrorBoundary>
         </main>
         <Suspense fallback={null}>
-        <TorCoach
+        <div className={["community", "classes"].includes(page) ? "community-tor-dock" : undefined}>
+        {page!=="tor" && <TorCoach
           lessonId={selectedLesson?.id}
           page={page}
           settings={{...progress.settings,name:progress.settings.nickname||progress.settings.name}}
           onNavigate={navigate}
-        />
+        />}
+        </div>
         </Suspense>
+        <nav className="mobile-learning-nav" aria-label="Quick navigation">
+          {navigation.filter(item => ["home","learn","terminal","classes","account"].includes(item.id)).map(({id,title,icon:Icon}) => <button key={id} onClick={()=>navigate(id)} aria-current={page===id?"page":undefined}><Icon size={18}/><span>{title}</span></button>)}
+        </nav>
         <footer className="app-footer">
           <span>CodeQuest / Built for understanding.</span>
           <span>

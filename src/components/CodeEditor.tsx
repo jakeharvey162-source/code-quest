@@ -15,6 +15,8 @@ import {
   prevSnippetField,
   clearSnippet,
   autocompletion,
+  acceptCompletion,
+  startCompletion,
 } from "@codemirror/autocomplete";
 import {
   indentWithTab,
@@ -25,6 +27,7 @@ import {
   copyLineDown,
 } from "@codemirror/commands";
 import { openSearchPanel, gotoLine } from "@codemirror/search";
+import { csharpCompletions } from "../lib/csharp-completion.mjs";
 import { snippetAt, plainSnippet } from "../lib/editor-snippets.mjs";
 import { requestQuest } from "../lib/workshop-quests.mjs";
 export default function CodeEditor({
@@ -32,16 +35,23 @@ export default function CodeEditor({
   onChange,
   plain = false,
   label = "C# code editor",
+  focusTarget,
+  completionContext = "",
 }: {
   value: string;
   onChange: (v: string) => void;
   plain?: boolean;
   label?: string;
+  focusTarget?: { name: string; request: number };
+  completionContext?: string;
 }) {
+  const plainEditor = useRef<HTMLTextAreaElement>(null);
   const host = useRef<HTMLDivElement>(null),
     editor = useRef<EditorView | null>(null),
     callback = useRef(onChange);
   callback.current = onChange;
+  const extra = useRef(completionContext);
+  extra.current = completionContext;
   useEffect(() => {
     if (plain || !host.current) return;
     let armed = -1,
@@ -88,6 +98,7 @@ export default function CodeEditor({
                     return true;
                   }
                   armed = -1;
+                  if (acceptCompletion(v)) return true;
                   return indentWithTab.run!(v);
                 },
               },
@@ -135,26 +146,19 @@ export default function CodeEditor({
             ]),
           ),
           autocompletion({
+            interactionDelay: 0,
             override: [
               (context) => {
-                const word = context.matchBefore(/[A-Za-z_]\w*/);
-                if (!word || (!context.explicit && word.from === word.to))
+                if (
+                  !context.explicit &&
+                  !context.matchBefore(/(?:[A-Za-z_]\w*|\.)$/)
+                )
                   return null;
-                const names = new Set(
-                  "class public private protected interface abstract virtual override new return if else for foreach while using namespace string int decimal double bool void static Console WriteLine"
-                    .split(" ")
-                    .concat(
-                      [
-                        ...context.state.doc
-                          .toString()
-                          .matchAll(/\b[A-Za-z_]\w*\b/g),
-                      ].map((m) => m[0]),
-                    ),
+                return csharpCompletions(
+                  context.state.doc.toString(),
+                  context.pos,
+                  extra.current,
                 );
-                return {
-                  from: word.from,
-                  options: [...names].map((label) => ({ label, type: "text" })),
-                };
               },
             ],
           }),
@@ -198,8 +202,29 @@ export default function CodeEditor({
         changes: { from: 0, to: view.state.doc.length, insert: value },
       });
   }, [value]);
+  useEffect(() => {
+    if (!focusTarget) return;
+    const signature = `void ${focusTarget.name}(`;
+    const index = value.indexOf(signature);
+    if (index < 0) return;
+    const opening = value.indexOf("{", index);
+    const at = opening >= 0 ? opening + 1 : index;
+    const view = editor.current;
+    if (view) {
+      view.dispatch({
+        selection: { anchor: at },
+        effects: EditorView.scrollIntoView(at, { y: "center" }),
+      });
+      view.focus();
+    } else if (plainEditor.current) {
+      plainEditor.current.focus();
+      plainEditor.current.setSelectionRange(at, at);
+    }
+    (view?.dom || plainEditor.current)?.scrollIntoView({ block: "center" });
+  }, [focusTarget, plain]);
   return plain ? (
     <textarea
+      ref={plainEditor}
       className="plain-editor"
       aria-label={label}
       value={value}
@@ -228,6 +253,33 @@ export default function CodeEditor({
       }}
     />
   ) : (
-    <div className="editor-host" ref={host} />
+    <div className="code-editor-shell">
+      <div className="editor-assist">
+        <button
+          type="button"
+          onClick={() => {
+            const view = editor.current;
+            if (view) {
+              view.dom.scrollIntoView({ block: "center", behavior: "instant" });
+              view.dispatch({
+                effects: EditorView.scrollIntoView(
+                  view.state.selection.main.head,
+                  { y: "center" },
+                ),
+              });
+              view.focus();
+              startCompletion(view);
+            }
+          }}
+        >
+          Suggest (Ctrl+Space)
+        </button>
+        <small>
+          Declared names &amp; common members · Tab/Enter accepts · Esc then Tab
+          leaves editor
+        </small>
+      </div>
+      <div className="editor-host" ref={host} />
+    </div>
   );
 }

@@ -212,6 +212,7 @@ export default function Playground({
         <span>LOCAL ROSLYN COMPILER</span>
       </div>
       <CodeEditor
+        completionContext={[{path:"Program.cs",text:code},...files].filter(f=>f.path!==active).map(f=>f.text).join("\n")}
         value={visibleCode}
         onChange={edit}
         plain={progress.settings.editorMode === "plain"}

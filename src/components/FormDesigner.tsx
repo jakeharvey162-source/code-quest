@@ -39,132 +39,8 @@ import type { Settings } from "../lib/progress";
 import { gridColumns, gridRows } from "../lib/grid-data.mjs";
 import { reviewSource } from "../lib/assessment-engine.mjs";
 import { maskedInput } from "../lib/input-mask.mjs";
-export type Control = {
-  id: string;
-  type: string;
-  name: string;
-  text: string;
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  parentId?: string;
-  font: string;
-  foreColor: string;
-  backColor: string;
-  enabled: boolean;
-  visible: boolean;
-  tabIndex: number;
-  anchor: string;
-  dock: string;
-  accessibleName: string;
-  eventValueChanged: string;
-  eventClick: string;
-  eventTextChanged: string;
-  eventSelectedIndexChanged: string;
-  eventCheckedChanged: string;
-  items: string;
-  checked: boolean;
-  password: boolean;
-  minimum: number;
-  maximum: number;
-  value: number;
-  selectedIndex?: number;
-  columns: string;
-  gridRows: string;
-  readOnly: boolean;
-  multiline: boolean;
-  mask?: string;
-  eventSelectionChanged: string;
-};
-export function validControls(value: unknown): value is Control[] {
-  return (
-    Array.isArray(value) &&
-    value.length <= 100 &&
-    value.every(
-      (c) =>
-        c &&
-        toolbox.includes(c.type) &&
-        (c.mask === undefined || (typeof c.mask === "string" && c.mask.length<=64)) &&
-        (c.parentId === undefined ||
-          (typeof c.parentId === "string" && c.parentId.length < 100)) &&
-        [
-          "id",
-          "name",
-          "text",
-          "font",
-          "foreColor",
-          "backColor",
-          "anchor",
-          "dock",
-          "accessibleName",
-          "eventValueChanged",
-          "eventClick",
-          "eventTextChanged",
-          "eventSelectedIndexChanged",
-          "eventCheckedChanged",
-          "items",
-          "columns",
-          "eventSelectionChanged",
-        ].every((k) => typeof c[k] === "string" && c[k].length < 10000) &&
-        typeof c.gridRows === "string" &&
-        c.gridRows.length <= 850000 &&
-        [
-          "x",
-          "y",
-          "width",
-          "height",
-          "tabIndex",
-          "minimum",
-          "maximum",
-          "value",
-        ].every((k) => Number.isFinite(c[k])) &&
-        ["x", "y", "width", "height", "tabIndex"].every(
-          (k) => Number.isSafeInteger(c[k]) && c[k] >= 0 && c[k] <= 10000,
-        ) &&
-        c.width >= 24 &&
-        c.height >= 20 &&
-        [
-          "enabled",
-          "visible",
-          "checked",
-          "password",
-          "readOnly",
-          "multiline",
-        ].every((k) => typeof c[k] === "boolean") &&
-        /^#[0-9a-f]{6}$/i.test(c.foreColor) &&
-        /^#[0-9a-f]{6}$/i.test(c.backColor) &&
-        ["None", "Top", "Bottom", "Left", "Right", "Fill"].includes(c.dock) &&
-        c.anchor
-          .split(",")
-          .every((s: string) =>
-            ["Top", "Bottom", "Left", "Right"].includes(s.trim()),
-          ),
-    ) &&
-    new Set(value.map((c) => c.id)).size === value.length
-  );
-}
-export function normalizeControls(value: unknown): Control[] | null {
-  if (!Array.isArray(value)) return null;
-  const migrated = value.map((c) =>
-    c && typeof c === "object"
-      ? {
-          eventValueChanged: "",
-          parentId: "",
-          columns: "Column1|Column 1\nColumn2|Column 2",
-          gridRows: "[]",
-          readOnly: true,
-          multiline: false,
-          mask: "",
-          eventSelectionChanged: "",
-          eventSelectedIndexChanged: "",
-          eventCheckedChanged: "",
-          ...c,
-        }
-      : c,
-  );
-  return validControls(migrated) ? migrated : null;
-}
+import { normalizeControls, validControls, type Control } from "../lib/form-storage";
+export { normalizeControls, validControls, type Control } from "../lib/form-storage";
 function initialControls() {
   try {
     return normalizeControls(JSON.parse(readText("cq-form", "[]"))) || [];
@@ -305,10 +181,23 @@ export function ControlView({
         />
       );
     case "MaskedTextBox":
-      return <input style={style} aria-label={c.accessibleName||c.name} tabIndex={preview?0:-1}
-        inputMode="numeric" maxLength={c.mask?.length||undefined} placeholder={c.mask?.replaceAll("0","_")}
-        value={c.text} readOnly={!preview} disabled={!preview||!c.enabled}
-        onChange={e=>{onValue?.({text:maskedInput(e.target.value,c.mask||"")});if(c.eventTextChanged)onEvent?.(c.eventTextChanged);}}/>;
+      return (
+        <input
+          style={style}
+          aria-label={c.accessibleName || c.name}
+          tabIndex={preview ? 0 : -1}
+          inputMode="numeric"
+          maxLength={c.mask?.length || undefined}
+          placeholder={c.mask?.replaceAll("0", "_")}
+          value={c.text}
+          readOnly={!preview}
+          disabled={!preview || !c.enabled}
+          onChange={(e) => {
+            onValue?.({ text: maskedInput(e.target.value, c.mask || "") });
+            if (c.eventTextChanged) onEvent?.(c.eventTextChanged);
+          }}
+        />
+      );
     case "DateTimePicker":
       return (
         <input
@@ -353,7 +242,7 @@ export function ControlView({
           style={{
             ...style,
             textDecoration: "underline",
-            color: c.foreColor === "#000000" ? "#1659ab" : c.foreColor,
+            color: c.foreColor,
           }}
           disabled={!preview || !c.enabled}
           tabIndex={preview ? 0 : -1}
@@ -363,7 +252,14 @@ export function ControlView({
         </button>
       );
     case "Label":
-      return <span style={style}>{c.text}</span>;
+      return (
+        <span
+          style={style}
+          onClick={() => preview && c.enabled && onEvent?.(c.eventClick)}
+        >
+          {c.text}
+        </span>
+      );
     case "ComboBox":
       return (
         <select
@@ -493,9 +389,13 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
     [grading, setGrading] = useState(false),
     [undo, setUndo] = useState<Control[][]>([]),
     [redo, setRedo] = useState<Control[][]>([]);
+  const [handlerFocus, setHandlerFocus] = useState<{
+    name: string;
+    request: number;
+  }>();
   const [runPosition, setRunPosition] = useState({ x: 24, y: 80 });
-  const toolboxSearchRef=useRef<HTMLInputElement>(null);
-  const propertyPanelRef=useRef<HTMLElement>(null);
+  const toolboxSearchRef = useRef<HTMLInputElement>(null);
+  const propertyPanelRef = useRef<HTMLElement>(null);
   const [messageBoxes, setMessageBoxes] = useState<string[]>([]);
   const runWindow = useRef<HTMLDivElement>(null);
   const runDrag = useRef<{
@@ -554,6 +454,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
     window.addEventListener("keydown", stop);
     return () => window.removeEventListener("keydown", stop);
   }, [preview, grading]);
+  const lastControlTap = useRef<{ id: string; time: number } | null>(null);
   const drag = useRef<{
     id: string;
     x: number;
@@ -588,11 +489,16 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
   }
   const cur = items.find((c) => c.id === selected);
   const validation = validateForm(items);
-  function checkDesignBuild(){
-    const report=validateForm(items);
-    setMessage(report.ok
-      ? "Design check passed — properties, names and event wiring look valid. Export the Windows solution and build it with Visual Studio for native verification."
-      : "Design check found "+report.issues.length+" issue(s): "+report.issues.join(" "));
+  function checkDesignBuild() {
+    const report = validateForm(items);
+    setMessage(
+      report.ok
+        ? "Design check passed — properties, names and event wiring look valid. Export the Windows solution and build it with Visual Studio for native verification."
+        : "Design check found " +
+            report.issues.length +
+            " issue(s): " +
+            report.issues.join(" "),
+    );
   }
   useEffect(() => {
     const timer = setTimeout(
@@ -888,7 +794,8 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
       return ["eventClick", c.name + "_Click"] as const;
     if (c.type === "DataGridView")
       return ["eventSelectionChanged", c.name + "_SelectionChanged"] as const;
-    if (c.type === "Button") return ["eventClick", c.name + "_Click"] as const;
+    if (["Button", "Label"].includes(c.type))
+      return ["eventClick", c.name + "_Click"] as const;
     if (["TextBox", "RichTextBox", "MaskedTextBox"].includes(c.type))
       return ["eventTextChanged", c.name + "_TextChanged"] as const;
     if (["ComboBox", "ListBox"].includes(c.type))
@@ -919,6 +826,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
           `${code.trim()}\n\nprivate void ${name}(object sender, EventArgs e)\n{\n    // Add your event logic here.\n}\n`,
       );
     setWorkspace("code");
+    setHandlerFocus({ name, request: Date.now() });
     setPreview(false);
     setMessage(
       `Opened ${name} in Form1.cs. Your code is included in the Windows export.`,
@@ -1053,28 +961,50 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
           setSelected("");
         }
         if (event.key === "F7") {
-          event.preventDefault();event.stopPropagation();
-          setWorkspace(event.shiftKey?"design":"code");
-          if(!event.shiftKey)setActiveSource("Form1.cs");
-          setMessage(event.shiftKey?"Opened Form1 designer (Shift+F7).":"Opened Form1.cs code editor (F7).");
+          event.preventDefault();
+          event.stopPropagation();
+          setWorkspace(event.shiftKey ? "design" : "code");
+          if (!event.shiftKey) setActiveSource("Form1.cs");
+          setMessage(
+            event.shiftKey
+              ? "Opened Form1 designer (Shift+F7)."
+              : "Opened Form1.cs code editor (F7).",
+          );
           return;
         }
-        if ((event.ctrlKey||event.metaKey)&&event.shiftKey&&event.key.toLowerCase()==="b") {
-          event.preventDefault();event.stopPropagation();
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.shiftKey &&
+          event.key.toLowerCase() === "b"
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
           checkDesignBuild();
           return;
         }
-        if(event.key==="F4"){
-          event.preventDefault();event.stopPropagation();
-          const panel=propertyPanelRef.current;
-          (panel?.querySelector("input,select") as HTMLElement|null)?.focus();
-          setMessage(cur?"Properties for "+cur.name+" ready to edit.":"Select a control, then press F4 to edit its Properties.");
+        if (event.key === "F4") {
+          event.preventDefault();
+          event.stopPropagation();
+          const panel = propertyPanelRef.current;
+          (panel?.querySelector("input,select") as HTMLElement | null)?.focus();
+          setMessage(
+            cur
+              ? "Properties for " + cur.name + " ready to edit."
+              : "Select a control, then press F4 to edit its Properties.",
+          );
           return;
         }
-        if((event.ctrlKey||event.metaKey)&&event.altKey&&event.key.toLowerCase()==="x"){
-          event.preventDefault();event.stopPropagation();
+        if (
+          (event.ctrlKey || event.metaKey) &&
+          event.altKey &&
+          event.key.toLowerCase() === "x"
+        ) {
+          event.preventDefault();
+          event.stopPropagation();
           toolboxSearchRef.current?.focus();
-          setMessage("Toolbox search focused (Ctrl+Alt+X). Type a control name.");
+          setMessage(
+            "Toolbox search focused (Ctrl+Alt+X). Type a control name.",
+          );
           return;
         }
         if (event.key === "Escape") {
@@ -1100,7 +1030,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
       }}
     >
       <SystemWorkshop
-        initialOpen={settings.level==="pro"}
+        initialOpen={settings.level === "pro"}
         onBusy={setGrading}
         controls={items}
         code={practicalCode}
@@ -1254,10 +1184,23 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
               {preview ? <MousePointer2 size={16} /> : <Play size={16} />}{" "}
               {preview ? "Stop debugging" : "Start / F5"}
             </button>
-            <button type="button" aria-label="Check WinForms design" onClick={checkDesignBuild}>
-              <CheckCircle2 size={16}/> Build Check · Ctrl+Shift+B
+            <button
+              type="button"
+              aria-label="Check WinForms design"
+              onClick={checkDesignBuild}
+            >
+              <CheckCircle2 size={16} /> Build Check · Ctrl+Shift+B
             </button>
-            <button type="button" onClick={()=>{setWorkspace("code");setActiveSource("Form1.cs")}} aria-label="Open Form1 C# code">Code · F7</button>
+            <button
+              type="button"
+              onClick={() => {
+                setWorkspace("code");
+                setActiveSource("Form1.cs");
+              }}
+              aria-label="Open Form1 C# code"
+            >
+              Code · F7
+            </button>
             <button
               aria-pressed={showCode}
               onClick={() => {
@@ -1404,10 +1347,33 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
             </div>
             <details className="tip">
               <summary>C# tools & exception handling</summary>
-              <p>Controls go on the form. Classes and exception handlers go in your C# code.</p>
-              <button disabled={preview||grading} onClick={()=>{setWorkspace("code");setActiveSource("Form1.cs");setMessage("In an event method, type try then Tab twice for try/catch, or tryf then Tab twice for try/finally. Use int.TryParse or decimal.TryParse for expected invalid input.");}}>Practise try / catch / finally</button>
-              <p>Use Add class in the file explorer. F7 opens code; Shift+F7 returns to Design; F4 opens Properties; F5 runs; Shift+F5 stops.</p>
-              <a href="https://learn.microsoft.com/en-us/dotnet/desktop/winforms/get-started/create-app-visual-studio" target="_blank" rel="noreferrer">Microsoft WinForms guide ↗</a>
+              <p>
+                Controls go on the form. Classes and exception handlers go in
+                your C# code.
+              </p>
+              <button
+                disabled={preview || grading}
+                onClick={() => {
+                  setWorkspace("code");
+                  setActiveSource("Form1.cs");
+                  setMessage(
+                    "In an event method, type try then Tab twice for try/catch, or tryf then Tab twice for try/finally. Use int.TryParse or decimal.TryParse for expected invalid input.",
+                  );
+                }}
+              >
+                Practise try / catch / finally
+              </button>
+              <p>
+                Use Add class in the file explorer. F7 opens code; Shift+F7
+                returns to Design; F4 opens Properties; F5 runs; Shift+F5 stops.
+              </p>
+              <a
+                href="https://learn.microsoft.com/en-us/dotnet/desktop/winforms/get-started/create-app-visual-studio"
+                target="_blank"
+                rel="noreferrer"
+              >
+                Microsoft WinForms guide ↗
+              </a>
             </details>
             <SourceExplorer
               files={sourceFiles}
@@ -1455,6 +1421,10 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                   the Design tab to edit the form.
                 </p>
                 <CodeEditor
+                  completionContext={sourceFiles.filter(f=>f.path!==activeSource).map(f=>f.text).join("\n")+"\n"+items.map(c=>c.type+" "+c.name+";").join("\n")}
+                  focusTarget={
+                    activeSource === "Form1.cs" ? handlerFocus : undefined
+                  }
                   value={
                     activeSource === "Form1.cs"
                       ? practicalCode
@@ -1736,9 +1706,10 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                           aria-label={!preview ? `Select ${c.name}` : undefined}
                           onFocus={() => !preview && setSelected(c.id)}
                           onClick={() => !preview && setSelected(c.id)}
-                          onDoubleClick={() =>
-                            !preview && createDefaultHandler(c)
-                          }
+                          onDoubleClick={(event) => {
+                            event.stopPropagation();
+                            if (!preview) createDefaultHandler(c);
+                          }}
                           onKeyDown={(e) => {
                             if (preview) return;
                             if (e.key === "F5") {
@@ -1824,6 +1795,26 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                           onPointerUp={(event) => {
                             const completedDrag = drag.current;
                             drag.current = null;
+                            const moved =
+                              completedDrag &&
+                              (Math.abs(event.clientX - completedDrag.startX) >
+                                2 ||
+                                Math.abs(event.clientY - completedDrag.startY) >
+                                  2);
+                            if (event.pointerType === "touch" && !moved) {
+                              const previous = lastControlTap.current;
+                              lastControlTap.current = {
+                                id: c.id,
+                                time: Date.now(),
+                              };
+                              if (
+                                previous?.id === c.id &&
+                                Date.now() - previous.time < 450
+                              ) {
+                                lastControlTap.current = null;
+                                createDefaultHandler(c);
+                              }
+                            } else lastControlTap.current = null;
                             if (
                               completedDrag &&
                               (Math.abs(event.clientX - completedDrag.startX) >
@@ -1872,6 +1863,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                         >
                           <div
                             className={preview ? "" : "design-surface"}
+                            inert={!preview}
                             aria-hidden={!preview}
                           >
                             <ControlView
@@ -1999,7 +1991,12 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
               </>
             )}
           </div>
-          <aside className="properties-panel" ref={propertyPanelRef} tabIndex={-1} aria-label="WinForms Properties panel">
+          <aside
+            className="properties-panel"
+            ref={propertyPanelRef}
+            tabIndex={-1}
+            aria-label="WinForms Properties panel"
+          >
             <fieldset disabled={preview} className="properties-fields">
               <h2>
                 Properties <span>⚡</span>
@@ -2074,6 +2071,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                         ForeColor
                         <input
                           type="color"
+                          aria-label="Foreground colour"
                           value={cur.foreColor}
                           onChange={(e) =>
                             change({ foreColor: e.target.value })
@@ -2084,6 +2082,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                         BackColor
                         <input
                           type="color"
+                          aria-label="Background colour"
                           value={cur.backColor}
                           onChange={(e) =>
                             change({ backColor: e.target.value })
@@ -2143,7 +2142,21 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                     </label>
                   </Field>
                   <Field title="Behavior">
-                    {cur.type==="MaskedTextBox"&&<label>Mask (0 = required digit)<input aria-label="Control Mask" maxLength={64} value={cur.mask||""} onChange={e=>change({mask:e.target.value})}/><small>Use 00000000 for an eight-digit student number, or 000-000-0000 for a phone number.</small></label>}
+                    {cur.type === "MaskedTextBox" && (
+                      <label>
+                        Mask (0 = required digit)
+                        <input
+                          aria-label="Control Mask"
+                          maxLength={64}
+                          value={cur.mask || ""}
+                          onChange={(e) => change({ mask: e.target.value })}
+                        />
+                        <small>
+                          Use 00000000 for an eight-digit student number, or
+                          000-000-0000 for a phone number.
+                        </small>
+                      </label>
+                    )}
                     {(["enabled", "visible"] as const).map((key) => (
                       <label className="check-label" key={key}>
                         <input

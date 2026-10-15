@@ -217,7 +217,7 @@ export function VoiceControls({
       {onNavigate && settings.voiceInput && (
         <span className="muted voice-help">Commands: {examples}</span>
       )}
-      <span role="status" className="muted voice-status">
+      <span role="status" aria-live="polite" aria-atomic="true" className="muted voice-status">
         {status}
       </span>
       {settings.voiceProvider === "elevenlabs" && (

@@ -178,3 +178,13 @@ export function challengeResults(challenge, output, token) {
   }
   return rows;
 }
+
+// Renewable practice uses one draft slot and no repeat XP.
+export function codingRemix(round=0){
+ const seed=Number.isSafeInteger(round)&&round>=0?round:0,threshold=30+seed%51,fee=1+seed%25;
+ const variants=[
+ task('practice-remix','easy','Pass mark remix',`Return true when mark is at least ${threshold}. Marks outside 0–100 must return false.`,'public static bool Pass(int mark)',[[`Pass(${threshold-1})`,'false'],[`Pass(${threshold})`,'true'],['Pass(100)','true'],['Pass(-1)','false'],['Pass(101)','false']],`public static bool Pass(int mark) { return mark >= ${threshold} && mark <= 100; }`,'Use && to require both the pass mark and maximum valid mark.'),
+ task('practice-remix','intermediate','Delivery fee remix',`Return price × quantity plus a delivery fee of ${fee}. Zero quantity costs zero. Test inputs are non-negative.`,'public static decimal Cost(decimal price, int quantity)',[['Cost(10m, 2)',`${20+fee}m`],['Cost(2.5m, 3)',`${7.5+fee}m`],['Cost(10m, 0)','0m'],['Cost(0m, 1)',`${fee}m`]],`public static decimal Cost(decimal price, int quantity) { return quantity == 0 ? 0m : price * quantity + ${fee}m; }`,'Handle zero quantity before adding delivery. Keep decimal money exact.'),
+ task('practice-remix','intermediate','Clean text remix','Trim outer whitespace and return the first character in uppercase. Null, empty and whitespace-only input must return an empty string.','public static string Initial(string text)',[['Initial(" learner ")','"L"'],['Initial("")','""'],['Initial(null)','""'],['Initial("   ")','""'],['Initial("code")','"C"']],'public static string Initial(string text) { return string.IsNullOrWhiteSpace(text) ? "" : text.Trim().Substring(0,1).ToUpperInvariant(); }','Check null or whitespace before indexing.')];
+ return {...variants[seed%3],xp:0,title:variants[seed%3].title+` · ${seed+1}`};
+}

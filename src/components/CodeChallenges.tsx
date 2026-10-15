@@ -1,7 +1,10 @@
 import { useState, useRef, useEffect } from "react";
+import DebugRepairLab from "./DebugRepairLab";
+import ContinuousPractice from "./ContinuousPractice";
 import CodeEditor from "./CodeEditor";
 import {
   codeChallenges,
+  codingRemix,
   challengeProgram,
   challengeResults,
 } from "../lib/code-challenges.mjs";
@@ -11,16 +14,37 @@ import type { UpdateProgress } from "./LessonView";
 export default function CodeChallenges({
   progress,
   update,
+  initialId,
 }: {
+  initialId?: string;
   progress: Progress;
   update: UpdateProgress;
 }) {
-  const [id, setId] = useState(codeChallenges[0].id),
+  const [id, setId] = useState(
+      codeChallenges.find((c) => c.id === initialId)?.id ||
+        (progress.drafts["coding-selected"] === "practice-remix"
+          ? "practice-remix"
+          : codeChallenges.find(
+              (c) => c.id === progress.drafts["coding-selected"],
+            )?.id) ||
+        codeChallenges[0].id,
+    ),
     [level, setLevel] = useState("all"),
     [busy, setBusy] = useState(false),
     [status, setStatus] = useState("Choose a challenge. Predict, code, test."),
     [results, setResults] = useState<{ passed: boolean; actual: string }[]>([]),
     [hint, setHint] = useState(false);
+  useEffect(() => {
+    if (initialId && codeChallenges.some((c) => c.id === initialId)) {
+      generation.current++;
+      if (lock.current) cancelRun();
+      lock.current = false;
+      setBusy(false);
+      setId(initialId);
+      setResults([]);
+      setHint(false);
+    }
+  }, [initialId]);
   const generation = useRef(0);
   const lock = useRef(false);
   useEffect(
@@ -30,7 +54,14 @@ export default function CodeChallenges({
     },
     [],
   );
-  const challenge = codeChallenges.find((c) => c.id === id)!;
+  const remixRound = Math.max(
+    0,
+    Math.min(1e9, Number(progress.drafts["coding-remix-round"]) || 0),
+  );
+  const challenge =
+    id === "practice-remix"
+      ? codingRemix(remixRound)
+      : codeChallenges.find((c) => c.id === id)!;
   const source = progress.drafts["challenge-" + id] ?? challenge.starter;
   function edit(value: string) {
     if (lock.current) return;
@@ -114,10 +145,43 @@ export default function CodeChallenges({
             Real C# tests. Earn XP by fixing the code, not just clicking Run.
           </p>
         </div>
-        <a href="#leaderboard">Compare your rank →</a>
+        <div className="button-row">
+          <a href="#challenges/daily">Daily repair project →</a>
+          <a href="#leaderboard">Compare your rank →</a>
+        </div>
       </div>
+      <p><a className="primary" href="#challenges/console">New to C#? Start with Console.Write and ReadLine →</a></p>
+      <DebugRepairLab
+        progress={progress}
+        update={update}
+        initialId={initialId}
+      />
+      <ContinuousPractice progress={progress} update={update} />
       <div className="challenge-layout">
         <aside className="challenge-picker">
+          <button
+            disabled={busy}
+            onClick={() => {
+              update((p) => {
+                const drafts: Record<string, string> = {
+                  ...p.drafts,
+                  "coding-selected": "practice-remix",
+                  "coding-remix-round": String((remixRound + 1) % 1e9),
+                };
+                delete drafts["challenge-practice-remix"];
+                return { ...p, drafts };
+              });
+              setId("practice-remix");
+              setResults([]);
+              setHint(false);
+              setLevel("all");
+              setStatus(
+                "New coding remix. Fill in the method and test the edge cases.",
+              );
+            }}
+          >
+            New coding remix →
+          </button>
           <label>
             Difficulty
             <select
@@ -127,7 +191,14 @@ export default function CodeChallenges({
                 const next = e.target.value;
                 setLevel(next);
                 if (next !== "all" && challenge.level !== next) {
-                  setId(codeChallenges.find((c) => c.level === next)!.id);
+                  const nextId = codeChallenges.find(
+                    (c) => c.level === next,
+                  )!.id;
+                  setId(nextId);
+                  update((p) => ({
+                    ...p,
+                    drafts: { ...p.drafts, "coding-selected": nextId },
+                  }));
                   setHint(false);
                   setResults([]);
                   setStatus("Ready to test your solution.");
@@ -151,6 +222,10 @@ export default function CodeChallenges({
                 aria-pressed={c.id === id}
                 onClick={() => {
                   setId(c.id);
+                  update((p) => ({
+                    ...p,
+                    drafts: { ...p.drafts, "coding-selected": c.id },
+                  }));
                   setHint(false);
                   setResults([]);
                   setStatus("Ready to test your solution.");

@@ -13,7 +13,8 @@
     "predev": "node scripts/prepare-compiler.mjs && node scripts/prepare-terminal.mjs",
     "prebuild": "node scripts/prepare-compiler.mjs && node scripts/prepare-terminal.mjs",
     "preview": "vite preview",
-    "test:cloud": "playwright test --config playwright.cloud.config.mjs"
+    "test:cloud": "playwright test --config playwright.cloud.config.mjs",
+    "test:community": "playwright test --config playwright.community.config.mjs"
   },
   "dependencies": {
     "@codemirror/autocomplete": "6.20.3",

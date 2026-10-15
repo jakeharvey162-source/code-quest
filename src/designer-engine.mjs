@@ -186,7 +186,11 @@ export function validateForm(list) {
   if (new Set(names).size !== names.length)
     issues.push("Control names must be unique.");
   for (const c of list) {
-    if(c.type === "MaskedTextBox" && !validInputMask(c.mask||"")) issues.push(c.name+": preview masks support 0 for a required digit and separators () +./- only.");
+    if (c.type === "MaskedTextBox" && !validInputMask(c.mask || ""))
+      issues.push(
+        c.name +
+          ": preview masks support 0 for a required digit and separators () +./- only.",
+      );
     if (!toolbox.includes(c.type))
       issues.push(c.name + ": unsupported control type.");
     if (
@@ -328,6 +332,8 @@ export function designerCode(list) {
           `${target}.TabIndex = ${c.tabIndex};`,
           `${target}.AccessibleName = ${quote(c.accessibleName)};`,
         ];
+        if (c.type === "Button")
+          lines.push(`${target}.UseVisualStyleBackColor = false;`);
         for (const key of ["foreColor", "backColor"])
           lines.push(
             `${target}.${key === "foreColor" ? "ForeColor" : "BackColor"} = System.Drawing.ColorTranslator.FromHtml(${quote(c[key])});`,
@@ -364,7 +370,8 @@ export function designerCode(list) {
           lines.push(`${target}.Checked = ${!!c.checked};`);
         if (c.type === "TextBox")
           lines.push(`${target}.UseSystemPasswordChar = ${!!c.password};`);
-        if(c.type === "MaskedTextBox") lines.push(`${target}.Mask = ${quote(c.mask||"")};`);
+        if (c.type === "MaskedTextBox")
+          lines.push(`${target}.Mask = ${quote(c.mask || "")};`);
         if (["TextBox", "RichTextBox"].includes(c.type))
           lines.push(
             `${target}.Multiline = ${c.type === "RichTextBox" || !!c.multiline};`,

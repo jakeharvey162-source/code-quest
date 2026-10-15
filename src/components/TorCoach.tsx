@@ -12,6 +12,7 @@ import {
 } from "../lib/coach-observation.mjs";
 import { useVoices } from "./VoiceControls";
 import {chooseTorReaction,reactionLine} from "../lib/tor-performance.mjs";
+import { studyReply } from "../lib/tor-study.mjs";
 import { lessonSummary, workspaceSummary } from "../lib/tor-summary.mjs";
 const TorAvatar = lazy(() => import("./TorAvatar"));
 const tips: Record<string, string> = {
@@ -23,7 +24,7 @@ const tips: Record<string, string> = {
     "Trace the code on paper first. Write each variable's value after every statement. For a loop, check the starting value, condition and update separately.",
   learn:
     "Predict the output before you run the code. If your prediction differs, trace one statement at a time. Understanding the change is how you prepare for an exam.",
-  home: "Pick a quest or open WinForms to build a form. I can explain controls, events, loops and validation. Drag my hologram out of your way, or use the arrow keys on my handle.",
+  home: "Pick a quest or open WinForms to build a form. I can explain controls, events, loops and validation. Open my panel for help, then minimise it to keep your workspace clear.",
   terminal: "Pick a language, press Run, and inspect the preview and console. I can help debug your code.",
 };
 function answer(question: string, page: string, language: string, spicy: boolean, variation=0) {
@@ -78,6 +79,7 @@ export default function TorCoach({
   const [speechBeat,setSpeechBeat]=useState(0);
   const [gestureId,setGestureId]=useState(0);
   const [gestureClip,setGestureClip]=useState("");
+  const lastSpokenObservation = useRef(0);
   const [reactionLabel,setReactionLabel]=useState("");
   const [proactive, setProactive] = useState(
     () => readText("cq-tor-observe", "true") === "true",
@@ -210,6 +212,7 @@ export default function TorCoach({
       );
       return;
     }
+    if(teachingLanguage === "en-ZA" && /lecturer|classroom|assign|rubric|bookings.txt|historical file/i.test(request)){respond(studyReply(request,/lecturer|rubric|assign/i.test(request)?"lecturer":"student").text);return;}
     respond(answer(request, page, teachingLanguage, roast, ++personalityTurn.current));
   }
   function stop() {
@@ -421,7 +424,6 @@ export default function TorCoach({
         !reaction ||
         listening ||
         pendingAction.current ||
-        Date.now() - lastProactive.current < 8000 ||
         Date.now() - lastRequest.current < 2000
       )
         return;
@@ -433,7 +435,7 @@ export default function TorCoach({
       setReactionLabel(performance.title);
       setGestureId(n=>n+1);
       setReply(text);
-      if (autoSpeak) say(text);
+      if (autoSpeak && Date.now() - lastSpokenObservation.current >= 8000) { lastSpokenObservation.current = Date.now(); say(text); }
     };
     window.addEventListener("cq-workspace-observation", see);
     return () => window.removeEventListener("cq-workspace-observation", see);
@@ -451,7 +453,7 @@ export default function TorCoach({
   if(presence==="hidden")return <aside className="tor-summon" aria-label="Summon Tor">
     <button onClick={()=>portal("summon")}>Call Tor</button>
     <button onClick={listen} aria-label="Call Tor by voice">🎙</button>
-    <span role="status">{status}</span>
+    <span role="status" aria-live="polite" aria-atomic="true">{status}</span>
   </aside>;
   return (
     <aside
@@ -474,6 +476,8 @@ export default function TorCoach({
       <button
         className="tor-handle"
         aria-label="Move Tor hologram"
+        aria-describedby="tor-move-help"
+        aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"
         title="Drag to move. Arrow keys move 16 pixels."
         onPointerDown={(e) => {
           if (e.button !== 0) return;
@@ -514,6 +518,7 @@ export default function TorCoach({
       >
         ⠿ TOR · drag me
       </button>
+      <span id="tor-move-help" className="sr-only">Use the arrow keys to move Tor 16 pixels. Position is saved on this device.</span>
       <button
         className="tor-avatar"
         aria-label={open ? "Minimise Tor" : "Open Tor tutor"}
@@ -586,6 +591,7 @@ export default function TorCoach({
       </button>
       {open && (
         <div className="tor-panel">
+          <a className="tor-study-link" href="#tor" onClick={()=>setOpen(false)}>Open Tor study desk · more room to read ↗</a>
           <div className="tor-observation" aria-label="What Tor sees">
             <b>What I see</b>
             <br />
@@ -755,7 +761,7 @@ export default function TorCoach({
               preview. Undo. Open Code Lab. Open Code Terminal. Challenge me. Roast my code.
             </p>
           </details>
-          <small role="status">
+          <small role="status" aria-live="polite" aria-atomic="true">
             {status || "Ready · voice commands and C# coaching"}
           </small>
           <small className="tor-mic-note">

@@ -1,0 +1,255 @@
+// Original revision exercises, not predicted or official UJ exam questions.
+export const practiceTopics = [
+  "Mixed revision",
+  "Variables & loops",
+  "WinForms & validation",
+  "Strings",
+  "Files & collections",
+  "Objects & inheritance",
+];
+export function practiceQuestion(index = 0, topic = 0) {
+  index = Number.isSafeInteger(index) && index >= 0 ? index : 0;
+  const a = 2 + ((Math.imul(index + 1, 17) >>> 0) % 19),
+    b = 2 + ((Math.imul(index + 3, 7) >>> 0) % 8);
+  const word = ["Lagos", "Joburg", "Durban", "Kigali"][index % 4];
+  const bank = [
+    [
+      1,
+      "Predict the output",
+      `int x = ${a};\nx += ${b};\nConsole.WriteLine(x * 2);`,
+      String((a + b) * 2),
+      [String(a + b * 2), String(a + b), String(a * 2)],
+      `First x becomes ${a + b}. Multiplication then gives ${(a + b) * 2}. += adds to the current value.`,
+      "Track one statement at a time and record the value after each assignment.",
+    ],
+    [
+      1,
+      "Count the loop",
+      `int total = 0;\nfor (int i = 1; i <= ${b}; i++)\n    total += i;\nConsole.WriteLine(total);`,
+      String((b * (b + 1)) / 2),
+      [String(b), String((b * (b - 1)) / 2), String(b * b)],
+      `The loop includes ${b}. Adding 1 through ${b} gives ${(b * (b + 1)) / 2}.`,
+      "A for loop starts with an initial value, checks a condition, runs its body, then updates its counter.",
+    ],
+    [
+      1,
+      "Find the logic bug",
+      `int price = ${a};\nint quantity = ${b};\nint total = price + quantity;\n// We want the cost of all items.`,
+      "Use price * quantity",
+      ["Use price / quantity", "Use price - quantity", "No change needed"],
+      `Adding gives ${a + b}, but the intended cost is ${a * b}. The code compiles; this is a logic error.`,
+      "Syntax errors prevent compilation. Runtime errors happen while running. Logic errors give incorrect results.",
+    ],
+    [
+      2,
+      "Choose safe input validation",
+      'A user types "hello" into txtAge. Which check avoids a numeric parsing exception?',
+      "int.TryParse(txtAge.Text, out int age)",
+      [
+        "int.Parse(txtAge.Text) > 0",
+        "txtAge.Text != null",
+        "Convert.ToInt32(txtAge.Text) > 0",
+      ],
+      "TryParse returns false for invalid text. Check its result before using age, then check the allowed age range.",
+      "TextBox.Text is text even when it looks numeric. Conversion and range checking are separate steps.",
+    ],
+    [
+      2,
+      "Wire the event",
+      "A button should calculate a total when clicked. Where should that calculation run?",
+      "In the button Click handler",
+      [
+        "Only in the Form constructor",
+        "In the button Text property",
+        "In the label BackColor property",
+      ],
+      "The Click handler runs when the event fires. Text and BackColor are properties, not places for calculations.",
+      "Double-click a control in the designer to create or open its default event handler.",
+    ],
+    [
+      3,
+      "Strings are immutable",
+      `string city = "${word}";\ncity.ToUpper();\nConsole.WriteLine(city);`,
+      word,
+      [word.toUpperCase(), word.toLowerCase(), "Compilation error"],
+      `ToUpper returns a new string. Without assigning its result, city remains "${word}".`,
+      "String methods return new strings. Store the returned value when you need the change.",
+    ],
+    [
+      3,
+      "Count the characters",
+      `string city = "  ${word}  ";\nConsole.WriteLine(city.Trim().Length);`,
+      String(word.length),
+      [String(word.length + 4), String(word.length + 2), "0"],
+      `Trim removes outer spaces. Length then counts the remaining ${word.length} characters.`,
+      "Indexing starts at zero. The final valid index is Length - 1.",
+    ],
+    [
+      4,
+      "Keep the old records",
+      "Which method adds a learner name without deleting existing names?",
+      "File.AppendAllText",
+      ["File.WriteAllText", "File.ReadAllText", "File.Delete"],
+      "Append adds to existing content. Include Environment.NewLine for a new line. WriteAllText replaces existing content.",
+      "Variables live in memory; saving to a file can preserve data after the program closes.",
+    ],
+    [
+      4,
+      "Handle file failures",
+      "File.Exists(path) returned true. Can reading still fail?",
+      "Yes: the file may disappear or access may be denied",
+      [
+        "No: Exists guarantees success",
+        "Only if the file contains numbers",
+        "Text files never throw exceptions",
+      ],
+      "The file can change after the check. Handle IOException and UnauthorizedAccessException around the actual operation.",
+      "External resources can change. Give the user a useful error instead of crashing.",
+    ],
+    [
+      5,
+      "Trace separate objects",
+      `var first = new Counter();\nvar second = new Counter();\nfirst.Value = ${a};\nsecond.Value = ${b};\nConsole.WriteLine(first.Value);\n// Counter has a public int Value instance field.`,
+      String(a),
+      [String(a + b), String(b), "0"],
+      `These are distinct objects. Updating second does not change first, which still holds ${a}.`,
+      "A class is a blueprint; new creates an object. Instance fields belong to individual objects.",
+    ],
+    [
+      5,
+      "Recognise encapsulation",
+      "Why keep balance private and expose a Deposit method that checks its input?",
+      "To control changes and reject invalid values",
+      [
+        "To prevent objects being created",
+        "To make the field global",
+        "To make all methods static",
+      ],
+      "Encapsulation places state behind controlled operations. Deposit can reject a negative amount before changing balance.",
+      "Encapsulation controls state access. Abstraction hides implementation details behind useful operations.",
+    ],
+    [
+      5,
+      "Choose runtime behaviour",
+      "Animal pet = new Dog();\npet.Speak();\n// Animal.Speak is virtual; Dog overrides it.",
+      "Dog.Speak runs",
+      [
+        "Animal.Speak always runs",
+        "Both run automatically",
+        "The declaration cannot compile",
+      ],
+      "A virtual call uses the override for the actual object, Dog, even though the variable type is Animal.",
+      "Inheritance expresses an is-a relationship. virtual and override enable different behaviour in derived types.",
+    ],
+    [
+      2,
+      "Text is not a number",
+      `// txtNumber.Text contains "${a}".\nMessageBox.Show(txtNumber.Text + "${b}");`,
+      `${a}${b}`,
+      [String(a + b), String(a * b), "Compilation error"],
+      `Both operands are strings, so + joins them into "${a}${b}". Parse valid input before doing arithmetic.`,
+      "Identify operand types first: + adds numbers but joins strings.",
+    ],
+    [
+      3,
+      "Follow split and indexing",
+      `string[] parts = "red,blue,gold".Split(',');\nMessageBox.Show(parts[${index % 3}][0].ToString());`,
+      ["r", "b", "g"][index % 3],
+      ["red", "blue", "gold", "Runtime exception"],
+      "Split creates three strings. The first index selects a string; [0] selects its first character.",
+      "Trace array and character indexes separately. Both start at zero.",
+    ],
+    [
+      4,
+      "Trace file replacement",
+      `// Assume all operations succeed.\nFile.WriteAllText("notes.txt", "${word}");\nFile.AppendAllText("notes.txt", "!");\nFile.WriteAllText("notes.txt", "Done");\nMessageBox.Show(File.ReadAllText("notes.txt"));`,
+      "Done",
+      [word + "!", word + "!Done", "Runtime exception"],
+      "The final WriteAllText replaces everything in the file with Done. Earlier content is overwritten.",
+      "Keep a running note of file contents after each write.",
+    ],
+    [
+      5,
+      "Trace a constructor",
+      `class Score {\n public int Value;\n public Score(int value) { Value = value + 1; }\n}\n// Inside an event handler:\nvar s = new Score(${a});\nMessageBox.Show(s.Value.ToString());`,
+      String(a + 1),
+      [String(a), "0", "Compilation error"],
+      `Creating Score runs its constructor and assigns ${a + 1}. Constructors have the class name and no return type.`,
+      "Parameters carry inputs into a constructor. Fields keep data in an object.",
+    ],
+    [
+      5,
+      "A setter can reject a value",
+      `class Mark {\n private int score = ${a};\n public int Score {\n  get { return score; }\n  set { if (value >= 0 && value <= 100) score = value; }\n }\n}\n// Inside an event handler:\nvar m = new Mark();\nm.Score = 150;\nMessageBox.Show(m.Score.ToString());`,
+      String(a),
+      ["150", "100", "0"],
+      `The setter rejects 150, leaving the initial value ${a}. Reading Score calls the getter.`,
+      "value holds the attempted assignment. Check the setter condition before changing the backing field.",
+    ],
+    [
+      4,
+      "Trace a shrinking list",
+      'var names = new List<string> { "Amina", "Bayo", "Cleo" };\nnames.RemoveAt(1);\nnames.Add("Dineo");\nConsole.WriteLine(names[1]);',
+      "Cleo",
+      ["Bayo", "Dineo", "Amina"],
+      "Removing Bayo at index 1 shifts Cleo into that position. Dineo is appended at index 2.",
+      "A List can grow and shrink. Removing an element shifts later indexes.",
+    ],
+    [
+      1,
+      "Pause before the line",
+      `int x = ${a};\nint y = ${b};\n// Breakpoint pauses before the next line. What is x now?\nx = x + y;`,
+      String(a),
+      [String(a + b), String(b), "0"],
+      `Before the assignment executes, x still holds ${a}. After stepping over the line it becomes ${a + b}.`,
+      "The debugger pauses before the current statement. Inspect values, step once, then inspect again.",
+    ],
+  ];
+  const eligible = bank.filter((q) => !topic || q[0] === topic);
+  const q = (eligible.length ? eligible : bank)[
+    index % (eligible.length || bank.length)
+  ];
+  const options = [...new Set([q[3], ...q[4]])],
+    shift = index % options.length;
+  return {
+    id: `practice-${topic}-${index}`,
+    topic: q[0],
+    title: q[1],
+    code: q[2],
+    answer: q[3],
+    choices: [...options.slice(shift), ...options.slice(0, shift)],
+    explanation: q[5],
+    lesson: q[6],
+  };
+}
+export function readPractice(raw) {
+  try {
+    const p = JSON.parse(raw || "{}");
+    return {
+      index:
+        Number.isSafeInteger(p.index) && p.index >= 0 && p.index < 1e9
+          ? p.index
+          : 0,
+      topic:
+        Number.isInteger(p.topic) &&
+        p.topic >= 0 &&
+        p.topic < practiceTopics.length
+          ? p.topic
+          : 0,
+      answered:
+        Number.isSafeInteger(p.answered) && p.answered >= 0 ? p.answered : 0,
+      correct:
+        Number.isSafeInteger(p.correct) &&
+        p.correct >= 0 &&
+        p.correct <= p.answered
+          ? p.correct
+          : 0,
+      recent: Array.isArray(p.recent)
+        ? p.recent.filter((x) => typeof x === "boolean").slice(-20)
+        : [],
+      choice: typeof p.choice === "string" ? p.choice.slice(0, 120) : "",
+    };
+  } catch {
+    return readPractice("{}");
+  }
+}

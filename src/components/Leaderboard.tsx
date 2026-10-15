@@ -161,7 +161,7 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
         <h2>Community rankings</h2>
         <p>
           Every participating player has a place on the board. Browse all pages;
-          tied scores share a rank.
+          tied scores share a rank. Scores are self-reported practice progress, not verified competition results or cash prizes.
         </p>
         {mineRank && (
           <div className="rank-summary">
