@@ -71,6 +71,9 @@ export default function Community({
     [roomSearch, setRoomSearch] = useState(""),
     [peopleSearch, setPeopleSearch] = useState(""),
     [messageSearch, setMessageSearch] = useState("");
+  // Routes share a component instance: switching the Private chats shortcut
+  // must still reveal friends even when Community was already open.
+  useEffect(() => setTab(defaultTab), [defaultTab]);
   const [draft, setDraft] = useState<Draft>(empty),
     [draftReady, setDraftReady] = useState(false),
     [draftStatus, setDraftStatus] = useState(""),
