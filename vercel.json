@@ -81,6 +81,9 @@
   "functions": {
     "api/voice.mjs": {
       "maxDuration": 60
+    },
+    "api/tor.mjs": {
+      "maxDuration": 60
     }
   },
   "rewrites": [

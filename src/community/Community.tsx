@@ -60,15 +60,20 @@ function CodePreview({ code, language }: { code: string; language: string }) {
 export default function Community({
   progress,
   onNavigate,
+  defaultTab = "channels",
 }: {
   progress: Progress;
   onNavigate: (path: string) => void;
+  defaultTab?: "channels" | "people";
 }) {
   const c = useCommunity();
-  const [tab, setTab] = useState("channels"),
+  const [tab, setTab] = useState<string>(defaultTab),
     [roomSearch, setRoomSearch] = useState(""),
     [peopleSearch, setPeopleSearch] = useState(""),
     [messageSearch, setMessageSearch] = useState("");
+  // Routes share a component instance: switching the Private chats shortcut
+  // must still reveal friends even when Community was already open.
+  useEffect(() => setTab(defaultTab), [defaultTab]);
   const [draft, setDraft] = useState<Draft>(empty),
     [draftReady, setDraftReady] = useState(false),
     [draftStatus, setDraftStatus] = useState(""),
@@ -585,7 +590,7 @@ export default function Community({
             Choose a Community nickname before posting. Friend requests and
             presence start off.
           </p>
-          <button onClick={() => setTab("privacy")}>Set up my profile</button>
+          <button className="primary" onClick={() => setTab("privacy")}>Create my Community profile</button>
         </div>
       )}
       <nav className="community-tabs" aria-label="Community sections">
@@ -651,11 +656,7 @@ export default function Community({
                   {c.sending ? "Syncing…" : "Sync messages"}
                 </button>
                 <span>
-                  {
-                    c.messages.filter(
-                      (m) => m.state === "queued" || m.state === "failed",
-                    ).length
-                  }{" "}
+                  {c.pendingCount}{" "}
                   in this outbox
                 </span>
               </div>
@@ -961,15 +962,8 @@ export default function Community({
                           >
                             Retry
                           </button>
-                          <button
-                            onClick={() => {
-                              setConfirmCancel(m);
-                            }}
-                          >
-                            Edit queued message
-                          </button>
                           <button onClick={() => setConfirmCancel(m)}>
-                            Cancel queued message
+                            Edit or cancel queued message
                           </button>
                         </>
                       ) : (

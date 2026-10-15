@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { askTorLive } from "../lib/tor-ai";
 import type { Progress } from "../lib/progress";
 import type { UpdateProgress } from "./LessonView";
 import {
@@ -16,7 +17,8 @@ export default function TorStudyDesk({
 }) {
   const [role, setRole] = useState<"student" | "lecturer">("student"),
     [question, setQuestion] = useState(""),
-    [notice, setNotice] = useState("");
+    [notice, setNotice] = useState(""),
+    [thinking, setThinking] = useState(false);
   const history = readStudyHistory(progress.drafts["tor-study-history"]);
   const [topic, setTopic] = useState(history.at(-1)?.topic || "debug");
   const [quiz, setQuiz] = useState<ReturnType<typeof studyQuestion> | null>(
@@ -37,29 +39,39 @@ export default function TorStudyDesk({
           "Explain how to test event wiring",
           "How do I check historical file recovery?",
         ];
-  function ask(text: string) {
-    if (!text.trim()) return;
-    const answer = studyReply(text.trim(), role, topic);
-    setTopic(answer.topic);
-    update((p) => ({
-      ...p,
-      drafts: {
-        ...p.drafts,
-        "tor-study-history": JSON.stringify(
-          [
-            ...readStudyHistory(p.drafts["tor-study-history"]),
-            {
-              question: text.trim().slice(0, 1000),
-              answer: answer.text,
-              topic: answer.topic,
-              role,
-            },
-          ].slice(-10),
-        ),
-      },
-    }));
-    setQuestion("");
-    setNotice("Tor’s built-in coaching reply is ready.");
+  async function ask(text: string) {
+    const questionText = text.trim();
+    if (!questionText || thinking) return;
+    setThinking(true);
+    setNotice("Tor is thinking…");
+    try {
+      const live = await askTorLive(
+        questionText,
+        role,
+        history.map((row) => ({ question: row.question, answer: row.answer })),
+      );
+      const fallback = studyReply(questionText, role, topic);
+      const answer = live.answer || fallback.text;
+      setTopic(fallback.topic);
+      update((p) => ({
+        ...p,
+        drafts: {
+          ...p.drafts,
+          "tor-study-history": JSON.stringify(
+            [
+              ...readStudyHistory(p.drafts["tor-study-history"]),
+              { question: questionText.slice(0, 1000), answer, topic: fallback.topic, role, source: live.live ? "live" : "built-in" },
+            ].slice(-10),
+          ),
+        },
+      }));
+      setQuestion("");
+      setNotice(live.notice);
+    } catch {
+      setNotice("Tor could not finish that request. Your question is still here; try again.");
+    } finally {
+      setThinking(false);
+    }
   }
   function generate() {
     const n = Number(progress.drafts["tor-study-seed"]) || 0;
@@ -75,9 +87,11 @@ export default function TorStudyDesk({
       <p className="eyebrow">YOUR STUDY PARTNER</p>
       <h1>Tor’s study desk</h1>
       <p>
-        Room to read, ask and practise. Built-in coaching works offline after
-        the app is cached. Official documentation opens on the web. A live AI
-        model or web-browsing service is not connected.
+        Chat naturally, share a C# error or ask for help with any CodeQuest
+        lesson. Live AI uses Gemini when configured and you are signed in.
+        Built-in explanations and practice questions remain available offline.
+        When live AI is enabled, your question and recent conversation are
+        sent to Google Gemini for a reply. Do not paste passwords or private data.
       </p>
       <div className="button-row">
         <a href="#challenges/equipment-booking">
@@ -97,7 +111,7 @@ export default function TorStudyDesk({
       </label>
       <div className="tor-study-prompts">
         {prompts.map((p) => (
-          <button key={p} onClick={() => ask(p)}>
+          <button key={p} onClick={() => void ask(p)} disabled={thinking}>
             {p}
           </button>
         ))}
@@ -108,21 +122,21 @@ export default function TorStudyDesk({
             <article key={i}>
               <h2>You · {row.role}</h2>
               <p>{row.question}</p>
-              <h3>Tor · built-in guide</h3>
+              <h3>Tor · {row.source === "live" ? "live AI" : "built-in guide"}</h3>
               <p>{row.answer}</p>
             </article>
           ))
         ) : (
           <p>
-            Pick a prompt or ask about debugging, events, validation, files or
-            properties. Tor keeps the last ten exchanges in your saved progress.
+            Say hello, paste an error or ask a coding question. Tor keeps the last
+            ten exchanges in your saved progress.
           </p>
         )}
       </section>
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          ask(question);
+          void ask(question);
         }}
       >
         <label>
@@ -137,8 +151,8 @@ export default function TorStudyDesk({
           />
         </label>
         <div className="button-row">
-          <button className="primary" disabled={!question.trim()}>
-            Send to Tor
+          <button className="primary" disabled={!question.trim() || thinking}>
+            {thinking ? "Tor is thinking…" : "Send to Tor"}
           </button>
           <button
             type="button"
@@ -152,7 +166,7 @@ export default function TorStudyDesk({
           >
             Clear conversation
           </button>
-          <button type="button" onClick={generate}>
+          <button type="button" onClick={generate} disabled={thinking}>
             New practice question
           </button>
         </div>

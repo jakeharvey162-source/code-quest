@@ -13,6 +13,8 @@ import {
 import { useVoices } from "./VoiceControls";
 import {chooseTorReaction,reactionLine} from "../lib/tor-performance.mjs";
 import { studyReply } from "../lib/tor-study.mjs";
+import { askTorLive, type TorTurn } from "../lib/tor-ai";
+import { useAuth } from "./AuthProvider";
 import { lessonSummary, workspaceSummary } from "../lib/tor-summary.mjs";
 const TorAvatar = lazy(() => import("./TorAvatar"));
 const tips: Record<string, string> = {
@@ -28,6 +30,9 @@ const tips: Record<string, string> = {
   terminal: "Pick a language, press Run, and inspect the preview and console. I can help debug your code.",
 };
 function answer(question: string, page: string, language: string, spicy: boolean, variation=0) {
+  if (/^(?:hi|hey|hello|yo|sup|good (?:morning|afternoon|evening))[!?.\s]*$/i.test(question.trim()))
+    return "Hey, I'm Tor! What are we building today? Ask me anything, or paste an error or code snippet.";
+
   const lesson=localizedLesson(question,language,spicy,variation);
   if(lesson)return lesson;
   if(language!=="en-ZA")return localizedFallback(language);
@@ -54,6 +59,7 @@ export default function TorCoach({
   onNavigate: (page: string) => void;
   lessonId?: string;
 }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [presence,setPresence]=useState<"visible"|"departing"|"hidden"|"arriving">("visible");
   const portalTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -88,6 +94,7 @@ export default function TorCoach({
   const lastRequest = useRef(0);
   const lastProactive = useRef(0);
   const personalityTurn = useRef(0);
+  const chatHistory = useRef<TorTurn[]>([]);
   const [accent, setAccent] = useState(() =>
     readText("cq-tor-accent", "en-ZA"),
   );
@@ -213,7 +220,13 @@ export default function TorCoach({
       return;
     }
     if(teachingLanguage === "en-ZA" && /lecturer|classroom|assign|rubric|bookings.txt|historical file/i.test(request)){respond(studyReply(request,/lecturer|rubric|assign/i.test(request)?"lecturer":"student").text);return;}
-    respond(answer(request, page, teachingLanguage, roast, ++personalityTurn.current));
+    // Keep deterministic form commands local; ordinary conversation uses live AI
+    // only with a valid signed-in session and server-side Gemini key.
+    const live = await askTorLive(request, "student", chatHistory.current, page);
+    const replyText = live.answer || answer(request, page, teachingLanguage, roast, ++personalityTurn.current);
+    chatHistory.current = [...chatHistory.current, {question: request, answer: replyText}].slice(-6);
+    respond(replyText);
+    if (!live.live) setStatus(live.notice);
   }
   function stop() {
     pendingAction.current?.abort();
@@ -591,7 +604,7 @@ export default function TorCoach({
       </button>
       {open && (
         <div className="tor-panel">
-          <a className="tor-study-link" href="#tor" onClick={()=>setOpen(false)}>Open Tor study desk · more room to read ↗</a>
+          {user && <a className="tor-study-link" href="#tor" onClick={()=>setOpen(false)}>Open Tor study desk · more room to read ↗</a>}
           <div className="tor-observation" aria-label="What Tor sees">
             <b>What I see</b>
             <br />

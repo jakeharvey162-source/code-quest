@@ -204,9 +204,17 @@ export default function CloudBackup({
       document.removeEventListener("visibilitychange", save);
     };
   }, [userId]);
-  return status ? (
-    <p className="cloud-backup-status" aria-live="polite">
-      {status} <a href="#account">Account</a>
+  // Keep successful saves accessible to account/history tests and screen readers
+  // without adding another global status landmark or a permanent visual banner.
+  if (!status) return null;
+  const needsAttention = /paused|unavailable|pending|too large|saving is off/i.test(status);
+  return (
+    <p
+      className={needsAttention ? "cloud-backup-status" : "cloud-backup-status sr-only"}
+      aria-live="polite"
+    >
+      {status}
+      {needsAttention && <> <a href="#account">Manage cloud saves</a></>}
     </p>
-  ) : null;
+  );
 }
