@@ -16,7 +16,6 @@ import {
   clearSnippet,
   autocompletion,
   acceptCompletion,
-  startCompletion,
 } from "@codemirror/autocomplete";
 import {
   indentWithTab,
@@ -254,31 +253,6 @@ export default function CodeEditor({
     />
   ) : (
     <div className="code-editor-shell">
-      <div className="editor-assist">
-        <button
-          type="button"
-          onClick={() => {
-            const view = editor.current;
-            if (view) {
-              view.dom.scrollIntoView({ block: "center", behavior: "instant" });
-              view.dispatch({
-                effects: EditorView.scrollIntoView(
-                  view.state.selection.main.head,
-                  { y: "center" },
-                ),
-              });
-              view.focus();
-              startCompletion(view);
-            }
-          }}
-        >
-          Suggest (Ctrl+Space)
-        </button>
-        <small>
-          Declared names &amp; common members · Tab/Enter accepts · Esc then Tab
-          leaves editor
-        </small>
-      </div>
       <div className="editor-host" ref={host} />
     </div>
   );
