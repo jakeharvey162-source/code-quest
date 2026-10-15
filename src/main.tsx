@@ -31,6 +31,7 @@ import {
   localDay,
 } from "./lib/progress";
 import type { Progress } from "./lib/progress";
+import { xpLost } from "./lib/xp-penalties.mjs";
 import QuestBoard from "./components/QuestBoard";
 import { workshopQuests } from "./lib/workshop-quests.mjs";
 import LearningPath from "./components/LearningPath";
@@ -70,8 +71,13 @@ const navigation = [
   { id: "settings", title: "Settings", icon: SettingsIcon },
   { id: "account", title: "Account", icon: House },
   { id: "classes", title: "Classroom", icon: MessagesSquare },
+  { id: "community", title: "Community chat", icon: MessagesSquare },
+  { id: "private-chats", title: "Private chats", icon: MessagesSquare },
   { id: "tor", title: "Tor study desk", icon: MessagesSquare },
 ];
+// Community, DMs, Classroom and live Tor Study Desk unlock with an account.
+// Free lessons, coding tools and the floating offline tutor remain available.
+const accountOnlyPages = new Set(["classes", "community", "private-chats", "tor"]);
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
   { failed: boolean; detail: string; recovering: boolean }
@@ -287,7 +293,7 @@ function App() {
   return (
     <div
       className={
-        "app-shell " + (["community", "classes"].includes(page) ? "community-active " : "") +
+        "app-shell " + (["community", "private-chats", "classes"].includes(page) ? "community-active " : "") +
         (progress.settings.reducedMotion ? "reduce-motion " : "") +
         (progress.settings.highContrast ? "high-contrast" : "")
       }
@@ -319,11 +325,11 @@ function App() {
         <button className="mobile-tools-toggle" aria-expanded={toolsExpanded} aria-controls="main-tools" onClick={() => setToolsExpanded(!toolsExpanded)}><Menu size={18}/>{toolsExpanded ? "Close tools" : "All tools"}</button>
         <p className="sidebar-label">YOUR ADVENTURE</p>
         <nav id="main-tools" className={toolsExpanded ? "tools-expanded" : undefined} aria-label="Main navigation">
-          {navigation.map(({ id, title, icon: Icon }) => (
+          {navigation.filter((item) => user || !accountOnlyPages.has(item.id)).map(({ id, title, icon: Icon }) => (
             <button
               key={id}
-              className={page === id || (page === "community" && id === "classes") ? "active" : ""}
-              aria-current={page === id || (page === "community" && id === "classes") ? "page" : undefined}
+              className={page === id ? "active" : ""}
+              aria-current={page === id ? "page" : undefined}
               onClick={() => navigate(id)}
             >
               <Icon size={19} />
@@ -691,8 +697,19 @@ function App() {
                     </div>
                   )}
                 </section>
-              ) : page === "community" ? (
-                <Classroom community progress={progress} onNavigate={navigate} />
+              ) : !user && accountOnlyPages.has(page) ? (
+                <section className="page settings-page" aria-label="Sign in required">
+                  <p className="eyebrow">UNLOCK YOUR LEARNING CREW</p>
+                  <h1>Join CodeQuest to connect</h1>
+                  <p>Create a free account or sign in to unlock Community channels,
+                    private conversations with accepted friends, Classroom, and Tor Study Desk.
+                    Your offline coding tools and lessons remain free without an account.</p>
+                  <button className="primary" onClick={() => navigate("account")}>
+                    Create account or sign in
+                  </button>
+                </section>
+              ) : page === "community" || page === "private-chats" ? (
+                <Classroom community defaultCommunityTab={page === "private-chats" ? "people" : "channels"} progress={progress} onNavigate={navigate} />
               ) : page === "tor" ? (
                 <TorStudyDesk progress={progress} update={update}/>
               ) : page === "challenges" ? (
@@ -737,7 +754,7 @@ function App() {
           </ErrorBoundary>
         </main>
         <Suspense fallback={null}>
-        <div className={["community", "classes"].includes(page) ? "community-tor-dock" : undefined}>
+        <div className={["community", "private-chats", "classes"].includes(page) ? "community-tor-dock" : undefined}>
         {page!=="tor" && <TorCoach
           lessonId={selectedLesson?.id}
           page={page}
@@ -747,7 +764,7 @@ function App() {
         </div>
         </Suspense>
         <nav className="mobile-learning-nav" aria-label="Quick navigation">
-          {navigation.filter(item => ["home","learn","terminal","classes","account"].includes(item.id)).map(({id,title,icon:Icon}) => <button key={id} onClick={()=>navigate(id)} aria-current={page===id?"page":undefined}><Icon size={18}/><span>{title}</span></button>)}
+          {navigation.filter(item => (user || !accountOnlyPages.has(item.id)) && ["home","learn","terminal","classes","account"].includes(item.id)).map(({id,title,icon:Icon}) => <button key={id} onClick={()=>navigate(id)} aria-current={page===id?"page":undefined}><Icon size={18}/><span>{title}</span></button>)}
         </nav>
         <footer className="app-footer">
           <span>CodeQuest / Built for understanding.</span>
@@ -786,7 +803,7 @@ function ProgressPage({
           </b>
         </article>
         <article>
-          <span>EXPERIENCE EARNED</span>
+          <span>CURRENT GAME XP</span>
           <b>
             {xpFor(progress)}
             <small> XP</small>
@@ -800,6 +817,12 @@ function ProgressPage({
           </b>
         </article>
       </div>
+      <p className="muted" role="note">
+        XP risk: a distinct failing coding-challenge solution can cost 5 XP,
+        at most twice per challenge. Repeating the same code and compiler
+        errors cost nothing. You have lost {xpLost(progress.steps)} XP so far;
+        your balance never drops below zero.
+      </p>
       <h2>Your neighbourhoods</h2>
       <div className="track-progress-list">
         {tracks.map((track) => {
