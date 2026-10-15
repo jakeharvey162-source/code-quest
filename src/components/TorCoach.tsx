@@ -14,6 +14,7 @@ import { useVoices } from "./VoiceControls";
 import {chooseTorReaction,reactionLine} from "../lib/tor-performance.mjs";
 import { studyReply } from "../lib/tor-study.mjs";
 import { askTorLive, type TorTurn } from "../lib/tor-ai";
+import { useAuth } from "./AuthProvider";
 import { lessonSummary, workspaceSummary } from "../lib/tor-summary.mjs";
 const TorAvatar = lazy(() => import("./TorAvatar"));
 const tips: Record<string, string> = {
@@ -58,6 +59,7 @@ export default function TorCoach({
   onNavigate: (page: string) => void;
   lessonId?: string;
 }) {
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [presence,setPresence]=useState<"visible"|"departing"|"hidden"|"arriving">("visible");
   const portalTimer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -602,7 +604,7 @@ export default function TorCoach({
       </button>
       {open && (
         <div className="tor-panel">
-          <a className="tor-study-link" href="#tor" onClick={()=>setOpen(false)}>Open Tor study desk · more room to read ↗</a>
+          {user && <a className="tor-study-link" href="#tor" onClick={()=>setOpen(false)}>Open Tor study desk · more room to read ↗</a>}
           <div className="tor-observation" aria-label="What Tor sees">
             <b>What I see</b>
             <br />
