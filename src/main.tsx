@@ -44,6 +44,7 @@ import { reloadLatestWorkspace } from "./lib/workspace-recovery";
 import CloudBackup from "./components/CloudBackup";
 import AuthProvider, { useAuth } from "./components/AuthProvider";
 const Classroom = lazy(() => import("./components/Classroom"));
+const BeginnerConsole = lazy(() => import("./components/BeginnerConsole"));
 const CodeChallenges = lazy(() => import("./components/CodeChallenges"));
 const Account = lazy(() => import("./components/Account"));
 const Leaderboard = lazy(() => import("./components/Leaderboard"));
@@ -426,7 +427,7 @@ function App() {
           </div>
         )}
         <main id="content" tabIndex={-1}>
-          <CloudBackup userId={user?.id} progress={progress} />
+          <CloudBackup userId={user?.id} progress={progress} update={update} />
           <ErrorBoundary key={route}>
             <Suspense
               fallback={
@@ -689,7 +690,7 @@ function App() {
               ) : page === "tor" ? (
                 <TorStudyDesk progress={progress} update={update}/>
               ) : page === "challenges" ? (
-                <CodeChallenges progress={progress} update={update} initialId={lessonId}/>
+                lessonId === "console" ? <BeginnerConsole progress={progress} update={update}/> : <CodeChallenges progress={progress} update={update} initialId={lessonId}/>
               ) : page === "videos" ? (
                 <TutorialLibrary onNavigate={navigate} />
               ) : page === "terminal" ? (

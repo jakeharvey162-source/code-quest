@@ -1,4 +1,4 @@
-let module;
+let module, compilation;
 self.onmessage = async (event) => {
   try {
     if (!module) {
@@ -23,7 +23,8 @@ self.onmessage = async (event) => {
         );
     }
     self.postMessage({ type: "compiling" });
-    const compilation = await module.createCompilationAsync(event.data.code);
+    if (compilation) await compilation.recompileAsync(event.data.code);
+    else compilation = await module.createCompilationAsync(event.data.code);
     const diagnostics = await compilation.getDiagnosticsAsync();
     if (diagnostics.some((d) => String(d.severity).toLowerCase() === "error")) {
       self.postMessage({

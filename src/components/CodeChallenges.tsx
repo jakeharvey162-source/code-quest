@@ -150,6 +150,7 @@ export default function CodeChallenges({
           <a href="#leaderboard">Compare your rank →</a>
         </div>
       </div>
+      <p><a className="primary" href="#challenges/console">New to C#? Start with Console.Write and ReadLine →</a></p>
       <DebugRepairLab
         progress={progress}
         update={update}

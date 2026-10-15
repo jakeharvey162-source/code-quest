@@ -3,9 +3,10 @@ import { supabase, authRedirect } from "../lib/supabase";
 import { useAuth } from "./AuthProvider";
 import { migrateProgress, xpFor, type Progress } from "../lib/progress";
 import { readText, writeText, readBrief } from "../lib/local-data";
-import { normalizeControls } from "./FormDesigner";
+import { normalizeControls } from "../lib/form-storage";
 import type { UpdateProgress } from "./LessonView";
 import { backupPreference } from "./CloudBackup";
+import { currentSnapshot, restoreSnapshot } from "../lib/cloud-snapshot";
 import LearnerProfile from "./LearnerProfile";
 function friendlyAccountError(error: unknown): string {
   const message = `${(error as { code?: string })?.code || ""} ${error instanceof Error ? error.message : String((error as { message?: string })?.message || error || "")}`;
@@ -50,8 +51,11 @@ export default function Account({
   }, [authError]);
   useEffect(() => {
     const saved = (event: Event) => {
-      const detail = (event as CustomEvent<{userId:string;revision:number}>).detail;
-      if (detail?.userId === user?.id && Number.isInteger(detail.revision)) setRevision(detail.revision);
+      const detail = (
+        event as CustomEvent<{ userId: string; revision: number }>
+      ).detail;
+      if (detail?.userId === user?.id && Number.isInteger(detail.revision))
+        setRevision(detail.revision);
     };
     window.addEventListener("cq-cloud-saved", saved);
     return () => window.removeEventListener("cq-cloud-saved", saved);
@@ -169,13 +173,7 @@ export default function Account({
       throw new Error(
         "Load cloud status before saving. Try Refresh cloud status.",
       );
-    const snapshot = {
-      format: "codequest-backup-v1",
-      progress,
-      controls: normalizeControls(JSON.parse(readText("cq-form", "[]"))) || [],
-      practicalCode: readText("cq-practical-code"),
-      practicalBrief: readBrief(),
-    };
+    const snapshot = currentSnapshot(progress);
     const { error } = await supabase.rpc("cq_save_snapshot", {
       expected_revision: revision,
       payload: snapshot,
@@ -188,7 +186,11 @@ export default function Account({
     if (error) throw error;
     await refresh();
     const enabled = auto && backupPreference(true, revision + 1);
-    setMessage(enabled ? "Saved. Automatic backup is on for this device. Restore your cloud save before continuing on another device." : "Saved to your account. Cloud history updated." );
+    setMessage(
+      enabled
+        ? "Saved to your account. Automatic backup is on for this device."
+        : "Saved to your account. Cloud history updated.",
+    );
   }
   async function load() {
     backupPreference(false);
@@ -200,30 +202,12 @@ export default function Account({
       .maybeSingle();
     if (error) throw error;
     if (!data) throw new Error("There is no cloud save yet.");
-    const value = data.snapshot,
-      restored = migrateProgress(value?.progress),
-      controls = normalizeControls(value?.controls);
-    if (
-      value?.format !== "codequest-backup-v1" ||
-      !restored ||
-      !controls ||
-      typeof value.practicalCode !== "string" ||
-      value.practicalCode.length > 50000
-    )
-      throw new Error("Cloud save is invalid. Your local work was kept.");
-    if (
-      !writeText("cq-form", JSON.stringify(controls)) ||
-      !writeText("cq-practical-code", value.practicalCode) ||
-      !writeText(
-        "cq-practical-brief",
-        JSON.stringify(value.practicalBrief || null),
-      )
-    )
-      throw new Error("This browser could not save the restored draft.");
+    const restored = restoreSnapshot(data.snapshot);
     update(() => restored);
     setRevision(data.revision);
     setRestore(false);
-    setMessage("Cloud save restored on this device.");
+    backupPreference(true, data.revision);
+    setMessage("Cloud save restored. Automatic saving is on.");
   }
   return (
     <section className="page settings-page">
@@ -363,23 +347,45 @@ export default function Account({
           <article className="settings-card">
             <h2>{user.email}</h2>
             <p>
-              Save manually or enable automatic backup every 60 seconds while this app is open. Save before closing or changing devices; restore to
-              load your last cloud save. Class sharing does not include your
-              private code drafts.
+              Your progress and code save automatically while you’re online.
+              Private drafts stay private when you share class progress.
             </p>
-            <div className="button-row">
-              <button disabled={busy} onClick={() => action(() => save(true))}>Save & enable automatic backup</button>
-              <button disabled={busy} onClick={() => { backupPreference(false); setMessage("Automatic backup turned off on this device."); }}>Turn off automatic backup</button>
-              <button disabled={busy} onClick={() => action(() => save())}>
-                Save to cloud
-              </button>
-              <button disabled={busy} onClick={() => setRestore(true)}>
-                Restore cloud save
-              </button>
-              <button disabled={busy} onClick={() => action(refresh)}>
-                Refresh cloud status
-              </button>
-            </div>
+            <details>
+              <summary>Cloud recovery &amp; save options</summary>
+              <p>
+                Use these if you need to choose between work saved on two
+                devices.
+              </p>
+              <div className="button-row">
+                <button
+                  disabled={busy}
+                  onClick={() => action(() => save(true))}
+                >
+                  Save &amp; enable automatic backup
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => {
+                    backupPreference(false);
+                    setMessage("Automatic backup turned off on this device.");
+                  }}
+                >
+                  Turn off automatic backup
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => action(() => save(true))}
+                >
+                  Save to cloud
+                </button>
+                <button disabled={busy} onClick={() => setRestore(true)}>
+                  Restore cloud save
+                </button>
+                <button disabled={busy} onClick={() => action(refresh)}>
+                  Refresh cloud status
+                </button>
+              </div>
+            </details>
             {restore && (
               <div>
                 <p>

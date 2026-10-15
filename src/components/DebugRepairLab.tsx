@@ -8,6 +8,7 @@ import {
 } from "../lib/daily-projects.mjs";
 import { localDay } from "../lib/progress";
 import { download } from "../lib/download";
+import InteractiveConsole from "./InteractiveConsole";
 import CodeEditor from "./CodeEditor";
 import {
   debugExercises,
@@ -409,6 +410,7 @@ export default function DebugRepairLab({
           plain={progress.settings.editorMode === "plain"}
           label="Repair C# program"
         />
+        <details><summary>Interact with this program in a console</summary><InteractiveConsole source={source}/></details>
         <label>
           Console input · one answer per line
           <textarea

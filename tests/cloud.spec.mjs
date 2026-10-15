@@ -2,6 +2,13 @@ import { test, expect } from "@playwright/test";
 import { freshProgress } from "../src/lib/progress.ts";
 const A = "11111111-1111-4111-8111-111111111111";
 const B = "22222222-2222-4222-8222-222222222222";
+async function recoveryOptions(page) {
+  const summary = page.getByText("Cloud recovery & save options", {
+    exact: true,
+  });
+  if ((await summary.locator("..").getAttribute("open")) === null)
+    await summary.click();
+}
 async function mockCloud(page, participants = []) {
   const snapshots = new Map(),
     history = new Map();
@@ -238,6 +245,7 @@ test("sign in errors, account-isolated local drafts, cloud save and explicit res
   await expect(page.getByLabel("Your name", { exact: true })).toHaveValue("");
   await page.getByLabel("Your name", { exact: true }).fill("Account A");
   await page.goto("/#account");
+  await recoveryOptions(page);
   await page
     .getByRole("button", { name: "Save to cloud", exact: true })
     .click();
@@ -248,6 +256,7 @@ test("sign in errors, account-isolated local drafts, cloud save and explicit res
   await page.goto("/#settings");
   await page.getByLabel("Your name", { exact: true }).fill("Changed locally");
   await page.goto("/#account");
+  await recoveryOptions(page);
   await page
     .getByRole("button", { name: "Restore cloud save", exact: true })
     .click();
@@ -641,22 +650,14 @@ test("automatic backup persists edits and pauses on a cross-device conflict", as
   await page.clock.install();
   await page.goto("/#account");
   await signin(page);
-  await page
-    .getByRole("button", {
-      name: "Save & enable automatic backup",
-      exact: true,
-    })
-    .click();
-  await expect(page.getByRole("status")).toContainText(
-    "Automatic backup is on",
-  );
+  await expect.poll(() => cloud.snapshots.get(A)?.revision).toBe(1);
   await page.goto("/#settings");
   await page
     .getByLabel("Your name", { exact: true })
     .fill("Auto saved learner");
   await page.clock.fastForward(61000);
   await expect(page.locator(".cloud-backup-status")).toContainText(
-    "Cloud backup saved",
+    "All changes saved",
   );
   expect(cloud.snapshots.get(A).snapshot.progress.settings.name).toBe(
     "Auto saved learner",
@@ -687,20 +688,13 @@ test("manual save remains usable after automatic backup while Account stays open
   await page.clock.install();
   await page.goto("/#account");
   await signin(page);
-  await page
-    .getByRole("button", {
-      name: "Save & enable automatic backup",
-      exact: true,
-    })
-    .click();
-  await expect(page.getByRole("status")).toContainText(
-    "Automatic backup is on",
-  );
+  await expect.poll(() => cloud.snapshots.get(A)?.revision).toBe(1);
   await page.clock.fastForward(61000);
   await expect(page.locator(".cloud-backup-status")).toContainText(
-    "Cloud backup saved",
+    "All changes saved",
   );
   const previous = cloud.snapshots.get(A).revision;
+  await recoveryOptions(page);
   await page
     .getByRole("button", { name: "Save to cloud", exact: true })
     .click();
@@ -791,4 +785,72 @@ test("lecturer switching classes cannot see an earlier delayed response overwrit
   await expect(
     page.getByRole("cell", { name: "Wrong delayed group" }),
   ).toHaveCount(0);
+});
+
+test("a new device restores its cloud draft automatically and unsaved local edits survive reload", async ({
+  page,
+}) => {
+  const cloud = await mockCloud(page);
+  await page.clock.install();
+  await page.goto("/#account");
+  await signin(page);
+  await expect.poll(() => cloud.snapshots.get(A)?.revision).toBe(1);
+  await page.goto("/#challenges/console");
+  await page
+    .getByRole("textbox", { name: "Beginner C# code" })
+    .fill('using System; Console.WriteLine("saved on device one");');
+  await page.evaluate((id) => {
+    localStorage.setItem(
+      "cq-source-files:" + id,
+      JSON.stringify([{ path: "Student.cs", text: "class Student {}" }]),
+    );
+    localStorage.setItem(
+      "cq-terminal-source-csharp:" + id,
+      'using System; Console.WriteLine("terminal draft");',
+    );
+  }, A);
+  await page.clock.fastForward(6000);
+  await expect
+    .poll(
+      () =>
+        cloud.snapshots.get(A)?.snapshot.progress.drafts[
+          "console-challenge-hello"
+        ],
+    )
+    .toContain("device one");
+  // Simulate the account opening on a fresh device, keeping only its auth session.
+  await page.evaluate((id) => {
+    for (const key of Object.keys(localStorage))
+      if (key.endsWith(":" + id)) localStorage.removeItem(key);
+  }, A);
+  await page.reload();
+  await expect
+    .poll(() =>
+      page.evaluate(
+        (id) => localStorage.getItem("cq-terminal-source-csharp:" + id),
+        A,
+      ),
+    )
+    .toContain("terminal draft");
+  await expect
+    .poll(() =>
+      page.evaluate((id) => localStorage.getItem("cq-source-files:" + id), A),
+    )
+    .toContain("Student.cs");
+  await expect(
+    page.getByRole("textbox", { name: "Beginner C# code" }),
+  ).toHaveText('using System; Console.WriteLine("saved on device one");');
+  await page
+    .getByRole("textbox", { name: "Beginner C# code" })
+    .fill('using System; Console.WriteLine("new offline draft");');
+  await page.reload();
+  await page.clock.fastForward(6000);
+  await expect
+    .poll(
+      () =>
+        cloud.snapshots.get(A)?.snapshot.progress.drafts[
+          "console-challenge-hello"
+        ],
+    )
+    .toContain("offline draft");
 });

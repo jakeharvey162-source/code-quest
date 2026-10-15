@@ -85,7 +85,7 @@
   },
   "rewrites": [
     {
-      "source": "/:page(home|dashboard|login|account|learn|lessons|challenges|videos|playground|terminal|designer|winforms|assessment|leaderboard|progress|settings|classes|community)/:path*",
+      "source": "/:page(home|dashboard|login|account|learn|lessons|challenges|videos|playground|terminal|designer|winforms|assessment|leaderboard|progress|settings|classes|community|tor)/:path*",
       "destination": "/index.html"
     }
   ]
