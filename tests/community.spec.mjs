@@ -714,3 +714,47 @@ test('member search finds a learner beyond the first 200 downloaded profiles',as
  await service.attach(page);await signin(page,'a@community.test');await page.getByRole('button',{name:'People & friends',exact:true}).click();await page.getByLabel('Find a Community member').fill('Learner 405');await expect(page.locator('.community-person').filter({hasText:'Learner 405'})).toHaveCount(0);await page.getByRole('button',{name:'Search all members',exact:true}).click();await expect(page.locator('.community-person').filter({hasText:'Learner 405'})).toBeVisible();
  }finally{await service.close();}
 });
+
+test('partial refresh failures preserve cached rooms and the block list across reloads',async({page})=>{
+ const service=await fixture();
+ try{
+  await service.attach(page);await signin(page,'a@community.test');
+  await page.getByRole('button',{name:'People & friends',exact:true}).click();
+  await page.locator('.community-person').filter({has:page.getByText('Bayo the builder',{exact:true})}).getByRole('button',{name:'Block',exact:true}).click();
+  await page.getByRole('button',{name:'Privacy & profile',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Unblock',exact:true})).toHaveCount(1);
+  await page.route('**/rest/v1/cq_community_blocks*',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'temporary blocks outage'})}));
+  await page.route('**/rest/v1/cq_community_rooms*',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'temporary rooms outage'})}));
+  await page.getByRole('button',{name:'Conversations',exact:true}).click();
+  await page.getByRole('button',{name:'Sync messages',exact:true}).click();
+  await expect(channel(page)).toBeVisible();
+  await page.getByRole('button',{name:'Privacy & profile',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Unblock',exact:true})).toHaveCount(1);
+  await page.getByRole('button',{name:'Conversations',exact:true}).click();
+  await expect(channel(page)).toBeVisible();
+  await page.reload();
+  await expect(channel(page)).toBeVisible();
+  await page.getByRole('button',{name:'Privacy & profile',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Unblock',exact:true})).toHaveCount(1);
+ }finally{await service.close();}
+});
+
+test("member-only chat links show after sign-in and Private chats opens friends on mobile",async({page})=>{
+  const service=await fixture();
+  try {
+    await service.attach(page);
+    await signin(page,"a@community.test");
+    const nav=page.getByRole("navigation",{name:"Main navigation"});
+    for(const name of ["Community chat","Private chats","Tor study desk","Classroom"])
+      await expect(nav.getByRole("button",{name,exact:true})).toBeVisible();
+    await nav.getByRole("button",{name:"Private chats",exact:true}).click();
+    await expect(page.getByRole("heading",{name:"Your people, your pace."})).toBeVisible();
+    await nav.getByRole("button",{name:"Community chat",exact:true}).click();
+    await expect(page.getByRole("heading",{name:"Community",exact:true})).toBeVisible();
+    await nav.getByRole("button",{name:"Tor study desk",exact:true}).click();
+    await expect(page.getByRole("heading",{name:"Tor’s study desk"})).toBeVisible();
+    await page.setViewportSize({width:390,height:844});
+    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);
+    expect(overflow).toBe(false);
+  } finally {await service.close();}
+});

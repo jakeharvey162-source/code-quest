@@ -888,3 +888,20 @@ test("Tor AI remembers follow-ups, preserves failed questions, and quiet saving 
  await page.getByLabel('Study question').fill('hold reply');await page.getByRole('button',{name:'Send to Tor',exact:true}).click();await page.getByRole('button',{name:'Stop reply',exact:true}).click();finishHold();await expect(page.getByLabel('Study question')).toHaveValue('hold reply');await expect(page.getByLabel('Study conversation')).not.toContainText('Late reply');
  await page.setViewportSize({width:360,height:800});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
+
+test('signed-in student and lecturer resume the offline study guide and official sources',async({page,context})=>{
+ await mockCloud(page);await page.goto('/#account');await signin(page);await page.goto('/#tor');
+ await page.getByLabel('Tor mode',{exact:true}).selectOption('offline');
+ await page.getByRole('button',{name:'What if bookings.txt is missing?',exact:true}).click();
+ await expect(page.getByLabel('Study conversation')).toContainText('does not contain bookings.txt');
+ await page.getByLabel('I’m here as').selectOption('lecturer');
+ await page.getByRole('button',{name:'Create a repair assignment and suggested rubric',exact:true}).click();
+ await expect(page.getByLabel('Study conversation')).toContainText('not an official UJ rubric');
+ await expect(page.getByRole('link',{name:/^C# properties/})).toHaveAttribute('href',/learn.microsoft.com/);
+ await page.getByRole('button',{name:'New practice question',exact:true}).click();await expect(page.getByRole('radio').first()).toBeVisible();
+ await page.setViewportSize({width:360,height:800});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+2)).toBe(true);
+ await page.evaluate(async()=>await navigator.serviceWorker.ready);await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
+ await context.setOffline(true);await page.reload();await expect(page.getByLabel('Study conversation')).toContainText('not an official UJ rubric');
+ await page.getByLabel('Tor mode',{exact:true}).selectOption('offline');await page.getByLabel('Study question').fill('hey');await page.getByRole('button',{name:'Send to Tor',exact:true}).click();await expect(page.getByLabel('Study conversation')).toContainText('Hey');
+ await context.setOffline(false);
+});

@@ -40,6 +40,9 @@ export function useCommunity() {
     [pending, setPending] = useState<Message[]>([]),
     [reactions, setReactions] = useState<any[]>([]),
     [hasOlder, setHasOlder] = useState(false);
+  // Read current data without recreating refresh/poll subscriptions on every render.
+  const current = useRef({ rooms, profiles, friends, blocks, prefs, classes, reports, unread, isModerator });
+  current.current = { rooms, profiles, friends, blocks, prefs, classes, reports, unread, isModerator };
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const epoch = useRef(0),
@@ -103,16 +106,17 @@ export function useCommunity() {
       results[index].status === "fulfilled"
         ? (results[index] as PromiseFulfilledResult<T>).value
         : fallback;
-    const r = value<Room[]>(0, []);
-    const p = value<Profile[]>(1, []);
-    const f = value<Friend[]>(2, []);
-    const b = value<{peer_id: string}[]>(3, []);
-    const settings = value<Pref[]>(4, []);
-    const c = value<any[]>(5, []);
-    const u = value<any[]>(6, []);
-    const rep = value<any[]>(7, []);
+    const previous = current.current;
+    const r = value<Room[]>(0, previous.rooms);
+    const p = value<Profile[]>(1, previous.profiles);
+    const f = value<Friend[]>(2, previous.friends);
+    const b = value<{peer_id: string}[]>(3, previous.blocks);
+    const settings = value<Pref[]>(4, previous.prefs);
+    const c = value<any[]>(5, previous.classes);
+    const u = value<any[]>(6, Object.entries(previous.unread).map(([room_id, unread]) => ({room_id, unread})));
+    const rep = value<any[]>(7, previous.reports);
     const mod = value<boolean>(8, false);
-    const me = value<Profile[]>(9, []);
+    const me = value<Profile[]>(9, previous.profiles.filter((p) => p.user_id === user.id));
     // An optional feature failing must not blank the entire Community screen.
     if (results.some((item) => item.status === "rejected")) {
       setNotice(results[0].status === "rejected"
@@ -254,6 +258,7 @@ export function useCommunity() {
         const lastRoom: any = await store.get("meta", "last-room");
         if (cancelled) return;
         if (snapshot) {
+          current.current = { ...current.current, ...snapshot };
           setRooms(snapshot.rooms || []);
           setProfiles(snapshot.profiles || []);
           setFriends(snapshot.friends || []);
