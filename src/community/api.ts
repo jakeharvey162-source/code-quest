@@ -18,7 +18,7 @@ export type Profile = {
   xp: number;
   completed: number;
   allow_requests: boolean;
-  last_seen: string;
+  last_seen: string | null;
   show_presence: boolean;
 };
 export type Message = {

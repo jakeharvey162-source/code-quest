@@ -24,6 +24,15 @@ async function setup() {
     ),
   );
   await db.exec(await readFile(migration, "utf8"));
+  await db.exec(
+    await readFile(
+      new URL(
+        "../supabase/migrations/20261015131500_codequest_private_presence.sql",
+        import.meta.url,
+      ),
+      "utf8",
+    ),
+  );
   const as = async (id, sql, params = []) => {
     await db.exec(
       `reset role;set role ${id ? "authenticated" : "anon"};set request.jwt.claim.sub='${id || ""}';`,
@@ -424,6 +433,68 @@ test("site moderators see a reported DM message without gaining access to the re
         )
       ).rows.length,
       1,
+    );
+  } finally {
+    await db.close();
+  }
+});
+
+test("private presence never exposes an activity timestamp through direct SQL or REST columns", async () => {
+  const { db, as } = await setup();
+  try {
+    assert.equal(
+      (
+        await as(
+          B,
+          "select last_seen from cq_community_profiles where user_id=$1",
+          [A],
+        )
+      ).rows[0].last_seen,
+      null,
+    );
+    await as(
+      A,
+      "update cq_community_profiles set show_presence=true where user_id=$1",
+      [A],
+    );
+    assert.ok(
+      (
+        await as(
+          B,
+          "select last_seen from cq_community_profiles where user_id=$1",
+          [A],
+        )
+      ).rows[0].last_seen,
+    );
+    await as(
+      A,
+      "update cq_community_profiles set show_presence=false where user_id=$1",
+      [A],
+    );
+    assert.equal(
+      (
+        await as(
+          B,
+          "select last_seen from cq_community_profiles where user_id=$1",
+          [A],
+        )
+      ).rows[0].last_seen,
+      null,
+    );
+    await as(
+      A,
+      "update cq_community_profiles set interests='Still learning' where user_id=$1",
+      [A],
+    );
+    assert.equal(
+      (
+        await as(
+          B,
+          "select last_seen from cq_community_profiles where user_id=$1",
+          [A],
+        )
+      ).rows[0].last_seen,
+      null,
     );
   } finally {
     await db.close();

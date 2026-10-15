@@ -1,7 +1,7 @@
 // Runs independently of React so a missing entry bundle still has a recovery UI.
 (() => {
   const aliases = { dashboard: "home", login: "account", winforms: "designer", lessons: "learn" };
-  const routes = new Set(["home", "learn", "challenges", "videos", "playground", "terminal", "designer", "assessment", "leaderboard", "progress", "settings", "account", "classes", "community"]);
+  const routes = new Set(["home", "learn", "challenges", "videos", "playground", "terminal", "designer", "assessment", "leaderboard", "progress", "settings", "account", "classes", "community", "tor"]);
   const parts = location.pathname.split("/").filter(Boolean);
   const route = aliases[parts[0]] || parts[0];
   if (routes.has(route)) {

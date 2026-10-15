@@ -87,7 +87,11 @@ export default function Community({
   const [foundPeople, setFoundPeople] = useState<Profile[]>([]);
   const [peopleNotice, setPeopleNotice] = useState("");
   const peopleRequest = useRef(0);
-  const directory = [...new Map([...c.profiles,...foundPeople].map(p=>[p.user_id,p])).values()];
+  const directory = [
+    ...new Map(
+      [...c.profiles, ...foundPeople].map((p) => [p.user_id, p]),
+    ).values(),
+  ];
   const [attachments, setAttachments] = useState(false);
   const [inlineEditor, setInlineEditor] = useState<string | null>(null);
   const [chatWidth, setChatWidth] = useState(45);
@@ -299,16 +303,43 @@ export default function Community({
   }, [own?.show_presence, c.user?.id]);
   async function searchPeople() {
     const request = ++peopleRequest.current;
-    const term = peopleSearch.trim().slice(0,60);
-    if (term.length < 2) {setPeopleNotice("Type at least two characters to search all members.");return;}
+    const term = peopleSearch.trim().slice(0, 60);
+    if (term.length < 2) {
+      setPeopleNotice("Type at least two characters to search all members.");
+      return;
+    }
     setPeopleNotice("Searching members…");
-    const pattern = "%" + term.replace(/[\\%_]/g,"\\$&") + "%";
+    const pattern = "%" + term.replace(/[\\%_]/g, "\\$&") + "%";
     try {
-      const batches = await Promise.all(["nickname","interests"].map(field=>result<Profile[]>(client().from("cq_community_profiles").select("*").ilike(field,pattern).order("nickname").order("user_id").limit(50))));
-      if(request!==peopleRequest.current)return;
-      const rows=[...new Map(batches.flat().map(p=>[p.user_id,p])).values()];
-      setFoundPeople(rows);setPeopleNotice(rows.length ? `${rows.length} matching members downloaded. Refine the search if needed; each field returns up to 50 matches.` : "No matching members found.");
-    } catch(error) {if(request===peopleRequest.current){setPeopleNotice("Search failed. Downloaded members remain available.");c.showError(error);}}
+      const batches = await Promise.all(
+        ["nickname", "interests"].map((field) =>
+          result<Profile[]>(
+            client()
+              .from("cq_community_profiles")
+              .select("*")
+              .ilike(field, pattern)
+              .order("nickname")
+              .order("user_id")
+              .limit(50),
+          ),
+        ),
+      );
+      if (request !== peopleRequest.current) return;
+      const rows = [
+        ...new Map(batches.flat().map((p) => [p.user_id, p])).values(),
+      ];
+      setFoundPeople(rows);
+      setPeopleNotice(
+        rows.length
+          ? `${rows.length} matching members downloaded. Refine the search if needed; each field returns up to 50 matches.`
+          : "No matching members found.",
+      );
+    } catch (error) {
+      if (request === peopleRequest.current) {
+        setPeopleNotice("Search failed. Downloaded members remain available.");
+        c.showError(error);
+      }
+    }
   }
   async function searchHistory() {
     const request = ++searchRequest.current;
@@ -442,7 +473,7 @@ export default function Community({
         </small>
         <p>{p.interests || "Here to build and learn."}</p>
         <small>
-          {p.show_presence
+          {p.show_presence && p.last_seen
             ? !c.online
               ? "Last downloaded activity"
               : Date.now() - new Date(p.last_seen).getTime() < 90000
@@ -1221,11 +1252,18 @@ export default function Community({
             Find a Community member
             <input
               value={peopleSearch}
-              onChange={(e) => {setPeopleSearch(e.target.value);peopleRequest.current++;setFoundPeople([]);setPeopleNotice("");}}
+              onChange={(e) => {
+                setPeopleSearch(e.target.value);
+                peopleRequest.current++;
+                setFoundPeople([]);
+                setPeopleNotice("");
+              }}
               placeholder="Nickname or interests"
             />
           </label>
-          <button disabled={!c.online} onClick={() => void searchPeople()}>Search all members</button>
+          <button disabled={!c.online} onClick={() => void searchPeople()}>
+            Search all members
+          </button>
           <p aria-live="polite">{peopleNotice}</p>
           {invitations.length > 0 && (
             <section>

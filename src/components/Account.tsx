@@ -263,6 +263,12 @@ export default function Account({
                   : "Welcome back"}
           </h2>
           {!recovery && (
+            <p>
+              Signing in automatically saves your learning and code to your
+              account. You can turn automatic saving off in Account.
+            </p>
+          )}
+          {!recovery && (
             <label>
               Email
               <input
