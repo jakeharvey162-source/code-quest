@@ -65,6 +65,7 @@ test("Tor sends real conversation roles and keeps the credential on the server",
   });
   assert.equal(reply.status, 200);
   assert.equal(reply.model, TOR_MODEL);
+  assert.equal(calls[0].init.headers.Authorization, "Bearer private-server-token");
   const request = JSON.parse(calls[1].init.body);
   assert.equal(request.messages.at(-1).content, "What is my name?");
   assert.equal(request.messages[1].content, "My name is Ayo");

@@ -76,6 +76,7 @@ export function createTorHandler({
         );
       // Refuse to generate if this exact model stops being free. No paid fallback.
       const catalog = await fetcher("https://ai-gateway.vercel.sh/v1/models", {
+        headers: { Authorization: `Bearer ${credential}` },
         signal: AbortSignal.any([deadline, AbortSignal.timeout(10000)]),
       });
       if (!catalog.ok) throw Error("catalog");
