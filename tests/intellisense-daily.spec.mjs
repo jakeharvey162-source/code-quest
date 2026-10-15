@@ -34,9 +34,8 @@ test("student selects a declared string name, Console member and object member f
   });
   await code.fill("using System;\nConsole.");
   await code.press("Control+End");
-  await page
-    .getByRole("button", { name: "Suggest (Ctrl+Space)", exact: true })
-    .click();
+  // Suggestions now appear in the editor; no redundant toolbar button.
+  await code.press("Control+Space");
   await page.getByRole("option").filter({ hasText: "WriteLine" }).click();
   await expect(code).toContainText("Console.WriteLine");
   await code.fill('string name = "Ayo";\nname.');
