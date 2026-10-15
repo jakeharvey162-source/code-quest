@@ -714,3 +714,23 @@ test('member search finds a learner beyond the first 200 downloaded profiles',as
  await service.attach(page);await signin(page,'a@community.test');await page.getByRole('button',{name:'People & friends',exact:true}).click();await page.getByLabel('Find a Community member').fill('Learner 405');await expect(page.locator('.community-person').filter({hasText:'Learner 405'})).toHaveCount(0);await page.getByRole('button',{name:'Search all members',exact:true}).click();await expect(page.locator('.community-person').filter({hasText:'Learner 405'})).toBeVisible();
  }finally{await service.close();}
 });
+
+test("member-only chat links show after sign-in and Private chats opens friends on mobile",async({page})=>{
+  const service=await fixture();
+  try {
+    await service.attach(page);
+    await signin(page,"a@community.test");
+    const nav=page.getByRole("navigation",{name:"Main navigation"});
+    for(const name of ["Community chat","Private chats","Tor study desk","Classroom"])
+      await expect(nav.getByRole("button",{name,exact:true})).toBeVisible();
+    await nav.getByRole("button",{name:"Private chats",exact:true}).click();
+    await expect(page.getByRole("heading",{name:"Your people, your pace."})).toBeVisible();
+    await nav.getByRole("button",{name:"Community chat",exact:true}).click();
+    await expect(page.getByRole("heading",{name:"Community",exact:true})).toBeVisible();
+    await nav.getByRole("button",{name:"Tor study desk",exact:true}).click();
+    await expect(page.getByRole("heading",{name:"Tor’s study desk"})).toBeVisible();
+    await page.setViewportSize({width:390,height:844});
+    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);
+    expect(overflow).toBe(false);
+  } finally {await service.close();}
+});
