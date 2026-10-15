@@ -7,10 +7,12 @@ export default function Classroom({
   progress,
   onNavigate,
   community = false,
+  defaultCommunityTab = "channels",
 }: {
   progress: Progress;
   onNavigate: (path: string) => void;
   community?: boolean;
+  defaultCommunityTab?: "channels" | "people";
 }) {
   const { user } = useAuth();
   if (!user)
@@ -52,7 +54,7 @@ export default function Classroom({
       </nav>
       <Suspense fallback={<p role="status">Opening your classroom…</p>}>
         {community ? (
-          <Community progress={progress} onNavigate={onNavigate} />
+          <Community progress={progress} onNavigate={onNavigate} defaultTab={defaultCommunityTab} />
         ) : (
           <Classes progress={progress} onNavigate={onNavigate} />
         )}
