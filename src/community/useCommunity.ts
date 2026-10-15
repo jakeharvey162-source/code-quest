@@ -25,7 +25,9 @@ export function useCommunity() {
   const [online, setOnline] = useState(navigator.onLine),
     [notice, setNotice] = useState(""),
     [loading, setLoading] = useState(true),
-    [sending, setSending] = useState(false);
+    [sending, setSending] = useState(false),
+    [acting, setActing] = useState(false);
+  const actionPending = useRef(false);
   const [rooms, setRooms] = useState<Room[]>([]),
     [profiles, setProfiles] = useState<Profile[]>([]),
     [friends, setFriends] = useState<Friend[]>([]),
@@ -369,6 +371,8 @@ export function useCommunity() {
     language: string;
     challenge_id: string | null;
   }) {
+    if (actionPending.current)
+      throw Error("Wait for the selected conversation to finish opening before sending.");
     if (!user)
       throw Error(
         "Sign in before sending. Your draft can be saved on this device.",
@@ -402,12 +406,18 @@ export function useCommunity() {
     await reloadOutbox();
   }
   async function action(fn: () => Promise<unknown>) {
+    if (actionPending.current) return;
+    actionPending.current = true;
+    setActing(true);
     try {
       await fn();
       await refresh();
       if (selectedRef.current) await latestLoad.current(selectedRef.current);
     } catch (e) {
       showError(e);
+    } finally {
+      actionPending.current = false;
+      if (active.current) setActing(false);
     }
   }
   const visible = mergeMessages(
@@ -423,6 +433,7 @@ export function useCommunity() {
     setNotice,
     loading,
     sending,
+    acting,
     rooms,
     profiles,
     friends,

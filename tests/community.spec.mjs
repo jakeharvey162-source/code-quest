@@ -361,13 +361,13 @@ test("Classroom and legacy community links require sign-in; challenges stay avai
   for (const path of ["classes", "community"]) {
     await page.goto("/#" + path);
     await expect(
-      page.getByRole("heading", { name: "Classroom", exact: true }),
+      page.getByRole("heading", { name: "Join CodeQuest to connect", exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole("textbox", { name: "Community message", exact: true }),
     ).toHaveCount(0);
     await page
-      .getByRole("button", { name: "Open account", exact: true })
+      .getByRole("button", { name: "Create account or sign in", exact: true })
       .click();
     await expect(
       page.getByRole("heading", { name: "Welcome back", exact: true }),
@@ -757,4 +757,20 @@ test("member-only chat links show after sign-in and Private chats opens friends 
     const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);
     expect(overflow).toBe(false);
   } finally {await service.close();}
+});
+
+test('opening a class discussion locks the old composer until the target room is ready',async({page})=>{
+ const service=await fixture();let release;const gate=new Promise(resolve=>{release=resolve;});
+ try{
+  await service.as(A,"insert into cq_classes(id,owner_id,name) values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',$1,'Race test class')",[A]);
+  await service.attach(page);await signin(page,'a@community.test');
+  await page.route('**/rest/v1/cq_community_rooms*',async route=>{if(route.request().method()==='POST')await gate;await route.fallback();});
+  await page.getByRole('button',{name:'Start Race test class discussion',exact:true}).click();
+  await expect(page.getByLabel('Community message',{exact:true})).toBeDisabled();
+  await expect(page.getByRole('button',{name:'Send message',exact:true})).toBeDisabled();
+  release();await expect(page.getByRole('heading',{name:'Race test class discussion',exact:true})).toBeVisible();
+  await expect(page.getByLabel('Community message',{exact:true})).toBeEnabled();
+  await send(page,'This belongs only in the class room');
+  await expect.poll(async()=>(await service.as(A,"select r.kind,m.body from cq_community_messages m join cq_community_rooms r on r.id=m.room_id where m.sender_id=$1",[A])).rows).toEqual([{kind:'class',body:'This belongs only in the class room'}]);
+ }finally{release();await service.close();}
 });

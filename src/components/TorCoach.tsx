@@ -610,7 +610,7 @@ export default function TorCoach({
       </button>
       {open && (
         <div className="tor-panel">
-          <a className="tor-study-link" href="#tor" onClick={()=>setOpen(false)}>Open Tor study desk · more room to read ↗</a>
+          {user && <a className="tor-study-link" href="#tor" onClick={()=>setOpen(false)}>Open Tor study desk · more room to read ↗</a>}
           <div className="tor-observation" aria-label="What Tor sees">
             <b>What I see</b>
             <br />

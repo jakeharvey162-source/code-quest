@@ -107,6 +107,8 @@ export default function Community({
   const current = c.rooms.find((r) => r.id === c.selected);
   const own = c.profiles.find((p) => p.user_id === c.user?.id);
   const draftKey = c.selected || "personal";
+  const activeDraftKey = useRef(draftKey);
+  activeDraftKey.current = draftKey;
   const peerFor = (room: any) =>
     room.member_a === c.user?.id ? room.member_b : room.member_a;
   const profileFor = (id: string) => directory.find((p) => p.user_id === id);
@@ -183,15 +185,17 @@ export default function Community({
   };
   async function send(e: React.FormEvent) {
     e.preventDefault();
-    if (busy || !draftReady) return;
+    if (busy || !draftReady || c.acting) return;
     setBusy(true);
     try {
       await draftWrites.current;
       await c.queue(draft);
-      ++draftVersion.current;
       await c.store.remove("draft", draftKey);
-      setDraft(empty);
-      setDraftStatus("Message saved to outbox.");
+      if (activeDraftKey.current === draftKey) {
+        ++draftVersion.current;
+        setDraft(empty);
+        setDraftStatus("Message saved to outbox.");
+      }
     } catch (e) {
       c.showError(e);
     } finally {
@@ -492,13 +496,13 @@ export default function Community({
           {connected(p.user_id) ? (
             <>
               <button
-                disabled={!c.online}
+                disabled={!c.online || c.acting}
                 onClick={() => void direct(p.user_id)}
               >
                 Message
               </button>
               <button
-                disabled={!c.online}
+                disabled={!c.online || c.acting}
                 onClick={() =>
                   void c.action(() =>
                     result(
@@ -519,6 +523,7 @@ export default function Community({
             <button
               disabled={
                 !c.online ||
+                c.acting ||
                 !own ||
                 !p.allow_requests ||
                 pendingFriend(p.user_id)
@@ -532,7 +537,7 @@ export default function Community({
                   : "Requests closed"}
             </button>
           )}
-          <button disabled={!c.online} onClick={() => void block(p.user_id)}>
+          <button disabled={!c.online || c.acting} onClick={() => void block(p.user_id)}>
             Block
           </button>
         </div>
@@ -725,7 +730,7 @@ export default function Community({
                 .map((cls) => (
                   <button
                     key={cls.id}
-                    disabled={!c.online}
+                    disabled={!c.online || c.acting}
                     onClick={() =>
                       void c.action(async () => {
                         const row = await result<any>(
@@ -772,7 +777,7 @@ export default function Community({
                 {current && c.user && (
                   <div className="community-actions">
                     <button
-                      disabled={!c.online}
+                      disabled={!c.online || c.acting}
                       onClick={() =>
                         void c.action(() =>
                           result(
@@ -798,7 +803,7 @@ export default function Community({
                     </button>
                     {canManage && (
                       <button
-                        disabled={!c.online}
+                        disabled={!c.online || c.acting}
                         onClick={() =>
                           void c.action(() =>
                             result(
@@ -999,7 +1004,7 @@ export default function Community({
                                 Report
                               </button>
                               <button
-                                disabled={!c.online}
+                                disabled={!c.online || c.acting}
                                 onClick={() => void block(m.sender_id)}
                               >
                                 Block user
@@ -1008,7 +1013,7 @@ export default function Community({
                           )}
                           {(m.sender_id === c.user?.id || canManage) && (
                             <button
-                              disabled={!c.online}
+                              disabled={!c.online || c.acting}
                               onClick={() =>
                                 void c.action(() =>
                                   result(
@@ -1065,7 +1070,7 @@ export default function Community({
                       onChange={(e) => setReason(e.target.value)}
                     />
                   </label>
-                  <button disabled={!c.online}>Submit report</button>
+                  <button disabled={!c.online || c.acting}>Submit report</button>
                   <button type="button" onClick={() => setReporting("")}>
                     Cancel report
                   </button>
@@ -1124,7 +1129,7 @@ export default function Community({
                     aria-label="Community message"
                     rows={3}
                     maxLength={4000}
-                    disabled={!draftReady || busy}
+                    disabled={!draftReady || busy || c.acting}
                     value={draft.body}
                     onChange={(e) => edit({ body: e.target.value })}
                     placeholder="What are you building? What have you tried?"
@@ -1196,6 +1201,7 @@ export default function Community({
                       !c.selected ||
                       !draftReady ||
                       busy ||
+                      c.acting ||
                       (current?.locked && !canManage)
                     }
                   >
@@ -1255,7 +1261,7 @@ export default function Community({
               placeholder="Nickname or interests"
             />
           </label>
-          <button disabled={!c.online} onClick={() => void searchPeople()}>
+          <button disabled={!c.online || c.acting} onClick={() => void searchPeople()}>
             Search all members
           </button>
           <p aria-live="polite">{peopleNotice}</p>
@@ -1280,7 +1286,7 @@ export default function Community({
                     </span>
                     {incoming && (
                       <button
-                        disabled={!c.online}
+                        disabled={!c.online || c.acting}
                         onClick={() =>
                           void c.action(() =>
                             result(
@@ -1297,7 +1303,7 @@ export default function Community({
                       </button>
                     )}
                     <button
-                      disabled={!c.online}
+                      disabled={!c.online || c.acting}
                       onClick={() =>
                         void c.action(() =>
                           result(
@@ -1461,7 +1467,7 @@ export default function Community({
               <div key={b.peer_id} className="community-person">
                 <span>Blocked member · {b.peer_id.slice(0, 8)}</span>
                 <button
-                  disabled={!c.online}
+                  disabled={!c.online || c.acting}
                   onClick={() =>
                     void c.action(() =>
                       result(
@@ -1509,7 +1515,7 @@ export default function Community({
                     />
                   )}
                   <button
-                    disabled={!c.online}
+                    disabled={!c.online || c.acting}
                     onClick={() =>
                       void c.action(() =>
                         result(

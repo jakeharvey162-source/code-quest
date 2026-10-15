@@ -15,4 +15,7 @@ test("guests see clean coding tools but no member-only community, private chat o
   await expect(page.locator(".cm-editor").first()).toBeVisible();
   await expect(page.getByRole("button",{name:/Suggest \(Ctrl\+Space\)/})).toHaveCount(0);
   await expect(page.locator(".editor-assist")).toHaveCount(0);
+  await page.goto("/#home");
+  await page.getByRole("button",{name:"Open Tor tutor",exact:true}).click();
+  await expect(page.getByRole("link",{name:/Open Tor study desk/})).toHaveCount(0);
 });
