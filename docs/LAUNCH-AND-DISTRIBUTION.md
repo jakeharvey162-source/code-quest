@@ -1,4 +1,4 @@
-# CodeQuest release and distribution — 14 October 2026
+# CodeQuest release and distribution — 15 October 2026
 
 ## What this branch delivers
 
@@ -10,15 +10,15 @@ Classroom combines classes/assignments and Community behind sign-in. Community i
 
 ## Account and saving behaviour
 
-Local progress is isolated per account. Account → **Save & enable automatic backup** first performs an explicit cloud save, then checks for changed work every 60 seconds while the app is open and visible. It backs up learning progress, form controls, practical code and the practical brief using the existing snapshot format. This is not a full filesystem backup of every imported project file.
+Local progress is isolated per account. Signed-in accounts save changed work automatically while visible and online, with checks every five seconds. First save requires no button. Backups include learning/challenge drafts, form controls and practical code, extra C# solution files and terminal sources. Fresh devices restore the last cloud snapshot automatically. Account → **Cloud recovery & save options** contains manual controls for resolving conflicting device work.
 
-Save manually before closing or switching devices; the final minute may not be uploaded. Restore explicitly on the other device before continuing. Offline/network failures preserve local work; a cross-device revision conflict pauses automatic backup rather than overwriting the newer snapshot. An unsuccessful request is never displayed as a successful backup. If local browser storage is unavailable, automatic backup cannot retain its preference across reloads.
+Wait for the saved status before closing or switching devices. Offline/network failures preserve local work, and retries use backoff. A cross-device revision conflict pauses saving instead of silently overwriting newer work. Open terminal/designer views refresh after cloud restoration. This is snapshot backup, not a full imported filesystem backup or simultaneous collaborative editing.
 
 The authentication UI now normalises email, accepts older short passwords for sign-in, offers password visibility, handles duplicate signup correctly and distinguishes confirmation guidance. Re-registering an existing email does not change its password. Browser fixtures cover these paths, but they cannot prove a particular user's password or real password-reset email delivery.
 
 ## What is actually live
 
-This work is on draft PR #25. It is not the production release. The last read-only hosted check found zero CodeQuest cloud snapshots and no Community message table; the shared backend's total user count is not a CodeQuest user count. Recheck hosted state at release time.
+PR #25 is authorized for release after checks. The hosted Community migration is installed alongside the existing account/Classroom tables. Three temporary real Auth accounts passed hosted signup/sign-in, friendship/DM consent and privacy, delivery/retry, and snapshot isolation/conflict checks; test accounts and records were then removed. See RELEASE-2026-10-15.md for current evidence. The shared backend's total user count is not a CodeQuest user count.
 
 The additive `20261014052709_codequest_community.sql` migration must be applied before enabling hosted Community. It only introduces CodeQuest-scoped objects. Do not change unrelated apps or global auth policies in this shared project. The earlier shared implementation brief requested a draft for review before production.
 

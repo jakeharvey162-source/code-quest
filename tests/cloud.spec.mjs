@@ -804,6 +804,7 @@ test("a new device restores its cloud draft automatically and unsaved local edit
       "cq-source-files:" + id,
       JSON.stringify([{ path: "Student.cs", text: "class Student {}" }]),
     );
+    localStorage.setItem("cq-terminal-language:" + id, "csharp");
     localStorage.setItem(
       "cq-terminal-source-csharp:" + id,
       'using System; Console.WriteLine("terminal draft");',
@@ -819,11 +820,16 @@ test("a new device restores its cloud draft automatically and unsaved local edit
     )
     .toContain("device one");
   // Simulate the account opening on a fresh device, keeping only its auth session.
+  await page.goto("/#terminal");
+  await expect(page.getByLabel("Terminal code editor")).toBeVisible();
   await page.evaluate((id) => {
     for (const key of Object.keys(localStorage))
       if (key.endsWith(":" + id)) localStorage.removeItem(key);
   }, A);
   await page.reload();
+  await expect(page.getByLabel("Terminal code editor")).toHaveValue(
+    'using System; Console.WriteLine("terminal draft");',
+  );
   await expect
     .poll(() =>
       page.evaluate(
@@ -837,6 +843,7 @@ test("a new device restores its cloud draft automatically and unsaved local edit
       page.evaluate((id) => localStorage.getItem("cq-source-files:" + id), A),
     )
     .toContain("Student.cs");
+  await page.goto("/#challenges/console");
   await expect(
     page.getByRole("textbox", { name: "Beginner C# code" }),
   ).toHaveText('using System; Console.WriteLine("saved on device one");');

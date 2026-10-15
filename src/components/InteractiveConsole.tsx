@@ -87,8 +87,8 @@ export default function InteractiveConsole({ source }: { source: string }) {
     <section className="settings-card" aria-label="Interactive C# console">
       <h3>Try your program</h3>
       <p>
-        Run, then answer each Console.ReadLine prompt below. Inputs replay the
-        program from the start; use deterministic console programs here.
+        Answer each Console.ReadLine prompt below. Each answer reruns your code
+        with earlier inputs, so random values and file changes may differ.
       </p>
       <div className="button-row">
         <button

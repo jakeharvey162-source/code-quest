@@ -71,6 +71,7 @@ export function restoreSnapshot(value: any) {
       "This browser could not restore your saved work. Free device storage and try again.",
     );
   }
+  window.dispatchEvent(new Event("cq-cloud-restored"));
   return progress;
 }
 export function hasLocalWork(p: Progress) {

@@ -170,6 +170,12 @@ function App() {
     [saveError, setSaveError] = useState(false),
     [installPrompt, setInstallPrompt] = useState<any>(null),
     [updateReady, setUpdateReady] = useState<ServiceWorker | null>(null);
+  const [workspaceVersion, setWorkspaceVersion] = useState(0);
+  useEffect(() => {
+    const restored = () => setWorkspaceVersion(v => v + 1);
+    window.addEventListener("cq-cloud-restored", restored);
+    return () => window.removeEventListener("cq-cloud-restored", restored);
+  }, []);
   const [questNotice, setQuestNotice] = useState("");
   const [toolsExpanded, setToolsExpanded] = useState(false);
   useEffect(()=>{
@@ -694,11 +700,11 @@ function App() {
               ) : page === "videos" ? (
                 <TutorialLibrary onNavigate={navigate} />
               ) : page === "terminal" ? (
-                <UniversalTerminal sharedCode={route.startsWith("terminal/share/")?route.split("/").slice(2).join("/"):undefined}/>
+                <UniversalTerminal key={workspaceVersion} sharedCode={route.startsWith("terminal/share/")?route.split("/").slice(2).join("/"):undefined}/>
               ) : page === "playground" ? (
-                <Playground progress={progress} update={update} />
+                <Playground key={workspaceVersion} progress={progress} update={update} />
               ) : page === "designer" ? (
-                <FormDesigner settings={progress.settings} />
+                <FormDesigner key={workspaceVersion} settings={progress.settings} />
               ) : page === "assessment" ? (
                 <Assessment
                   progress={progress}

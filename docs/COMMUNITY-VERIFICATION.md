@@ -1,3 +1,7 @@
+# Current release update — 15 October 2026
+
+Hosted migration and real-account API checks now passed; see [RELEASE-2026-10-15.md](RELEASE-2026-10-15.md). The dated checkpoint records below describe earlier draft-stage evidence and limitations. Production release is now explicitly authorized and gated on current CI.
+
 # Community implementation verification
 
 Date: 2026-10-14. Development branch: `feature/codequest-community`.
