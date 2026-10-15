@@ -142,23 +142,16 @@ test("touch double-tap on a label opens its event code", async ({
   }
 });
 
-test("phone tool menu makes Classroom discoverable and closes after navigation", async ({
-  page,
-}) => {
+test("phone navigation hides Classroom until an account signs in", async ({ page }) => {
   await page.setViewportSize({ width: 360, height: 800 });
   await page.goto("/#home");
   await page.getByRole("button", { name: "All tools", exact: true }).click();
-  await expect(
-    page.getByRole("button", { name: "Close tools", exact: true }),
-  ).toHaveAttribute("aria-expanded", "true");
-  await page
-    .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("button", { name: "Classroom", exact: true })
-    .click();
-  await expect(
-    page.getByRole("heading", { name: "Classroom", exact: true }),
-  ).toBeVisible();
-  await expect(
-    page.getByRole("button", { name: "All tools", exact: true }),
-  ).toHaveAttribute("aria-expanded", "false");
+  const nav = page.getByRole("navigation", { name: "Main navigation" });
+  await expect(nav.getByRole("button", { name: "Classroom", exact: true })).toHaveCount(0);
+  await expect(nav.getByRole("button", { name: "Community chat", exact: true })).toHaveCount(0);
+  await expect(nav.getByRole("button", { name: "Private chats", exact: true })).toHaveCount(0);
+  await page.goto("/#classes");
+  await expect(page.getByRole("heading", { name: "Join CodeQuest to connect" })).toBeVisible();
+  await page.getByRole("button", { name: "Create account or sign in" }).click();
+  await expect(page).toHaveURL(/#account$/);
 });
