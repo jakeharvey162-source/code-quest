@@ -67,7 +67,7 @@ export default function Community({
   defaultTab?: "channels" | "people";
 }) {
   const c = useCommunity();
-  const [tab, setTab] = useState(defaultTab),
+  const [tab, setTab] = useState<string>(defaultTab),
     [roomSearch, setRoomSearch] = useState(""),
     [peopleSearch, setPeopleSearch] = useState(""),
     [messageSearch, setMessageSearch] = useState("");
