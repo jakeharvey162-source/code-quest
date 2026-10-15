@@ -1,12 +1,14 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Progress } from "../lib/progress";
 import type { UpdateProgress } from "./LessonView";
 import {
   readStudyHistory,
+  storeStudyHistory,
   studyReply,
   studyQuestion,
   torSources,
 } from "../lib/tor-study.mjs";
+import { chatWithTor, type TorMessage } from "../lib/tor-chat";
 export default function TorStudyDesk({
   progress,
   update,
@@ -37,29 +39,80 @@ export default function TorStudyDesk({
           "Explain how to test event wiring",
           "How do I check historical file recovery?",
         ];
-  function ask(text: string) {
-    if (!text.trim()) return;
-    const answer = studyReply(text.trim(), role, topic);
-    setTopic(answer.topic);
-    update((p) => ({
-      ...p,
-      drafts: {
-        ...p.drafts,
-        "tor-study-history": JSON.stringify(
-          [
-            ...readStudyHistory(p.drafts["tor-study-history"]),
-            {
-              question: text.trim().slice(0, 1000),
-              answer: answer.text,
-              topic: answer.topic,
-              role,
-            },
-          ].slice(-10),
-        ),
-      },
-    }));
-    setQuestion("");
-    setNotice("Tor’s built-in coaching reply is ready.");
+  const [engine, setEngine] = useState<"ai" | "offline">("ai"),
+    [busy, setBusy] = useState(false);
+  const pending = useRef<AbortController | null>(null);
+  const generation = useRef(0);
+  useEffect(
+    () => () => {
+      generation.current++;
+      pending.current?.abort();
+    },
+    [],
+  );
+  function cancel() {
+    generation.current++;
+    pending.current?.abort();
+    pending.current = null;
+    setBusy(false);
+  }
+  async function ask(text: string) {
+    if (!text.trim() || busy) return;
+    const request = text.trim().slice(0, 6000),
+      version = ++generation.current;
+    const controller = new AbortController();
+    pending.current = controller;
+    setBusy(true);
+    setNotice(engine === "ai" ? "Tor is thinking…" : "");
+    try {
+      let answer;
+      if (engine === "offline") answer = studyReply(request, role, topic);
+      else {
+        const messages: TorMessage[] = history.flatMap((row) => [
+          { role: "user" as const, content: row.question },
+          { role: "assistant" as const, content: row.answer },
+        ]);
+        messages.push({ role: "user", content: request });
+        answer = {
+          topic,
+          text: await chatWithTor(messages, controller.signal, role),
+        };
+      }
+      if (version !== generation.current) return;
+      setTopic(answer.topic);
+      update((p) => ({
+        ...p,
+        drafts: {
+          ...p.drafts,
+          "tor-study-history": storeStudyHistory(
+            [
+              ...readStudyHistory(p.drafts["tor-study-history"]),
+              {
+                question: request,
+                answer: answer.text.slice(0, 6000),
+                topic: answer.topic,
+                role,
+                engine,
+              },
+            ].slice(-10),
+          ),
+        },
+      }));
+      setQuestion("");
+      setNotice("");
+    } catch (error) {
+      if (version === generation.current)
+        setNotice(
+          error instanceof Error
+            ? error.message
+            : "Tor could not reply. Your question is kept; try again.",
+        );
+    } finally {
+      if (version === generation.current) {
+        setBusy(false);
+        pending.current = null;
+      }
+    }
   }
   function generate() {
     const n = Number(progress.drafts["tor-study-seed"]) || 0;
@@ -74,11 +127,22 @@ export default function TorStudyDesk({
     <section className="page tor-study-page">
       <p className="eyebrow">YOUR STUDY PARTNER</p>
       <h1>Tor’s study desk</h1>
-      <p>
-        Room to read, ask and practise. Built-in coaching works offline after
-        the app is cached. Official documentation opens on the web. A live AI
-        model or web-browsing service is not connected.
-      </p>
+      <p>Ask a question, paste code, or pick up where you left off.</p>
+      <label>
+        Tor mode
+        <select
+          aria-label="Tor mode"
+          value={engine}
+          onChange={(e) => {
+            cancel();
+            setEngine(e.target.value as "ai" | "offline");
+            setNotice("");
+          }}
+        >
+          <option value="ai">AI conversation</option>
+          <option value="offline">Offline guide</option>
+        </select>
+      </label>
       <div className="button-row">
         <a href="#challenges/equipment-booking">
           Open today’s equipment practice →
@@ -97,7 +161,7 @@ export default function TorStudyDesk({
       </label>
       <div className="tor-study-prompts">
         {prompts.map((p) => (
-          <button key={p} onClick={() => ask(p)}>
+          <button key={p} disabled={busy} onClick={() => void ask(p)}>
             {p}
           </button>
         ))}
@@ -106,16 +170,17 @@ export default function TorStudyDesk({
         {history.length ? (
           history.map((row, i) => (
             <article key={i}>
-              <h2>You · {row.role}</h2>
+              <h2>You</h2>
               <p>{row.question}</p>
-              <h3>Tor · built-in guide</h3>
-              <p>{row.answer}</p>
+              <h3>{row.engine === "ai" ? "Tor" : "Tor · offline guide"}</h3>
+              <p style={{ whiteSpace: "pre-wrap" }}>{row.answer}</p>
             </article>
           ))
         ) : (
           <p>
             Pick a prompt or ask about debugging, events, validation, files or
-            properties. Tor keeps the last ten exchanges in your saved progress.
+            properties. Tor keeps your recent conversation in your saved
+            progress.
           </p>
         )}
       </section>
@@ -130,19 +195,32 @@ export default function TorStudyDesk({
           <textarea
             aria-label="Study question"
             value={question}
-            maxLength={1000}
+            maxLength={6000}
+            disabled={busy}
             rows={3}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder="What should I test after fixing the constructor?"
+            placeholder="Message Tor, or paste the code you’re working on…"
           />
         </label>
         <div className="button-row">
-          <button className="primary" disabled={!question.trim()}>
-            Send to Tor
+          <button className="primary" disabled={busy || !question.trim()}>
+            {busy ? "Thinking…" : "Send to Tor"}
           </button>
+          {busy && (
+            <button
+              type="button"
+              onClick={() => {
+                cancel();
+                setNotice("Stopped. Your question is kept.");
+              }}
+            >
+              Stop reply
+            </button>
+          )}
           <button
             type="button"
             onClick={() => {
+              cancel();
               update((p) => ({
                 ...p,
                 drafts: { ...p.drafts, "tor-study-history": "[]" },
@@ -152,11 +230,26 @@ export default function TorStudyDesk({
           >
             Clear conversation
           </button>
-          <button type="button" onClick={generate}>
+          <button
+            type="button"
+            onClick={() =>
+              engine === "ai"
+                ? void ask(
+                    "Give me one original beginner C# code-repair challenge. Include broken code, requirements and example inputs/outputs. Ask me to type a correction, not choose multiple-choice answers. Wait for my attempt before revealing the solution.",
+                  )
+                : generate()
+            }
+          >
             New practice question
           </button>
         </div>
       </form>
+      {engine === "ai" && (
+        <p className="muted">
+          AI chat runs online; the provider may retain messages. No live web
+          browsing.
+        </p>
+      )}
       <p role="status" aria-live="polite">
         {notice}
       </p>
@@ -191,10 +284,7 @@ export default function TorStudyDesk({
         aria-label="Official learning sources"
       >
         <h2>Read the official explanation</h2>
-        <p>
-          These curated Microsoft references are separate from Tor’s built-in
-          replies.
-        </p>
+        <p>Check explanations against these official Microsoft references.</p>
         {torSources.map((source) => (
           <a
             key={source.url}

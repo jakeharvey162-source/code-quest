@@ -204,7 +204,7 @@ export default function CloudBackup({
       document.removeEventListener("visibilitychange", save);
     };
   }, [userId]);
-  return status ? (
+  return /paused|too large|unavailable|pending|could not/i.test(status) ? (
     <p className="cloud-backup-status" aria-live="polite">
       {status} <a href="#account">Account</a>
     </p>
