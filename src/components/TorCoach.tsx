@@ -221,9 +221,9 @@ export default function TorCoach({
     // Keep deterministic form commands local; ordinary conversation uses live AI
     // only with a valid signed-in session and server-side Gemini key.
     const live = await askTorLive(request, "student", chatHistory.current, page);
-    const text = live.answer || answer(request, page, teachingLanguage, roast, ++personalityTurn.current);
-    chatHistory.current = [...chatHistory.current, {question: request, answer: text}].slice(-6);
-    respond(text);
+    const replyText = live.answer || answer(request, page, teachingLanguage, roast, ++personalityTurn.current);
+    chatHistory.current = [...chatHistory.current, {question: request, answer: replyText}].slice(-6);
+    respond(replyText);
     if (!live.live) setStatus(live.notice);
   }
   function stop() {
