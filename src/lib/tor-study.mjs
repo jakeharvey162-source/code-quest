@@ -40,6 +40,11 @@ export function studyTopic(text, previous = "debug") {
 }
 export function studyReply(question, role = "student", previous = "debug") {
   const topic = studyTopic(question, previous);
+  // Greetings and open-ended conversation must not trigger a canned debugger lecture.
+  if (/^(?:hi|hey|hello|yo|sup|good (?:morning|afternoon|evening)|howdy)[!?.\s]*$/i.test(question.trim()))
+    return { topic, text: "Hey! I'm Tor. What are we building or learning today? You can paste code, a C# error, or a question and I'll help you work through it." };
+  if (/^(?:how are you|what's up|whats up|who are you)[!?.\s]*$/i.test(question.trim()))
+    return { topic, text: "I'm Tor, your CodeQuest coding tutor. I can help with C#, WinForms, debugging and challenges. What's on your mind?" };
   if (/bookings.txt|histor|missing file/i.test(question))
     return {
       topic: "files",
