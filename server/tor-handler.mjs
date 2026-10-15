@@ -5,6 +5,8 @@ export function createTorHandler({
   authenticate,
   reserve,
   fetcher = fetch,
+  supabaseUrl = "",
+  supabaseApiKey = "",
 }) {
   return async (req, res) => {
     res.setHeader("Cache-Control", "private, no-store");
@@ -16,6 +18,7 @@ export function createTorHandler({
     }
     const allowed = new Set([
       "https://code-quest-tau-woad.vercel.app",
+      "https://codequest.pp.ua",
       ...(env.VERCEL_URL ? ["https://" + env.VERCEL_URL] : []),
       ...(env.VERCEL_BRANCH_URL ? ["https://" + env.VERCEL_BRANCH_URL] : []),
       ...(env.PUBLIC_APP_URL ? [env.PUBLIC_APP_URL.replace(/\/$/, "")] : []),
@@ -58,6 +61,53 @@ export function createTorHandler({
         400,
         "Send a question and up to three earlier exchanges, below 30,000 characters.",
       );
+    // Prefer the Gemini key already configured inside Ash's shared Supabase
+    // project. The Edge Function authenticates the user and reserves the
+    // existing database quota atomically; no provider key reaches Vercel.
+    // Explicit 'vercel' mode remains available for emergency rollback.
+    if (env.CQ_TOR_PROVIDER !== "vercel" && supabaseUrl && supabaseApiKey) {
+      try {
+        const edge = await fetcher(
+          supabaseUrl.replace(/\/$/, "") + "/functions/v1/codequest-tor-gemini",
+          {
+            method: "POST",
+            headers: {
+              apikey: supabaseApiKey,
+              Authorization: "Bearer " + token,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messages: body.messages,
+              mode: body.mode,
+              language: body.language,
+            }),
+            signal: AbortSignal.timeout(37000),
+          },
+        );
+        const payload = await edge.json().catch(() => ({}));
+        if (edge.ok && typeof payload.text === "string" && payload.text.trim())
+          return res.status(200).json({
+            text: payload.text.slice(0, 6000),
+            model: payload.model || "gemini",
+          });
+        if (edge.status === 401)
+          return fail(401, "Your session expired. Sign in again.", "signin_required");
+        if (edge.status === 403)
+          return fail(403, "Tor is not authorized for this session.", "forbidden");
+        if (edge.status === 429)
+          return fail(429, payload.error || "Tor's chat allowance is reached.", "rate_limited");
+        if (edge.status === 400 || edge.status === 413)
+          return fail(edge.status, "Please shorten or correct your message.", "invalid_messages");
+        // A failed provider request may have already consumed an Edge quota
+        // slot. Do not double-charge by attempting a different model.
+        if (payload.code && payload.code !== "setup_required")
+          return fail(503, payload.error || "Tor's AI is unavailable.", "unavailable");
+        // No key deployed yet, or Edge gateway not found: use the existing
+        // free Vercel-backed provider rather than breaking online chat.
+      } catch {
+        // Network errors fall back to the existing Vercel provider.
+      }
+    }
     // Vercel injects a fresh runtime identity on each function request.
     // VERCEL_OIDC_TOKEN is principally the build/local-development fallback.
     const credential = env.AI_GATEWAY_API_KEY ||
