@@ -19,7 +19,7 @@ export default function CodeChallenges({
   progress: Progress;
   update: UpdateProgress;
 }) {
-  const [id, setId] = useState(codeChallenges.find(c => c.id === initialId)?.id || codeChallenges[0].id),
+  const [id, setId] = useState(codeChallenges.find(c => c.id === initialId)?.id || (progress.drafts["coding-selected"] === "practice-remix" ? "practice-remix" : codeChallenges.find(c=>c.id===progress.drafts["coding-selected"])?.id) || codeChallenges[0].id),
     [level, setLevel] = useState("all"),
     [busy, setBusy] = useState(false),
     [status, setStatus] = useState("Choose a challenge. Predict, code, test."),
@@ -126,7 +126,7 @@ export default function CodeChallenges({
       <div className="challenge-layout">
         <aside className="challenge-picker">
           <button disabled={busy} onClick={() => {
-            update(p => {const drafts: Record<string,string> = {...p.drafts,"coding-remix-round":String((remixRound+1)%1e9)};delete drafts["challenge-practice-remix"];return {...p,drafts};});
+            update(p => {const drafts: Record<string,string> = {...p.drafts,"coding-selected":"practice-remix","coding-remix-round":String((remixRound+1)%1e9)};delete drafts["challenge-practice-remix"];return {...p,drafts};});
             setId("practice-remix");setResults([]);setHint(false);setLevel("all");setStatus("New coding remix. Fill in the method and test the edge cases.");
           }}>New coding remix →</button>
           <label>
@@ -138,7 +138,9 @@ export default function CodeChallenges({
                 const next = e.target.value;
                 setLevel(next);
                 if (next !== "all" && challenge.level !== next) {
-                  setId(codeChallenges.find((c) => c.level === next)!.id);
+                  const nextId=codeChallenges.find((c) => c.level === next)!.id;
+                  setId(nextId);
+                  update(p=>({...p,drafts:{...p.drafts,"coding-selected":nextId}}));
                   setHint(false);
                   setResults([]);
                   setStatus("Ready to test your solution.");
@@ -162,6 +164,7 @@ export default function CodeChallenges({
                 aria-pressed={c.id === id}
                 onClick={() => {
                   setId(c.id);
+                  update(p=>({...p,drafts:{...p.drafts,"coding-selected":c.id}}));
                   setHint(false);
                   setResults([]);
                   setStatus("Ready to test your solution.");

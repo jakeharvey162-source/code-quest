@@ -94,3 +94,25 @@ The latest account/cloud suite passed all 12 tests. The updated Community suite 
 ![Android World with compact Tor and All tools menu](community-screenshots/android-412-world.webp)
 
 ![Bounded and scrollable Android tutor panel](community-screenshots/android-412-tor-open.webp)
+
+## Continuous practice and backup follow-up — 14 October 2026
+
+Recovered the published PR head in an isolated checkout after the session reopened an older local workspace. The interrupted run's missing logs are not used as evidence. Checkpoint `73197ef` saves the renewed work remotely.
+
+Changes: original Units 1–7 revision exercises, recurring five-answer goals, real C# coding remixes, bounded saved practice state, opt-in automatic cloud backup with revision conflicts and manual-save coordination, current visual feedback from Tor during rapid edits, chat synchronization locking/jitter/backoff, redundant read-receipt suppression, server-side profile search beyond the first 200 cached entries, and explicit self-reported ranking language. The ranking database test now includes 405 public participants plus a private row.
+
+Fresh verification:
+
+- Unit/database suite: 132 passed. TypeScript and production build passed.
+- Full browser regression: 100 passed; one optional software-WebGL test skipped by the default configuration. Includes compilers, learning progression, seven original coding challenges, new revision/coding-remix flows, Android layout, accessibility, native ZIP export, offline startup/runtime caching and Tor caption reactions.
+- Account/class browser fixtures: 14 passed, including account isolation, cloud restore, duplicate signup, password visibility/normalization, automatic backups, conflict pausing and manual saves after automatic revision changes. The fixture now enforces expected snapshot revisions.
+
+See LAUNCH-AND-DISTRIBUTION.md for capacity limits, packaging steps, revenue models and release requirements. A 405-row database test is not a 400-concurrent-user load test. No full-world-readiness percentage is claimed. Vercel reported successful deployment status through GitHub for the checkpoint, but its deployment-details connector returned 403 for the project team, and no authenticated CLI fallback was available. Hosted preview behaviour could not be verified through that connection. Production Community, real reset-email delivery and physical Android testing remain outside the fixture evidence.
+
+## Final verification — 15 October 2026
+
+- Re-ran `npm run check`: 132 unit/database tests passed, TypeScript passed, production build passed.
+- Re-ran the final practice browser checks: 3 passed, including all seven original challenges, renewable practice on a phone, and coding-remix/source restoration after reload. Inspected the 390px screenshot; no horizontal overflow or oversized tutor overlay.
+- Re-ran account/cloud fixtures: 14 passed. Re-ran Community fixtures: 12 passed, including finding member 405 through server search and phone layouts at 320px, 360px and 412px.
+- GitHub Actions run 38623420786 for checkpoint `73197ef` completed successfully: full browser regression, explicit software-WebGL Tor check, cloud and Community suites, production build, and Windows `dotnet build` of the exported WinForms solution. The final follow-up edits above have fresh local coverage; this checkpoint CI result is not a claim about a later commit.
+- The PR remains a draft. No production merge or hosted Community migration was performed. Authentication fixture success does not establish that the reported user's real credentials or password-reset email delivery now work.

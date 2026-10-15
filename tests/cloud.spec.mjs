@@ -105,6 +105,10 @@ async function mockCloud(page, participants = []) {
       }
     } else if (path.endsWith("/cq_save_snapshot")) {
       const body = request.postDataJSON();
+      if(body.expected_revision !== (snapshots.get(actor)?.revision || 0)) {
+        await route.fulfill({status:409,contentType:"application/json",body:JSON.stringify({message:"Cloud save changed on another device"})});
+        return;
+      }
       snapshots.set(actor, {
         snapshot: body.payload,
         revision: body.expected_revision + 1,
@@ -614,4 +618,13 @@ test('automatic backup persists edits and pauses on a cross-device conflict',asy
  await expect(page.locator('.cloud-backup-status')).toContainText('Cloud backup saved');expect(cloud.snapshots.get(A).snapshot.progress.settings.name).toBe('Auto saved learner');
  await page.route('**/rest/v1/rpc/cq_save_snapshot',route=>route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({message:'Cloud save changed on another device'})}));
  await page.getByLabel('Your name',{exact:true}).fill('Preserve this local draft');await page.clock.fastForward(61000);await expect(page.locator('.cloud-backup-status')).toContainText('Cloud backup paused');await expect(page.getByLabel('Your name',{exact:true})).toHaveValue('Preserve this local draft');
+});
+
+
+test('manual save remains usable after automatic backup while Account stays open',async({page})=>{
+ const cloud=await mockCloud(page);await page.clock.install();await page.goto('/#account');await signin(page);
+ await page.getByRole('button',{name:'Save & enable automatic backup',exact:true}).click();await expect(page.getByRole('status')).toContainText('Automatic backup is on');
+ await page.clock.fastForward(61000);await expect(page.locator('.cloud-backup-status')).toContainText('Cloud backup saved');
+ const previous=cloud.snapshots.get(A).revision;
+ await page.getByRole('button',{name:'Save to cloud',exact:true}).click();await expect(page.getByRole('status')).toContainText('Saved to your account');expect(cloud.snapshots.get(A).revision).toBe(previous+1);
 });

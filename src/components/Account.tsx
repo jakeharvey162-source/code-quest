@@ -48,6 +48,14 @@ export default function Account({
   useEffect(() => {
     if (authError) setMessage(authError);
   }, [authError]);
+  useEffect(() => {
+    const saved = (event: Event) => {
+      const detail = (event as CustomEvent<{userId:string;revision:number}>).detail;
+      if (detail?.userId === user?.id && Number.isInteger(detail.revision)) setRevision(detail.revision);
+    };
+    window.addEventListener("cq-cloud-saved", saved);
+    return () => window.removeEventListener("cq-cloud-saved", saved);
+  }, [user?.id]);
   async function refresh() {
     if (!supabase || !user) return;
     const { data, error } = await supabase

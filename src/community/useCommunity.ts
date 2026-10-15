@@ -128,10 +128,12 @@ export function useCommunity() {
         : r.find((room) => room.slug === "general")?.id || r[0]?.id || "",
     );
   }, [user?.id, store]);
+  const acknowledgedRead = useRef<Record<string,string>>({});
   const markRead = useCallback(
     async (room: string, at: string) => {
       if (!user || !navigator.onLine) return;
       const preference = prefs.find((p) => p.room_id === room);
+      if ((acknowledgedRead.current[room] || preference?.read_at || "") >= at) return;
       await result(
         client()
           .from("cq_community_prefs")
@@ -142,6 +144,7 @@ export function useCommunity() {
             muted: preference?.muted || false,
           }),
       );
+      acknowledgedRead.current[room] = at;
       if (active.current) setUnread((old) => ({ ...old, [room]: 0 }));
     },
     [user?.id, prefs],
