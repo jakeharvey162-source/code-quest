@@ -33,6 +33,8 @@ test("Tor distinguishes planning, file recovery and built-in capability", () => 
     studyReply("Explain properties and constructors").text,
     /A Label/,
   );
+  assert.match(studyReply("hey").text, /What are we building/);
+  assert.doesNotMatch(studyReply("hey").text, /breakpoint|F10|trace/i);
   assert.equal(studyTopic("What about a setter?", "files"), "objects");
   assert.ok(studyQuestion(0, "files").choices.length > 1);
   assert.equal(readStudyHistory("bad").length, 0);
