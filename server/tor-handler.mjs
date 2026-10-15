@@ -17,6 +17,7 @@ export function createTorHandler({
     const allowed = new Set([
       "https://code-quest-tau-woad.vercel.app",
       ...(env.VERCEL_URL ? ["https://" + env.VERCEL_URL] : []),
+      ...(env.VERCEL_BRANCH_URL ? ["https://" + env.VERCEL_BRANCH_URL] : []),
       ...(env.PUBLIC_APP_URL ? [env.PUBLIC_APP_URL.replace(/\/$/, "")] : []),
     ]);
     if (req.headers.origin && !allowed.has(req.headers.origin))
@@ -65,6 +66,7 @@ export function createTorHandler({
         "setup_required",
       );
     try {
+      const deadline = AbortSignal.timeout(45000);
       const user = await authenticate(token);
       if (!user)
         return fail(
@@ -74,7 +76,7 @@ export function createTorHandler({
         );
       // Refuse to generate if this exact model stops being free. No paid fallback.
       const catalog = await fetcher("https://ai-gateway.vercel.sh/v1/models", {
-        signal: AbortSignal.timeout(10000),
+        signal: AbortSignal.any([deadline, AbortSignal.timeout(10000)]),
       });
       if (!catalog.ok) throw Error("catalog");
       const model = (await catalog.json()).data?.find(
@@ -105,7 +107,7 @@ export function createTorHandler({
             Authorization: "Bearer " + credential,
             "Content-Type": "application/json",
           },
-          signal: AbortSignal.timeout(40000),
+          signal: deadline,
           body: JSON.stringify({
             model: TOR_MODEL,
             max_tokens: 1200,

@@ -409,6 +409,7 @@ export default function TorCoach({
   useEffect(() => {
     pendingAction.current?.abort();
     setReply(teachingLanguage === "en-ZA" ? (tips[page] || tips.learn) : localizedFallback(teachingLanguage));
+    setStatus("");
     setObservation(null);
     previousObservation.current = null;
     setMood("ready");

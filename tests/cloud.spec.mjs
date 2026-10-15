@@ -862,9 +862,11 @@ test("a new device restores its cloud draft automatically and unsaved local edit
 test("Tor AI remembers follow-ups, preserves failed questions, and quiet saving stays out of the workspace",async({page})=>{
  const cloud=await mockCloud(page);
  const requests=[];
+ let finishHold;const hold=new Promise(resolve=>{finishHold=resolve;});
  await page.route("**/api/tor",async route=>{
   const body=route.request().postDataJSON();requests.push(body);
   const question=body.messages.at(-1).content;
+  if(question==='hold reply'){await hold;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({text:'Late reply must not appear'})}).catch(()=>{});}
   if(question==='fail now')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Tor’s AI service is temporarily unavailable.'})});
   await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({text:question==='hey'?'Hey! What are we learning today?':'You said hey earlier. Here is a C# example: Console.WriteLine("Hello");',model:'test-model'})});
  });
@@ -883,5 +885,6 @@ test("Tor AI remembers follow-ups, preserves failed questions, and quiet saving 
  await expect(page.getByRole('status')).toContainText('temporarily unavailable');
  await expect(page.getByLabel('Study question')).toHaveValue('fail now');
  await expect(page.getByLabel('Study conversation')).not.toContainText('Read the first error');
+ await page.getByLabel('Study question').fill('hold reply');await page.getByRole('button',{name:'Send to Tor',exact:true}).click();await page.getByRole('button',{name:'Stop reply',exact:true}).click();finishHold();await expect(page.getByLabel('Study question')).toHaveValue('hold reply');await expect(page.getByLabel('Study conversation')).not.toContainText('Late reply');
  await page.setViewportSize({width:360,height:800});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
