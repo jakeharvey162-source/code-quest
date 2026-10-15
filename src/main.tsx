@@ -31,6 +31,7 @@ import {
   localDay,
 } from "./lib/progress";
 import type { Progress } from "./lib/progress";
+import { xpLost } from "./lib/xp-penalties.mjs";
 import QuestBoard from "./components/QuestBoard";
 import { workshopQuests } from "./lib/workshop-quests.mjs";
 import LearningPath from "./components/LearningPath";
@@ -816,6 +817,12 @@ function ProgressPage({
           </b>
         </article>
       </div>
+      <p className="muted" role="note">
+        XP risk: a distinct failing coding-challenge solution can cost 5 XP,
+        at most twice per challenge. Repeating the same code and compiler
+        errors cost nothing. You have lost {xpLost(progress.steps)} XP so far;
+        your balance never drops below zero.
+      </p>
       <h2>Your neighbourhoods</h2>
       <div className="track-progress-list">
         {tracks.map((track) => {
