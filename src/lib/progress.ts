@@ -1,6 +1,7 @@
 import { readText, writeText } from "./local-data.ts";
 import { challengeXp } from "./code-challenges.mjs";
 import { earnedQuestXp } from "./workshop-quests.mjs";
+import { xpLost } from "./xp-penalties.mjs";
 import { validAvatar } from "./profile.ts";
 import { learningLevels, type LearningLevel } from "./learning-path.ts";
 export type Settings = {
@@ -162,15 +163,15 @@ export function completeStep(
   };
 }
 export function xpFor(progress: Progress) {
-  return (
+  const earned =
     Object.entries(progress.steps).reduce(
       (sum, [key, steps]) =>
-        sum + (["workshop-quests", "code-challenges"].includes(key) ? 0 : new Set(steps).size * 20),
+        sum + (["workshop-quests", "code-challenges", "xp-penalties"].includes(key) ? 0 : new Set(steps).size * 20),
       0,
     ) +
     new Set(progress.completed).size * 60 +
-    earnedQuestXp(progress.steps) + challengeXp(progress.steps)
-  );
+    earnedQuestXp(progress.steps) + challengeXp(progress.steps);
+  return Math.max(0, earned - xpLost(progress.steps));
 }
 export function streakFor(activity: string[], today = new Date()) {
   const days = new Set(activity);
