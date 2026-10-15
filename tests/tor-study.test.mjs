@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   readStudyHistory,
+  storeStudyHistory,
   studyReply,
   studyTopic,
   studyQuestion,
@@ -62,4 +63,18 @@ test("practice project preserves broken source and excludes private IDE/build in
   assert.ok(files.some((f) => f.name.endsWith("Form1.cs")));
   assert.ok(files.every((f) => !/(\.vs|obj|bin)\//.test(f.name)));
   assert.ok(!files.some((f) => f.name.endsWith("bookings.txt")));
+});
+
+test("offline greetings are relevant and longer AI history fits a cloud draft without losing the latest question", () => {
+  assert.match(studyReply("hey").text, /Hey!/);
+  assert.doesNotMatch(studyReply("hey").text, /first error|breakpoint/);
+  const rows = Array.from({ length: 10 }, (_, i) => ({
+    question: "x".repeat(5990) + i,
+    answer: "a".repeat(4000),
+    role: "student",
+    engine: "ai",
+  }));
+  const saved = storeStudyHistory(rows);
+  assert.ok(saved.length <= 45000);
+  assert.ok(JSON.parse(saved).at(-1).question.endsWith("9"));
 });

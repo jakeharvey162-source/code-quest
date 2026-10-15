@@ -1,3 +1,5 @@
+import {chatWithTor, type TorMessage} from "../lib/tor-chat";
+import {useAuth} from "./AuthProvider";
 import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { Settings } from "../lib/progress";
 import { readText, writeText } from "../lib/local-data";
@@ -97,6 +99,8 @@ export default function TorCoach({
     { code: "en-KE", name: "Kenyan English" },
   ];
   const [question, setQuestion] = useState("");
+  const {user}=useAuth();
+  const conversation=useRef<TorMessage[]>([]);
   const [reply, setReply] = useState(tips[page] || tips.learn);
   const [status, setStatus] = useState("");
   const [autoSpeak, setAutoSpeak] = useState(
@@ -147,7 +151,7 @@ export default function TorCoach({
     pendingAction.current?.abort();
     const request = cleanCoachRequest(text);
     if (!request) return;
-    if (/\b(summari[sz]e|summary|simpler|simply|break it down|what.*next)\b/i.test(request)) {
+    if ((!user || !navigator.onLine) && /\b(summari[sz]e|summary|simpler|simply|break it down|what.*next)\b/i.test(request)) {
       respond(teachingLanguage !== "en-ZA" ? localizedFallback(teachingLanguage) : lessonId ? lessonSummary(lessonId) : workspaceSummary(observation, page));
       return;
     }
@@ -158,7 +162,7 @@ export default function TorCoach({
       portal("summon");return;
     }
     const contextTopic = observation?.output && /error|failed|CS\d{4}/i.test(observation.output)?"debug error":page==="designer"?"button event":page==="terminal"?"debug error":"loop";
-    if (/\b(roast me|roast my code|give me a roast)\b/i.test(request)) {
+    if ((!user || !navigator.onLine) && /\b(roast me|roast my code|give me a roast)\b/i.test(request)) {
       respond(localizedLesson(contextTopic,teachingLanguage,true,++personalityTurn.current)||localizedFallback(teachingLanguage));
       const reaction=chooseTorReaction("dance");
       setGestureClip(reaction.clip);
@@ -166,7 +170,7 @@ export default function TorCoach({
       setGestureId(n=>n+1);
       return;
     }
-    if (/\b(challenge me|coding challenge|give me a challenge)\b/i.test(request)) {
+    if ((!user || !navigator.onLine) && /\b(challenge me|coding challenge|give me a challenge)\b/i.test(request)) {
       respond(localizedChallenge(contextTopic,teachingLanguage));
       return;
     }
@@ -202,7 +206,7 @@ export default function TorCoach({
       return;
     }
     if (
-      /what (?:do you see|am i doing)|look at (?:my|the) (?:form|screen)|why.*(?:error|work)|help.*(?:error|form)/i.test(
+      /what (?:do you see|am i doing)|look at (?:my|the) (?:form|screen)/i.test(
         request,
       ) &&
       observation
@@ -212,8 +216,22 @@ export default function TorCoach({
       );
       return;
     }
+    if(user && navigator.onLine){
+      const controller=new AbortController();pendingAction.current=controller;
+      setStatus("Tor is thinking…");setReply("");
+      try{
+        const messages:TorMessage[]=[...conversation.current,{role:"user",content:request}];
+        const response=await chatWithTor(messages,controller.signal,"student",teachingLanguage);
+        if(controller.signal.aborted)return;
+        conversation.current=[...messages,{role:"assistant" as const,content:response}].slice(-6);
+        respond(response);
+      }catch(error){if(!controller.signal.aborted){setStatus(error instanceof Error?error.message:"Tor’s AI is unavailable.");setMood("concerned");}}
+      finally{if(pendingAction.current===controller)pendingAction.current=null;}
+      return;
+    }
     if(teachingLanguage === "en-ZA" && /lecturer|classroom|assign|rubric|bookings.txt|historical file/i.test(request)){respond(studyReply(request,/lecturer|rubric|assign/i.test(request)?"lecturer":"student").text);return;}
-    respond(answer(request, page, teachingLanguage, roast, ++personalityTurn.current));
+    if (/^(hey|hi|hello|yo|howzit)[!.? ]*$/i.test(request)) respond("Hey! I’m Tor. What are we building or learning today? Sign in for an AI conversation, or I can help with the offline lessons.");
+    else respond(answer(request, page, teachingLanguage, roast, ++personalityTurn.current));
   }
   function stop() {
     pendingAction.current?.abort();
@@ -391,6 +409,7 @@ export default function TorCoach({
   useEffect(() => {
     pendingAction.current?.abort();
     setReply(teachingLanguage === "en-ZA" ? (tips[page] || tips.learn) : localizedFallback(teachingLanguage));
+    setStatus("");
     setObservation(null);
     previousObservation.current = null;
     setMood("ready");

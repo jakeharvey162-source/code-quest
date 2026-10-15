@@ -60,6 +60,7 @@ test("student and lecturer use the Tor desk, resume conversation, practise and f
     page.getByRole("heading", { name: "Tor’s study desk" }),
   ).toBeVisible();
   await expect(page.locator(".tor-coach")).toHaveCount(0);
+  await page.getByLabel("Tor mode",{exact:true}).selectOption("offline");
   await page
     .getByRole("button", {
       name: "What if bookings.txt is missing?",
@@ -130,6 +131,7 @@ test("Tor study desk and practice project remain available offline after caching
     .toBe(true);
   await context.setOffline(true);
   await page.reload();
+  await page.getByLabel("Tor mode",{exact:true}).selectOption("offline");
   await page
     .getByRole("button", {
       name: "Help me debug the equipment booking practice",

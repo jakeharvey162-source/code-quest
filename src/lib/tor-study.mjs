@@ -40,6 +40,11 @@ export function studyTopic(text, previous = "debug") {
 }
 export function studyReply(question, role = "student", previous = "debug") {
   const topic = studyTopic(question, previous);
+  if (/^(hey|hi|hello|yo|howzit)( tor)?[!.? ]*$/i.test(question.trim()))
+    return {
+      topic,
+      text: "Hey! I’m Tor. What are we building or learning today?",
+    };
   if (/bookings.txt|histor|missing file/i.test(question))
     return {
       topic: "files",
@@ -56,7 +61,7 @@ export function studyReply(question, role = "student", previous = "debug") {
   if (/chatgpt|internet|browse|web|ai model/i.test(question))
     return {
       topic,
-      text: "This Tor study desk uses built-in course coaching and local question templates. It does not contact a language model or browse pages. The official-document links open the web when you choose them. Your conversation stays in your CodeQuest progress on this device and is included if you enable cloud backup. Use New practice question for varying exercises, or ask about debugging, events, validation, files or properties.",
+      text: "This Tor study desk uses built-in course coaching and local question templates. It does not contact a language model or browse pages. The official-document links open the web when you choose them. Your conversation stays in your CodeQuest progress on this device and is included in your account’s automatic cloud backup when it is on. Use New practice question for varying exercises, or ask about debugging, events, validation, files or properties.",
     };
   if (topic === "classroom")
     return {
@@ -120,8 +125,8 @@ export function readStudyHistory(raw) {
           .slice(-10)
           .map((r) => ({
             ...r,
-            question: r.question.slice(0, 1000),
-            answer: r.answer.slice(0, 2500),
+            question: r.question.slice(0, 6000),
+            answer: r.answer.slice(0, 6000),
             topic: studyTopic(
               "",
               r.topic &&
@@ -147,4 +152,11 @@ export function studyQuestion(seed, topic) {
     seed,
     { debug: 1, events: 2, validation: 2, files: 4, objects: 5 }[topic] || 0,
   );
+}
+
+export function storeStudyHistory(rows) {
+  const recent = rows.slice(-10);
+  while (recent.length > 1 && JSON.stringify(recent).length > 45000)
+    recent.shift();
+  return JSON.stringify(recent);
 }

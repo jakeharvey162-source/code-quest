@@ -656,9 +656,7 @@ test("automatic backup persists edits and pauses on a cross-device conflict", as
     .getByLabel("Your name", { exact: true })
     .fill("Auto saved learner");
   await page.clock.fastForward(61000);
-  await expect(page.locator(".cloud-backup-status")).toContainText(
-    "All changes saved",
-  );
+  await expect(page.locator(".cloud-backup-status")).toHaveCount(0);
   expect(cloud.snapshots.get(A).snapshot.progress.settings.name).toBe(
     "Auto saved learner",
   );
@@ -690,9 +688,7 @@ test("manual save remains usable after automatic backup while Account stays open
   await signin(page);
   await expect.poll(() => cloud.snapshots.get(A)?.revision).toBe(1);
   await page.clock.fastForward(61000);
-  await expect(page.locator(".cloud-backup-status")).toContainText(
-    "All changes saved",
-  );
+  await expect(page.locator(".cloud-backup-status")).toHaveCount(0);
   const previous = cloud.snapshots.get(A).revision;
   await recoveryOptions(page);
   await page
@@ -860,4 +856,35 @@ test("a new device restores its cloud draft automatically and unsaved local edit
         ],
     )
     .toContain("offline draft");
+});
+
+
+test("Tor AI remembers follow-ups, preserves failed questions, and quiet saving stays out of the workspace",async({page})=>{
+ const cloud=await mockCloud(page);
+ const requests=[];
+ let finishHold;const hold=new Promise(resolve=>{finishHold=resolve;});
+ await page.route("**/api/tor",async route=>{
+  const body=route.request().postDataJSON();requests.push(body);
+  const question=body.messages.at(-1).content;
+  if(question==='hold reply'){await hold;return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({text:'Late reply must not appear'})}).catch(()=>{});}
+  if(question==='fail now')return route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({error:'Tor’s AI service is temporarily unavailable.'})});
+  await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({text:question==='hey'?'Hey! What are we learning today?':'You said hey earlier. Here is a C# example: Console.WriteLine("Hello");',model:'test-model'})});
+ });
+ await page.goto('/#account');await signin(page);
+ await expect.poll(()=>cloud.snapshots.get(A)?.revision).toBe(1);
+ await expect(page.locator('.cloud-backup-status')).toHaveCount(0);
+ await page.goto('/#tor');
+ await page.getByLabel('Study question').fill('hey');await page.getByRole('button',{name:'Send to Tor',exact:true}).click();
+ await expect(page.getByLabel('Study conversation')).toContainText('Hey! What are we learning today?');
+ await page.getByLabel('Study question').fill('What did I say earlier?');await page.getByRole('button',{name:'Send to Tor',exact:true}).click();
+ await expect(page.getByLabel('Study conversation')).toContainText('You said hey earlier');
+ expect(requests[1].messages[0]).toEqual({role:'user',content:'hey'});
+ expect(requests[1].messages[1].role).toBe('assistant');
+ await page.reload();await expect(page.getByLabel('Study conversation')).toContainText('You said hey earlier');
+ await page.getByLabel('Study question').fill('fail now');await page.getByRole('button',{name:'Send to Tor',exact:true}).click();
+ await expect(page.getByRole('status')).toContainText('temporarily unavailable');
+ await expect(page.getByLabel('Study question')).toHaveValue('fail now');
+ await expect(page.getByLabel('Study conversation')).not.toContainText('Read the first error');
+ await page.getByLabel('Study question').fill('hold reply');await page.getByRole('button',{name:'Send to Tor',exact:true}).click();await page.getByRole('button',{name:'Stop reply',exact:true}).click();finishHold();await expect(page.getByLabel('Study question')).toHaveValue('hold reply');await expect(page.getByLabel('Study conversation')).not.toContainText('Late reply');
+ await page.setViewportSize({width:360,height:800});expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });
