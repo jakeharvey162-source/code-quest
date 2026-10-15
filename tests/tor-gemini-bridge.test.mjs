@@ -6,7 +6,7 @@ async function send({ status = 200, providerCode, mode = "gemini" } = {}) {
   const calls = [];
   let oldQuota = 0;
   const handler = createTorHandler({
-    env: mode === "gemini" ? {} : { VERCEL_OIDC_TOKEN: "private", CQ_TOR_PROVIDER: "vercel" },
+    env: mode === "gemini" ? { VERCEL_OIDC_TOKEN: "gateway-token" } : { VERCEL_OIDC_TOKEN: "gateway-token", CQ_TOR_PROVIDER: "vercel" },
     supabaseUrl: "https://example.supabase.co",
     supabaseApiKey: "publishable",
     authenticate: async () => ({ id: "student" }),
@@ -66,8 +66,8 @@ test("Gemini quota errors do not route around rate limits", async () => {
 
 test("Only missing Gemini setup falls back to the existing model", async () => {
   const { calls, result, oldQuota } = await send({ status: 503, providerCode: "setup_required" });
-  assert.equal(result.status, 503);
-  assert.equal(result.code, "setup_required");
-  assert.equal(calls.length, 1);
-  assert.equal(oldQuota, 0);
+  assert.equal(result.status, 200);
+  assert.equal(result.model, TOR_MODEL);
+  assert.equal(calls.length, 3);
+  assert.equal(oldQuota, 1);
 });
