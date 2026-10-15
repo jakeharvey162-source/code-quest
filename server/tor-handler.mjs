@@ -18,6 +18,7 @@ export function createTorHandler({
     }
     const allowed = new Set([
       "https://code-quest-tau-woad.vercel.app",
+      "https://codequest.pp.ua",
       ...(env.VERCEL_URL ? ["https://" + env.VERCEL_URL] : []),
       ...(env.VERCEL_BRANCH_URL ? ["https://" + env.VERCEL_BRANCH_URL] : []),
       ...(env.PUBLIC_APP_URL ? [env.PUBLIC_APP_URL.replace(/\/$/, "")] : []),
@@ -67,7 +68,7 @@ export function createTorHandler({
     if (env.CQ_TOR_PROVIDER !== "vercel" && supabaseUrl && supabaseApiKey) {
       try {
         const edge = await fetcher(
-          supabaseUrl.replace(/\\/$/, "") + "/functions/v1/codequest-tor-gemini",
+          supabaseUrl.replace(/\/$/, "") + "/functions/v1/codequest-tor-gemini",
           {
             method: "POST",
             headers: {
