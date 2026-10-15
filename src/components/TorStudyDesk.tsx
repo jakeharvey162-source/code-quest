@@ -90,6 +90,8 @@ export default function TorStudyDesk({
         Chat naturally, share a C# error or ask for help with any CodeQuest
         lesson. Live AI uses Gemini when configured and you are signed in.
         Built-in explanations and practice questions remain available offline.
+        When live AI is enabled, your question and recent conversation are
+        sent to Google Gemini for a reply. Do not paste passwords or private data.
       </p>
       <div className="button-row">
         <a href="#challenges/equipment-booking">
