@@ -25,7 +25,9 @@ export function useCommunity() {
   const [online, setOnline] = useState(navigator.onLine),
     [notice, setNotice] = useState(""),
     [loading, setLoading] = useState(true),
-    [sending, setSending] = useState(false);
+    [sending, setSending] = useState(false),
+    [acting, setActing] = useState(false);
+  const actionPending = useRef(false);
   const [rooms, setRooms] = useState<Room[]>([]),
     [profiles, setProfiles] = useState<Profile[]>([]),
     [friends, setFriends] = useState<Friend[]>([]),
@@ -40,6 +42,9 @@ export function useCommunity() {
     [pending, setPending] = useState<Message[]>([]),
     [reactions, setReactions] = useState<any[]>([]),
     [hasOlder, setHasOlder] = useState(false);
+  // Read current data without recreating refresh/poll subscriptions on every render.
+  const current = useRef({ rooms, profiles, friends, blocks, prefs, classes, reports, unread, isModerator });
+  current.current = { rooms, profiles, friends, blocks, prefs, classes, reports, unread, isModerator };
   const selectedRef = useRef(selected);
   selectedRef.current = selected;
   const epoch = useRef(0),
@@ -62,7 +67,7 @@ export function useCommunity() {
   const refresh = useCallback(async () => {
     if (!user || !navigator.onLine) return;
     const version = epoch.current;
-    const [r, p, f, b, settings, c, u, rep, mod, me] = await Promise.all([
+    const results = await Promise.allSettled([
       result<Room[]>(
         client()
           .from("cq_community_rooms")
@@ -99,6 +104,27 @@ export function useCommunity() {
       ),
     ]);
     if (!active.current || version !== epoch.current) return;
+    const value = <T,>(index: number, fallback: T): T =>
+      results[index].status === "fulfilled"
+        ? (results[index] as PromiseFulfilledResult<T>).value
+        : fallback;
+    const previous = current.current;
+    const r = value<Room[]>(0, previous.rooms);
+    const p = value<Profile[]>(1, previous.profiles);
+    const f = value<Friend[]>(2, previous.friends);
+    const b = value<{peer_id: string}[]>(3, previous.blocks);
+    const settings = value<Pref[]>(4, previous.prefs);
+    const c = value<any[]>(5, previous.classes);
+    const u = value<any[]>(6, Object.entries(previous.unread).map(([room_id, unread]) => ({room_id, unread})));
+    const rep = value<any[]>(7, previous.reports);
+    const mod = value<boolean>(8, false);
+    const me = value<Profile[]>(9, previous.profiles.filter((p) => p.user_id === user.id));
+    // An optional feature failing must not blank the entire Community screen.
+    if (results.some((item) => item.status === "rejected")) {
+      setNotice(results[0].status === "rejected"
+        ? "Conversations could not load. Check sign-in and select Sync messages to retry."
+        : "Some Community features could not load. Conversations that are available will still appear. Tap Sync messages to retry.");
+    }
     setRooms(r);
     const knownProfiles = [
       ...new Map(
@@ -234,6 +260,7 @@ export function useCommunity() {
         const lastRoom: any = await store.get("meta", "last-room");
         if (cancelled) return;
         if (snapshot) {
+          current.current = { ...current.current, ...snapshot };
           setRooms(snapshot.rooms || []);
           setProfiles(snapshot.profiles || []);
           setFriends(snapshot.friends || []);
@@ -344,6 +371,8 @@ export function useCommunity() {
     language: string;
     challenge_id: string | null;
   }) {
+    if (actionPending.current)
+      throw Error("Wait for the selected conversation to finish opening before sending.");
     if (!user)
       throw Error(
         "Sign in before sending. Your draft can be saved on this device.",
@@ -377,12 +406,18 @@ export function useCommunity() {
     await reloadOutbox();
   }
   async function action(fn: () => Promise<unknown>) {
+    if (actionPending.current) return;
+    actionPending.current = true;
+    setActing(true);
     try {
       await fn();
       await refresh();
       if (selectedRef.current) await latestLoad.current(selectedRef.current);
     } catch (e) {
       showError(e);
+    } finally {
+      actionPending.current = false;
+      if (active.current) setActing(false);
     }
   }
   const visible = mergeMessages(
@@ -398,6 +433,7 @@ export function useCommunity() {
     setNotice,
     loading,
     sending,
+    acting,
     rooms,
     profiles,
     friends,
@@ -410,6 +446,7 @@ export function useCommunity() {
     selected,
     setSelected,
     messages: visible,
+    pendingCount: pending.length,
     reactions,
     hasOlder,
     refresh,

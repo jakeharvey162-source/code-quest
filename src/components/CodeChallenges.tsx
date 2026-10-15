@@ -11,6 +11,8 @@ import {
 import { runCSharp, cancelRun } from "../lib/compiler";
 import { localDay, type Progress } from "../lib/progress";
 import type { UpdateProgress } from "./LessonView";
+import { xpFor } from "../lib/progress";
+import { applyChallengePenalty } from "../lib/xp-penalties.mjs";
 export default function CodeChallenges({
   progress,
   update,
@@ -111,10 +113,17 @@ export default function CodeChallenges({
             challenge.xp +
             " XP earned once. Try the next challenge.",
         );
-      } else
+      } else {
+        const { lost } = applyChallengePenalty(progress, id, source, xpFor(progress));
+        if (lost) update((p) => applyChallengePenalty(p, id, source, xpFor(p)).progress);
         setStatus(
-          "Some tests failed. Read the actual result, fix one thing, and try again.",
+          "Some tests failed. " +
+            (lost
+              ? "-5 XP for this attempt. A different fix can still earn the challenge reward. "
+              : "No extra XP lost for this attempt. ") +
+            "Read the result, change one thing, and try again.",
         );
+      }
     } catch (e) {
       if (version === generation.current)
         setStatus(e instanceof Error ? e.message : "Run failed.");
@@ -142,7 +151,7 @@ export default function CodeChallenges({
           <p className="eyebrow">THE EXAM TRAINING ARENA</p>
           <h1>Code challenges</h1>
           <p>
-            Real C# tests. Earn XP by fixing the code, not just clicking Run.
+            Real C# tests. Earn XP by solving code. A distinct failing solution can cost 5 XP, capped at two mistakes per challenge. Compiler errors and repeating the same answer are free.
           </p>
         </div>
         <div className="button-row">

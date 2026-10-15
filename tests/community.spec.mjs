@@ -361,13 +361,13 @@ test("Classroom and legacy community links require sign-in; challenges stay avai
   for (const path of ["classes", "community"]) {
     await page.goto("/#" + path);
     await expect(
-      page.getByRole("heading", { name: "Classroom", exact: true }),
+      page.getByRole("heading", { name: "Join CodeQuest to connect", exact: true }),
     ).toBeVisible();
     await expect(
       page.getByRole("textbox", { name: "Community message", exact: true }),
     ).toHaveCount(0);
     await page
-      .getByRole("button", { name: "Open account", exact: true })
+      .getByRole("button", { name: "Create account or sign in", exact: true })
       .click();
     await expect(
       page.getByRole("heading", { name: "Welcome back", exact: true }),
@@ -713,4 +713,64 @@ test('member search finds a learner beyond the first 200 downloaded profiles',as
  insert into cq_community_profiles(user_id,nickname,allow_requests) select ('90000000-0000-4000-8000-' || lpad(i::text,12,'0'))::uuid,'Learner ' || lpad(i::text,3,'0'),true from generate_series(1,405) i;`);
  await service.attach(page);await signin(page,'a@community.test');await page.getByRole('button',{name:'People & friends',exact:true}).click();await page.getByLabel('Find a Community member').fill('Learner 405');await expect(page.locator('.community-person').filter({hasText:'Learner 405'})).toHaveCount(0);await page.getByRole('button',{name:'Search all members',exact:true}).click();await expect(page.locator('.community-person').filter({hasText:'Learner 405'})).toBeVisible();
  }finally{await service.close();}
+});
+
+test('partial refresh failures preserve cached rooms and the block list across reloads',async({page})=>{
+ const service=await fixture();
+ try{
+  await service.attach(page);await signin(page,'a@community.test');
+  await page.getByRole('button',{name:'People & friends',exact:true}).click();
+  await page.locator('.community-person').filter({has:page.getByText('Bayo the builder',{exact:true})}).getByRole('button',{name:'Block',exact:true}).click();
+  await page.getByRole('button',{name:'Privacy & profile',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Unblock',exact:true})).toHaveCount(1);
+  await page.route('**/rest/v1/cq_community_blocks*',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'temporary blocks outage'})}));
+  await page.route('**/rest/v1/cq_community_rooms*',route=>route.fulfill({status:503,contentType:'application/json',body:JSON.stringify({message:'temporary rooms outage'})}));
+  await page.getByRole('button',{name:'Conversations',exact:true}).click();
+  await page.getByRole('button',{name:'Sync messages',exact:true}).click();
+  await expect(channel(page)).toBeVisible();
+  await page.getByRole('button',{name:'Privacy & profile',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Unblock',exact:true})).toHaveCount(1);
+  await page.getByRole('button',{name:'Conversations',exact:true}).click();
+  await expect(channel(page)).toBeVisible();
+  await page.reload();
+  await expect(channel(page)).toBeVisible();
+  await page.getByRole('button',{name:'Privacy & profile',exact:true}).click();
+  await expect(page.getByRole('button',{name:'Unblock',exact:true})).toHaveCount(1);
+ }finally{await service.close();}
+});
+
+test("member-only chat links show after sign-in and Private chats opens friends on mobile",async({page})=>{
+  const service=await fixture();
+  try {
+    await service.attach(page);
+    await signin(page,"a@community.test");
+    const nav=page.getByRole("navigation",{name:"Main navigation"});
+    for(const name of ["Community chat","Private chats","Tor study desk","Classroom"])
+      await expect(nav.getByRole("button",{name,exact:true})).toBeVisible();
+    await nav.getByRole("button",{name:"Private chats",exact:true}).click();
+    await expect(page.getByRole("heading",{name:"Your people, your pace."})).toBeVisible();
+    await nav.getByRole("button",{name:"Community chat",exact:true}).click();
+    await expect(page.getByRole("heading",{name:"Community",exact:true})).toBeVisible();
+    await nav.getByRole("button",{name:"Tor study desk",exact:true}).click();
+    await expect(page.getByRole("heading",{name:"Tor’s study desk"})).toBeVisible();
+    await page.setViewportSize({width:390,height:844});
+    const overflow=await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+2);
+    expect(overflow).toBe(false);
+  } finally {await service.close();}
+});
+
+test('opening a class discussion locks the old composer until the target room is ready',async({page})=>{
+ const service=await fixture();let release;const gate=new Promise(resolve=>{release=resolve;});
+ try{
+  await service.as(A,"insert into cq_classes(id,owner_id,name) values('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',$1,'Race test class')",[A]);
+  await service.attach(page);await signin(page,'a@community.test');
+  await page.route('**/rest/v1/cq_community_rooms*',async route=>{if(route.request().method()==='POST')await gate;await route.fallback();});
+  await page.getByRole('button',{name:'Start Race test class discussion',exact:true}).click();
+  await expect(page.getByLabel('Community message',{exact:true})).toBeDisabled();
+  await expect(page.getByRole('button',{name:'Send message',exact:true})).toBeDisabled();
+  release();await expect(page.getByRole('heading',{name:'Race test class discussion',exact:true})).toBeVisible();
+  await expect(page.getByLabel('Community message',{exact:true})).toBeEnabled();
+  await send(page,'This belongs only in the class room');
+  await expect.poll(async()=>(await service.as(A,"select r.kind,m.body from cq_community_messages m join cq_community_rooms r on r.id=m.room_id where m.sender_id=$1",[A])).rows).toEqual([{kind:'class',body:'This belongs only in the class room'}]);
+ }finally{release();await service.close();}
 });

@@ -5,7 +5,7 @@ export default defineConfig({
   testIgnore: ["cloud.spec.mjs", "community.spec.mjs"],
   timeout: 120000,
   expect: { timeout: 10000 },
-  workers: 1,
+  workers: process.env.CI ? 2 : 1,
   retries: 0,
   reporter: [["list"], ["html", { open: "never" }]],
   use: {

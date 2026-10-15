@@ -109,7 +109,7 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
               user_id: user.id,
               nickname,
               avatar: progress.settings.avatar,
-              xp: Math.min(100000, Math.max(xp, mineRank?.xp || 0)),
+              xp: Math.min(100000, Math.max(0, xp)),
               completed: Math.max(completed, mineRank?.completed || 0),
               visible: true,
             },
@@ -132,7 +132,7 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
     }
   }
   useEffect(() => {
-    if (!joined || !mineRank || busy || xp <= mineRank.xp) return;
+    if (!joined || !mineRank || busy || xp === mineRank.xp) return;
     const attempt = `${user?.id}:${xp}`;
     if (autoPublishAttempt.current === attempt) return;
     const timer = setTimeout(() => {
@@ -186,7 +186,7 @@ export default function Leaderboard({ progress }: { progress: Progress }) {
         )}
         <p>
           Joining makes your nickname, selected photo/avatar, practice XP and
-          lesson count public. Your best XP updates when you visit this board.
+          lesson count public. Your current XP updates when you visit this board, including challenge penalties.
           Email and private code stay private. Scores are self-study progress,
           not verified exam marks.
         </p>

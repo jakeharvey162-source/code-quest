@@ -35,8 +35,13 @@ test("moves and resizes", () => {
 });
 test("removes controls", () =>
   assert.equal(removeControl(addControl([], "Label"), "label1").length, 0));
-test("requires button Click event", () =>
-  assert.equal(validateForm(addControl([], "Button")).ok, false));
+test("allows unwired Button and omits Click subscription", () => {
+  const controls = addControl([], "Button");
+  assert.equal(validateForm(controls).ok, true);
+  const code = designerCode(controls);
+  assert.match(code, /new System\.Windows\.Forms\.Button\(\)/);
+  assert.doesNotMatch(code, /\.Click \+=/);
+});
 test("passes wired button", () => {
   let a = addControl([], "Button");
   a = updateControl(a, a[0].id, {
@@ -135,4 +140,51 @@ test("export rejects event properties incompatible with the selected control typ
         .ok,
       false,
     );
+});
+
+test("rejects unsupported Anchor and Dock enum values before native export", () => {
+  const base = addControl([], "Label");
+  for (const patch of [
+    { anchor: "Top, Banana" },
+    { anchor: "Top, Top" },
+    { anchor: "None, Left" },
+    { dock: "Unicorn" },
+  ]) {
+    const form = updateControl(base, base[0].id, patch);
+    assert.equal(validateForm(form).ok, false, JSON.stringify(patch));
+  }
+  const valid = updateControl(base, base[0].id, {
+    anchor: "Top, Bottom, Left, Right",
+    dock: "Fill",
+  });
+  assert.equal(validateForm(valid).ok, true);
+});
+
+test("validates unwired Button alongside Anchor and Dock rules", () => {
+  const base = addControl([], "Button");
+  assert.equal(validateForm(base).ok, true);
+  assert.equal(validateForm(updateControl(base, base[0].id, { anchor: "Left, Banana" })).ok, false);
+  assert.equal(validateForm(updateControl(base, base[0].id, { dock: "Unicorn" })).ok, false);
+  const valid = updateControl(base, base[0].id, { anchor: "Left, Right", dock: "Fill" });
+  assert.equal(validateForm(valid).ok, true);
+  assert.doesNotMatch(designerCode(valid), /\.Click \+=/);
+});
+
+test("rejects nonboolean Enabled/Visible before native C# export", () => {
+  const base = addControl([], "Button");
+  for (const patch of [
+    { enabled: "sometimes" },
+    { visible: "maybe" },
+    { enabled: 1 },
+    { visible: null },
+  ]) {
+    const result = validateForm(updateControl(base, base[0].id, patch));
+    assert.equal(result.ok, false, JSON.stringify(patch));
+    assert.ok(result.issues.some((issue) => issue.includes(Object.keys(patch)[0])));
+  }
+  const valid = updateControl(base, base[0].id, { enabled: false, visible: false });
+  assert.equal(validateForm(valid).ok, true);
+  const code = designerCode(valid);
+  assert.match(code, /\.Enabled = false;/);
+  assert.match(code, /\.Visible = false;/);
 });
