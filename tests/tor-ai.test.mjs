@@ -140,3 +140,14 @@ test("provider failures and empty output remain errors, never hardcoded answers"
     assert.ok(!JSON.stringify(result).includes("private stack"));
   }
 });
+
+test('Tor reads the per-request Vercel runtime identity without exposing it',async()=>{
+ const {run,calls}=fixture({env:{VERCEL:'1'}});
+ const reply=await run(undefined,{'x-vercel-oidc-token':'runtime-private-identity'});
+ assert.equal(reply.status,200);
+ assert.equal(calls[0].init.headers.Authorization,'Bearer runtime-private-identity');
+ assert.equal(calls[1].init.headers.Authorization,'Bearer runtime-private-identity');
+ assert.ok(!JSON.stringify(reply).includes('runtime-private-identity'));
+ const local=fixture({env:{}});
+ assert.equal((await local.run(undefined,{'x-vercel-oidc-token':'untrusted-local-header'})).code,'setup_required');
+});
