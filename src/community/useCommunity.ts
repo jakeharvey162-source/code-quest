@@ -62,7 +62,7 @@ export function useCommunity() {
   const refresh = useCallback(async () => {
     if (!user || !navigator.onLine) return;
     const version = epoch.current;
-    const [r, p, f, b, settings, c, u, rep, mod, me] = await Promise.all([
+    const results = await Promise.allSettled([
       result<Room[]>(
         client()
           .from("cq_community_rooms")
@@ -99,6 +99,26 @@ export function useCommunity() {
       ),
     ]);
     if (!active.current || version !== epoch.current) return;
+    const value = <T,>(index: number, fallback: T): T =>
+      results[index].status === "fulfilled"
+        ? (results[index] as PromiseFulfilledResult<T>).value
+        : fallback;
+    const r = value<Room[]>(0, []);
+    const p = value<Profile[]>(1, []);
+    const f = value<Friend[]>(2, []);
+    const b = value<{peer_id: string}[]>(3, []);
+    const settings = value<Pref[]>(4, []);
+    const c = value<any[]>(5, []);
+    const u = value<any[]>(6, []);
+    const rep = value<any[]>(7, []);
+    const mod = value<boolean>(8, false);
+    const me = value<Profile[]>(9, []);
+    // An optional feature failing must not blank the entire Community screen.
+    if (results.some((item) => item.status === "rejected")) {
+      setNotice(results[0].status === "rejected"
+        ? "Conversations could not load. Check sign-in and select Sync messages to retry."
+        : "Some Community features could not load. Conversations that are available will still appear. Tap Sync messages to retry.");
+    }
     setRooms(r);
     const knownProfiles = [
       ...new Map(
@@ -410,6 +430,7 @@ export function useCommunity() {
     selected,
     setSelected,
     messages: visible,
+    pendingCount: pending.length,
     reactions,
     hasOlder,
     refresh,
