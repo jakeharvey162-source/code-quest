@@ -26,7 +26,7 @@ export default function CodeChallenges({
     [status, setStatus] = useState("Choose a challenge. Predict, code, test."),
     [results, setResults] = useState<{ passed: boolean; actual: string }[]>([]),
     [hint, setHint] = useState(false);
-  useEffect(()=>{ if(initialId && codeChallenges.some(c=>c.id===initialId)){setId(initialId);setResults([]);setHint(false);} },[initialId]);
+  useEffect(()=>{ if(initialId && codeChallenges.some(c=>c.id===initialId)){generation.current++;if(lock.current)cancelRun();lock.current=false;setBusy(false);setId(initialId);setResults([]);setHint(false);} },[initialId]);
   const generation = useRef(0);
   const lock = useRef(false);
   useEffect(
@@ -123,7 +123,7 @@ export default function CodeChallenges({
         </div>
         <a href="#leaderboard">Compare your rank →</a>
       </div>
-      <DebugRepairLab progress={progress} update={update} />
+      <DebugRepairLab progress={progress} update={update} initialId={initialId} />
       <ContinuousPractice progress={progress} update={update} />
       <div className="challenge-layout">
         <aside className="challenge-picker">

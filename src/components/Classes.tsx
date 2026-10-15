@@ -1,9 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { useAuth } from "./AuthProvider";
-import { lessons } from "../curriculum";
+import {
+  assignableTasks,
+  assignmentTask,
+  sharedTaskIds,
+} from "../lib/assignments.mjs";
 import { xpFor, type Progress } from "../lib/progress";
-export default function Classes({
+type ClassesProps = { progress: Progress; onNavigate: (path: string) => void };
+export default function Classes(props: ClassesProps) {
+  const { user } = useAuth();
+  return <ClassBody key={user?.id || "guest"} {...props} />;
+}
+function ClassBody({
   progress,
   onNavigate,
 }: {
@@ -17,7 +26,7 @@ export default function Classes({
   const [selected, setSelected] = useState(""),
     [name, setName] = useState(""),
     [code, setCode] = useState(""),
-    [lessonId, setLessonId] = useState(lessons[0].id),
+    [lessonId, setLessonId] = useState(assignableTasks[0].id),
     [due, setDue] = useState("");
   const [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false);
@@ -32,7 +41,18 @@ export default function Classes({
     if (result.error) throw result.error;
     setClasses(result.data || []);
   }
+  const detailsGeneration = useRef(0);
+  const selectedRef = useRef(selected);
+  selectedRef.current = selected;
+  useEffect(
+    () => () => {
+      detailsGeneration.current++;
+    },
+    [],
+  );
   async function details() {
+    const version = ++detailsGeneration.current;
+    const classId = selected;
     if (!supabase || !selected) {
       setAssignments([]);
       setStudents([]);
@@ -49,6 +69,11 @@ export default function Classes({
         .select("user_id,display_name,completed,xp,updated_at")
         .eq("class_id", selected),
     ]);
+    if (
+      version !== detailsGeneration.current ||
+      selectedRef.current !== classId
+    )
+      return;
     if (a.error || s.error) throw a.error || s.error;
     setAssignments(a.data || []);
     setStudents(s.data || []);
@@ -61,6 +86,7 @@ export default function Classes({
     );
   }, [user?.id]);
   useEffect(() => {
+    detailsGeneration.current++;
     setAssignments([]);
     setStudents([]);
     details().catch(() => setMessage("This class could not load."));
@@ -101,6 +127,10 @@ export default function Classes({
               onSubmit={(e) => {
                 e.preventDefault();
                 action(async () => {
+                  if (name.trim().length < 2)
+                    throw new Error(
+                      "Use at least two non-space characters for the class name.",
+                    );
                   const { data, error } = await supabase!
                     .from("cq_classes")
                     .insert({ name: name.trim(), owner_id: user.id })
@@ -160,7 +190,7 @@ export default function Classes({
               </label>
               <p className="muted">
                 Joining shares your profile name. Share my progress sends
-                completed quest IDs and XP to the lecturer. Code drafts,
+                completed quest/repair IDs and XP to the lecturer. Code drafts,
                 assessment answers and account settings stay private.
               </p>
               <button disabled={busy}>Join class</button>
@@ -212,7 +242,7 @@ export default function Classes({
                           value={lessonId}
                           onChange={(e) => setLessonId(e.target.value)}
                         >
-                          {lessons.map((lesson) => (
+                          {assignableTasks.map((lesson) => (
                             <option key={lesson.id} value={lesson.id}>
                               {lesson.title}
                             </option>
@@ -240,7 +270,7 @@ export default function Classes({
                             .from("cq_members")
                             .update({
                               display_name: progress.settings.name || "Learner",
-                              completed: progress.completed,
+                              completed: sharedTaskIds(progress),
                               xp: xpFor(progress),
                               updated_at: new Date().toISOString(),
                             })
@@ -283,10 +313,14 @@ export default function Classes({
                   assignments.map((item) => (
                     <div key={item.id} className="button-row">
                       <button
-                        onClick={() => onNavigate(`learn/${item.lesson_id}`)}
+                        disabled={!assignmentTask(item.lesson_id)}
+                        onClick={() => {
+                          const task = assignmentTask(item.lesson_id);
+                          if (task) onNavigate(task.route);
+                        }}
                       >
-                        {lessons.find((lesson) => lesson.id === item.lesson_id)
-                          ?.title || "Quest"}
+                        {assignmentTask(item.lesson_id)?.title ||
+                          "Unavailable assignment"}
                       </button>
                       <span>
                         {item.due_date ? `Due ${item.due_date}` : "No deadline"}
@@ -325,7 +359,7 @@ export default function Classes({
                         <thead>
                           <tr>
                             <th>Learner</th>
-                            <th>Quests</th>
+                            <th>Tasks</th>
                             <th>XP</th>
                             <th>Updated</th>
                           </tr>
@@ -334,7 +368,18 @@ export default function Classes({
                           {students.map((student) => (
                             <tr key={student.user_id}>
                               <td>{student.display_name}</td>
-                              <td>{student.completed.length}</td>
+                              <td>
+                                {student.completed.length}
+                                <details>
+                                  <summary>View tasks</summary>
+                                  {student.completed.map((id: string) => (
+                                    <div key={id}>
+                                      {assignmentTask(id)?.title ||
+                                        "Earlier task"}
+                                    </div>
+                                  ))}
+                                </details>
+                              </td>
                               <td>{student.xp}</td>
                               <td>
                                 {new Date(

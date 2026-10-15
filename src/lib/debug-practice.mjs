@@ -1,3 +1,4 @@
+import { equipmentMission } from "./equipment-practice.mjs";
 // Original repair exercises informed by the supplied course concepts.
 const exercise = (
   id,
@@ -10,6 +11,7 @@ const exercise = (
   hint,
 ) => ({ id, title, category, brief, starter, solution, cases, hint });
 export const debugExercises = [
+  equipmentMission(0), equipmentMission(1), equipmentMission(2),
   exercise(
     "validation",
     "The gate that accepts everything",

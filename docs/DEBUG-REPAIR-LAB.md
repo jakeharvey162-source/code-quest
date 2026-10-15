@@ -12,7 +12,7 @@ Open **Code challenges → Debug repair lab**. This is first-year C# repair prac
 - Compilation and boundary repair: first fix syntax, then test the exact passing mark.
 - Event wiring: subscribe a handler once and check one action per click. This is a console model of event subscription, not a native WinForms window.
 
-These seven missions contain 33 checks. They complement the existing seven method challenges, renewable revision questions and coding remixes. Progress labels mean a mission was practised; this lab does not award repeat XP or claim exam marks. Programs, chosen mission and console input use the existing account-scoped progress drafts and are included when that progress is backed up.
+The original seven missions contain 33 checks. The equipment-booking practice and its two variations add 48 checks, bringing the repair lab to ten missions and 81 checks. See STUDENT-LECTURER-VERIFICATION.md for the source project, missing historical file, assignment workflow and Tor study desk. They complement the existing seven method challenges, renewable revision questions and coding remixes. Progress labels mean a mission was practised; this lab does not award repeat XP or claim exam marks. Programs, chosen mission and console input use the existing account-scoped progress drafts and are included when that progress is backed up.
 
 ## Console and trace
 

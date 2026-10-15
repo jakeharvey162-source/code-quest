@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { equipmentRecovery } from "../lib/equipment-practice.mjs";
+import { download } from "../lib/download";
 import CodeEditor from "./CodeEditor";
 import {
   debugExercises,
@@ -22,15 +24,33 @@ type Frame = {
 export default function DebugRepairLab({
   progress,
   update,
+  initialId,
 }: {
+  initialId?: string;
   progress: Progress;
   update: UpdateProgress;
 }) {
   const [id, setId] = useState(
     () =>
+      debugExercises.find((e) => e.id === initialId)?.id ||
       debugExercises.find((e) => e.id === progress.drafts["repair-selected"])
-        ?.id || debugExercises[0].id,
+        ?.id ||
+      debugExercises[0].id,
   );
+  const [labOpen, setLabOpen] = useState(
+    () => !!initialId && debugExercises.some((e) => e.id === initialId),
+  );
+  useEffect(() => {
+    if (initialId && debugExercises.some((e) => e.id === initialId)) {
+      generation.current++;
+      if (owner.current) cancelRun();
+      owner.current = false;
+      setBusy(false);
+      setLabOpen(true);
+      setId(initialId);
+      clear();
+    }
+  }, [initialId]);
   const exercise = debugExercises.find((e) => e.id === id)!;
   const source = progress.drafts["repair-code-" + id] ?? exercise.starter;
   const input = progress.drafts["repair-input-" + id] ?? exercise.cases[0][0];
@@ -170,6 +190,8 @@ export default function DebugRepairLab({
   }
   return (
     <details
+      open={labOpen}
+      onToggle={(e) => setLabOpen(e.currentTarget.open)}
       className="repair-lab"
       onKeyDown={(e) => {
         if (!["F5", "F9", "F10"].includes(e.key)) return;
@@ -217,6 +239,57 @@ export default function DebugRepairLab({
         </label>
         <h3>{exercise.title}</h3>
         <p>{exercise.brief}</p>
+        {id === "equipment-booking" && (
+          <details className="equipment-paper">
+            <summary>
+              Your full practice task: project recovery and booking rules
+            </summary>
+            <p>
+              The browser mission below adapts the logic from your Practice
+              Question 15 OCT project and Equipment Booking question paper. The
+              native source ZIP remains deliberately broken for repair.
+            </p>
+            <ol>
+              {equipmentRecovery.map((item) => (
+                <li key={item}>{item}</li>
+              ))}
+            </ol>
+            <p>
+              <b>Required record format:</b>{" "}
+              StudentNumber|StudentName|EquipmentNumber|EquipmentType|BookingDays|AccessoriesRequired|BookingStatus
+            </p>
+            <p>
+              The supplied ZIP has no bookings.txt. Console LOAD commands are
+              test fixtures, not recovered history.
+            </p>
+            <button
+              onClick={async () => {
+                try {
+                  const { equipmentProject } =
+                    await import("../lib/equipment-project.mjs");
+                  download(
+                    "EquipmentBooking-Practice.zip",
+                    equipmentProject().buffer,
+                    "application/zip",
+                  );
+                } catch {
+                  setStatus(
+                    "Project download could not load. Reconnect and retry.",
+                  );
+                }
+              }}
+            >
+              Download practice Windows project
+            </button>
+            <p>
+              Native checks: back up → build → inspect Form Load and Click
+              subscriptions → recover the actual file → reopen → test invalid
+              capture and statistics. Record what you changed and the evidence
+              for each check.
+            </p>
+            <a href="#tor">Ask Tor for a recovery plan →</a>
+          </details>
+        )}
         <p>
           <b>Example input:</b>{" "}
           <code>{JSON.stringify(exercise.cases[0][0])}</code>{" "}

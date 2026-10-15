@@ -105,8 +105,14 @@ async function mockCloud(page, participants = []) {
       }
     } else if (path.endsWith("/cq_save_snapshot")) {
       const body = request.postDataJSON();
-      if(body.expected_revision !== (snapshots.get(actor)?.revision || 0)) {
-        await route.fulfill({status:409,contentType:"application/json",body:JSON.stringify({message:"Cloud save changed on another device"})});
+      if (body.expected_revision !== (snapshots.get(actor)?.revision || 0)) {
+        await route.fulfill({
+          status: 409,
+          contentType: "application/json",
+          body: JSON.stringify({
+            message: "Cloud save changed on another device",
+          }),
+        });
         return;
       }
       snapshots.set(actor, {
@@ -405,6 +411,23 @@ test("lecturer creates a class, assigns a quest and sees shared progress", async
   ).toBeVisible();
   await page.getByRole("button", { name: "Remove assignment" }).click();
   await expect(page.getByText("No quests assigned yet.")).toBeVisible();
+  await page
+    .getByRole("combobox", { name: "Quest", exact: true })
+    .selectOption("repair:equipment-booking");
+  await page.getByRole("button", { name: "Assign quest", exact: true }).click();
+  await page
+    .getByRole("button", {
+      name: "Repair · Practice Question 15 OCT: Equipment Booking",
+      exact: true,
+    })
+    .click();
+  await expect(page).toHaveURL(/#challenges\/equipment-booking$/);
+  await expect(
+    page.getByRole("heading", {
+      name: "Practice Question 15 OCT: Equipment Booking",
+      exact: true,
+    }),
+  ).toBeVisible();
 });
 
 test("learner joins by invitation, explicitly shares progress and leaves the class", async ({
@@ -611,20 +634,161 @@ test("registered-address signup explains that the original password is unchanged
   ).toBeVisible();
 });
 
-test('automatic backup persists edits and pauses on a cross-device conflict',async({page})=>{
- const cloud=await mockCloud(page);await page.clock.install();await page.goto('/#account');await signin(page);
- await page.getByRole('button',{name:'Save & enable automatic backup',exact:true}).click();await expect(page.getByRole('status')).toContainText('Automatic backup is on');
- await page.goto('/#settings');await page.getByLabel('Your name',{exact:true}).fill('Auto saved learner');await page.clock.fastForward(61000);
- await expect(page.locator('.cloud-backup-status')).toContainText('Cloud backup saved');expect(cloud.snapshots.get(A).snapshot.progress.settings.name).toBe('Auto saved learner');
- await page.route('**/rest/v1/rpc/cq_save_snapshot',route=>route.fulfill({status:409,contentType:'application/json',body:JSON.stringify({message:'Cloud save changed on another device'})}));
- await page.getByLabel('Your name',{exact:true}).fill('Preserve this local draft');await page.clock.fastForward(61000);await expect(page.locator('.cloud-backup-status')).toContainText('Cloud backup paused');await expect(page.getByLabel('Your name',{exact:true})).toHaveValue('Preserve this local draft');
+test("automatic backup persists edits and pauses on a cross-device conflict", async ({
+  page,
+}) => {
+  const cloud = await mockCloud(page);
+  await page.clock.install();
+  await page.goto("/#account");
+  await signin(page);
+  await page
+    .getByRole("button", {
+      name: "Save & enable automatic backup",
+      exact: true,
+    })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Automatic backup is on",
+  );
+  await page.goto("/#settings");
+  await page
+    .getByLabel("Your name", { exact: true })
+    .fill("Auto saved learner");
+  await page.clock.fastForward(61000);
+  await expect(page.locator(".cloud-backup-status")).toContainText(
+    "Cloud backup saved",
+  );
+  expect(cloud.snapshots.get(A).snapshot.progress.settings.name).toBe(
+    "Auto saved learner",
+  );
+  await page.route("**/rest/v1/rpc/cq_save_snapshot", (route) =>
+    route.fulfill({
+      status: 409,
+      contentType: "application/json",
+      body: JSON.stringify({ message: "Cloud save changed on another device" }),
+    }),
+  );
+  await page
+    .getByLabel("Your name", { exact: true })
+    .fill("Preserve this local draft");
+  await page.clock.fastForward(61000);
+  await expect(page.locator(".cloud-backup-status")).toContainText(
+    "Cloud backup paused",
+  );
+  await expect(page.getByLabel("Your name", { exact: true })).toHaveValue(
+    "Preserve this local draft",
+  );
 });
 
+test("manual save remains usable after automatic backup while Account stays open", async ({
+  page,
+}) => {
+  const cloud = await mockCloud(page);
+  await page.clock.install();
+  await page.goto("/#account");
+  await signin(page);
+  await page
+    .getByRole("button", {
+      name: "Save & enable automatic backup",
+      exact: true,
+    })
+    .click();
+  await expect(page.getByRole("status")).toContainText(
+    "Automatic backup is on",
+  );
+  await page.clock.fastForward(61000);
+  await expect(page.locator(".cloud-backup-status")).toContainText(
+    "Cloud backup saved",
+  );
+  const previous = cloud.snapshots.get(A).revision;
+  await page
+    .getByRole("button", { name: "Save to cloud", exact: true })
+    .click();
+  await expect(page.getByRole("status")).toContainText("Saved to your account");
+  expect(cloud.snapshots.get(A).revision).toBe(previous + 1);
+});
 
-test('manual save remains usable after automatic backup while Account stays open',async({page})=>{
- const cloud=await mockCloud(page);await page.clock.install();await page.goto('/#account');await signin(page);
- await page.getByRole('button',{name:'Save & enable automatic backup',exact:true}).click();await expect(page.getByRole('status')).toContainText('Automatic backup is on');
- await page.clock.fastForward(61000);await expect(page.locator('.cloud-backup-status')).toContainText('Cloud backup saved');
- const previous=cloud.snapshots.get(A).revision;
- await page.getByRole('button',{name:'Save to cloud',exact:true}).click();await expect(page.getByRole('status')).toContainText('Saved to your account');expect(cloud.snapshots.get(A).revision).toBe(previous+1);
+test("lecturer switching classes cannot see an earlier delayed response overwrite the chosen class", async ({
+  page,
+}) => {
+  await mockCloud(page);
+  const classrooms = [
+    { id: "slow-class", name: "Morning group", owner_id: A, join_code: "slow" },
+    {
+      id: "fast-class",
+      name: "Afternoon group",
+      owner_id: A,
+      join_code: "fast",
+    },
+  ];
+  let release;
+  const gate = new Promise((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/rest/v1/cq_classes*", (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(classrooms),
+    }),
+  );
+  await page.route("**/rest/v1/cq_assignments*", async (route) => {
+    const slow = route.request().url().includes("slow-class");
+    if (slow) await gate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          id: slow ? "slow-assignment" : "fast-assignment",
+          lesson_id: slow ? "variables" : "repair:equipment-booking",
+          due_date: null,
+        },
+      ]),
+    });
+  });
+  await page.route("**/rest/v1/cq_members*", async (route) => {
+    const slow = route.request().url().includes("slow-class");
+    if (slow) await gate;
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify([
+        {
+          user_id: B,
+          display_name: slow ? "Wrong delayed group" : "Chosen group learner",
+          completed: [],
+          xp: 0,
+          updated_at: new Date().toISOString(),
+        },
+      ]),
+    });
+  });
+  await page.goto("/#account");
+  await signin(page);
+  await page.goto("/#classes");
+  const pending = page.waitForRequest(
+    (r) => r.url().includes("cq_assignments") && r.url().includes("slow-class"),
+  );
+  await page
+    .getByRole("combobox", { name: "Your classes", exact: true })
+    .selectOption("slow-class");
+  await pending;
+  await page
+    .getByRole("combobox", { name: "Your classes", exact: true })
+    .selectOption("fast-class");
+  await expect(
+    page.getByRole("cell", { name: "Chosen group learner" }),
+  ).toBeVisible();
+  const oldResponse = page.waitForResponse(
+    (r) => r.url().includes("cq_members") && r.url().includes("slow-class"),
+  );
+  release();
+  await oldResponse;
+  await expect(
+    page.getByRole("cell", { name: "Chosen group learner" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("cell", { name: "Wrong delayed group" }),
+  ).toHaveCount(0);
 });

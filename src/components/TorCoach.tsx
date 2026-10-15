@@ -12,6 +12,7 @@ import {
 } from "../lib/coach-observation.mjs";
 import { useVoices } from "./VoiceControls";
 import {chooseTorReaction,reactionLine} from "../lib/tor-performance.mjs";
+import { studyReply } from "../lib/tor-study.mjs";
 import { lessonSummary, workspaceSummary } from "../lib/tor-summary.mjs";
 const TorAvatar = lazy(() => import("./TorAvatar"));
 const tips: Record<string, string> = {
@@ -211,6 +212,7 @@ export default function TorCoach({
       );
       return;
     }
+    if(teachingLanguage === "en-ZA" && /lecturer|classroom|assign|rubric|bookings.txt|historical file/i.test(request)){respond(studyReply(request,/lecturer|rubric|assign/i.test(request)?"lecturer":"student").text);return;}
     respond(answer(request, page, teachingLanguage, roast, ++personalityTurn.current));
   }
   function stop() {
@@ -589,6 +591,7 @@ export default function TorCoach({
       </button>
       {open && (
         <div className="tor-panel">
+          <a className="tor-study-link" href="#tor" onClick={()=>setOpen(false)}>Open Tor study desk · more room to read ↗</a>
           <div className="tor-observation" aria-label="What Tor sees">
             <b>What I see</b>
             <br />

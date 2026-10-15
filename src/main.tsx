@@ -37,6 +37,7 @@ import LearningPath from "./components/LearningPath";
 import ProfileAvatar from "./components/ProfileAvatar";
 import { validAvatar } from "./lib/profile";
 import CityMap from "./components/CityMap";
+const TorStudyDesk = lazy(() => import("./components/TorStudyDesk"));
 const TorCoach = lazy(() => import("./components/TorCoach"));
 import { VoiceControls } from "./components/VoiceControls";
 import { reloadLatestWorkspace } from "./lib/workspace-recovery";
@@ -68,6 +69,7 @@ const navigation = [
   { id: "settings", title: "Settings", icon: SettingsIcon },
   { id: "account", title: "Account", icon: House },
   { id: "classes", title: "Classroom", icon: MessagesSquare },
+  { id: "tor", title: "Tor study desk", icon: MessagesSquare },
 ];
 class ErrorBoundary extends Component<
   { children: React.ReactNode },
@@ -684,6 +686,8 @@ function App() {
                 </section>
               ) : page === "community" ? (
                 <Classroom community progress={progress} onNavigate={navigate} />
+              ) : page === "tor" ? (
+                <TorStudyDesk progress={progress} update={update}/>
               ) : page === "challenges" ? (
                 <CodeChallenges progress={progress} update={update} initialId={lessonId}/>
               ) : page === "videos" ? (
@@ -727,12 +731,12 @@ function App() {
         </main>
         <Suspense fallback={null}>
         <div className={["community", "classes"].includes(page) ? "community-tor-dock" : undefined}>
-        <TorCoach
+        {page!=="tor" && <TorCoach
           lessonId={selectedLesson?.id}
           page={page}
           settings={{...progress.settings,name:progress.settings.nickname||progress.settings.name}}
           onNavigate={navigate}
-        />
+        />}
         </div>
         </Suspense>
         <nav className="mobile-learning-nav" aria-label="Quick navigation">
