@@ -58,7 +58,7 @@ export default async function handler(req, res) {
     contents.push({ role: "model", parts: [{ text: turn.answer.slice(0, 1600) }] });
   }
   contents.push({ role: "user", parts: [{ text: data.message.trim() }] });
-  const model = process.env.GEMINI_MODEL || "gemini-3.8-flash";
+  const model = process.env.GEMINI_MODEL || "gemini-3.1-flash-lite";
   if (!/^gemini-[a-z0-9.-]+$/.test(model)) return json(res, 503, { error: "Invalid server model." });
   try {
     const controller = new AbortController();
