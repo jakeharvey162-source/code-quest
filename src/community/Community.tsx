@@ -585,7 +585,7 @@ export default function Community({
             Choose a Community nickname before posting. Friend requests and
             presence start off.
           </p>
-          <button onClick={() => setTab("privacy")}>Set up my profile</button>
+          <button className="primary" onClick={() => setTab("privacy")}>Create my Community profile</button>
         </div>
       )}
       <nav className="community-tabs" aria-label="Community sections">
@@ -651,11 +651,7 @@ export default function Community({
                   {c.sending ? "Syncing…" : "Sync messages"}
                 </button>
                 <span>
-                  {
-                    c.messages.filter(
-                      (m) => m.state === "queued" || m.state === "failed",
-                    ).length
-                  }{" "}
+                  {c.pendingCount}{" "}
                   in this outbox
                 </span>
               </div>
@@ -961,15 +957,8 @@ export default function Community({
                           >
                             Retry
                           </button>
-                          <button
-                            onClick={() => {
-                              setConfirmCancel(m);
-                            }}
-                          >
-                            Edit queued message
-                          </button>
                           <button onClick={() => setConfirmCancel(m)}>
-                            Cancel queued message
+                            Edit or cancel queued message
                           </button>
                         </>
                       ) : (
