@@ -451,7 +451,7 @@ export default function TorCoach({
   if(presence==="hidden")return <aside className="tor-summon" aria-label="Summon Tor">
     <button onClick={()=>portal("summon")}>Call Tor</button>
     <button onClick={listen} aria-label="Call Tor by voice">🎙</button>
-    <span role="status">{status}</span>
+    <span role="status" aria-live="polite" aria-atomic="true">{status}</span>
   </aside>;
   return (
     <aside
@@ -474,6 +474,8 @@ export default function TorCoach({
       <button
         className="tor-handle"
         aria-label="Move Tor hologram"
+        aria-describedby="tor-move-help"
+        aria-keyshortcuts="ArrowLeft ArrowRight ArrowUp ArrowDown"
         title="Drag to move. Arrow keys move 16 pixels."
         onPointerDown={(e) => {
           if (e.button !== 0) return;
@@ -514,6 +516,7 @@ export default function TorCoach({
       >
         ⠿ TOR · drag me
       </button>
+      <span id="tor-move-help" className="sr-only">Use the arrow keys to move Tor 16 pixels. Position is saved on this device.</span>
       <button
         className="tor-avatar"
         aria-label={open ? "Minimise Tor" : "Open Tor tutor"}
@@ -755,7 +758,7 @@ export default function TorCoach({
               preview. Undo. Open Code Lab. Open Code Terminal. Challenge me. Roast my code.
             </p>
           </details>
-          <small role="status">
+          <small role="status" aria-live="polite" aria-atomic="true">
             {status || "Ready · voice commands and C# coaching"}
           </small>
           <small className="tor-mic-note">

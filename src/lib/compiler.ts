@@ -35,7 +35,11 @@ export function runCSharp(
   } catch {
     pending = false;
     worker = undefined;
-    return Promise.reject(new Error("The C# compiler could not start in this browser. Reload the app and try again."));
+    return Promise.reject(
+      new Error(
+        "The C# compiler could not start in this browser. Reload the app and try again.",
+      ),
+    );
   }
   const current = worker;
   return new Promise((resolve, reject) => {
@@ -65,18 +69,39 @@ export function runCSharp(
       fail(event.message || "The compiler could not start.");
     current.onmessage = (event) => {
       if (event.data.type === "status") {
-        try { onStatus(event.data.text); } catch { /* UI status failures must not break compilation. */ }
-      }
-      else if (event.data.type === "running") {
+        try {
+          onStatus(event.data.text);
+        } catch {
+          /* UI status failures must not break compilation. */
+        }
+      } else if (event.data.type === "compiling") {
         clearTimeout(timer);
         timer = setTimeout(
           () =>
             fail(
-              "Program stopped after 10 seconds. Check for an infinite loop.",
+              "C# compilation timed out. Your code is saved. Try again or simplify the program.",
+            ),
+          90000,
+        );
+        try {
+          onStatus("Checking C# code…");
+        } catch {
+          /* Keep compilation alive. */
+        }
+      } else if (event.data.type === "running") {
+        clearTimeout(timer);
+        timer = setTimeout(
+          () =>
+            fail(
+              "Run exceeded 10 seconds after compiler preparation. This can be caused by a long-running loop or a slow device; it does not prove an infinite loop. Your code is preserved.",
             ),
           10000,
         );
-        try { onStatus("Compiling and running C#…"); } catch { /* Keep execution alive. */ }
+        try {
+          onStatus("Running C#…");
+        } catch {
+          /* Keep execution alive. */
+        }
       } else if (event.data.type === "result") {
         finish();
         resolve(event.data.result);
@@ -85,7 +110,9 @@ export function runCSharp(
     try {
       current.postMessage({ code });
     } catch {
-      fail("The compiler did not accept the program. Reload and try again; your editor content is preserved.");
+      fail(
+        "The compiler did not accept the program. Reload and try again; your editor content is preserved.",
+      );
     }
   });
 }

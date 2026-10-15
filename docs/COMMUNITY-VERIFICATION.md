@@ -116,3 +116,9 @@ See LAUNCH-AND-DISTRIBUTION.md for capacity limits, packaging steps, revenue mod
 - Re-ran account/cloud fixtures: 14 passed. Re-ran Community fixtures: 12 passed, including finding member 405 through server search and phone layouts at 320px, 360px and 412px.
 - GitHub Actions run 38623420786 for checkpoint `73197ef` completed successfully: full browser regression, explicit software-WebGL Tor check, cloud and Community suites, production build, and Windows `dotnet build` of the exported WinForms solution. The final follow-up edits above have fresh local coverage; this checkpoint CI result is not a claim about a later commit.
 - The PR remains a draft. No production merge or hosted Community migration was performed. Authentication fixture success does not establish that the reported user's real credentials or password-reset email delivery now work.
+
+## Assessment repair and report follow-up — 15 October 2026
+
+See [DEBUG-REPAIR-LAB.md](DEBUG-REPAIR-LAB.md) for the seven repair missions, buffered C# console, recorded trace/replay controls and explicit live-debugger limitations. The test report's exact cold first-lesson starter now gets wrong-answer feedback. Startup/diagnostic preparation is separated from the execution timeout, and timeouts no longer diagnose an infinite loop without evidence. Tor has explicit polite, atomic voice status and accessible arrow-key movement instructions.
+
+Fresh evidence: 135 unit/database tests, TypeScript, production build, nine focused browser checks covering seven missions with 33 cases, C# lesson/runtime regressions, draft restoration, keyboard movement, unavailable speech, the report reproduction and 360px dark trace accessibility. Earlier in this follow-up, all seven existing code challenges passed. Real screen-reader software and physical Android devices were not exercised. These source changes remain on the draft branch, separate from production.

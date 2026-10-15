@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import DebugRepairLab from "./DebugRepairLab";
 import ContinuousPractice from "./ContinuousPractice";
 import CodeEditor from "./CodeEditor";
 import {
@@ -122,6 +123,7 @@ export default function CodeChallenges({
         </div>
         <a href="#leaderboard">Compare your rank →</a>
       </div>
+      <DebugRepairLab progress={progress} update={update} />
       <ContinuousPractice progress={progress} update={update} />
       <div className="challenge-layout">
         <aside className="challenge-picker">

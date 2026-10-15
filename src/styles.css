@@ -3350,3 +3350,32 @@ html[data-motion=reduced]{scroll-behavior:auto!important}
 .practice-choices { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,220px),1fr)); gap: .65rem; margin: 1rem 0; }
 .practice-choices button { min-height: 48px; white-space: normal; overflow-wrap: anywhere; text-align: left; }
 .practice-choices button[aria-pressed="true"] { outline: 3px solid var(--accent,#c89400); outline-offset: 2px; }
+
+/* Repair arena: readable console and trace controls on small phones. */
+.repair-lab { margin: 24px 0; border: 2px solid var(--accent, #d9a321); border-radius: 18px; overflow: hidden; }
+.repair-lab > summary { padding: 20px; cursor: pointer; background: var(--surface); }
+.repair-lab > summary strong { font-size: 1.25rem; }
+.repair-lab > summary span { display: block; margin: 8px 0 0 20px; }
+.repair-content { padding: clamp(12px, 3vw, 28px); min-width: 0; }
+.repair-content > label { display: grid; gap: 8px; margin: 16px 0; }
+.repair-content select, .repair-content textarea { width: 100%; max-width: 100%; min-height: 44px; }
+.repair-content .editor-host { height: 360px; }
+.repair-content .plain-editor { width: 100%; min-height: 320px; }
+.repair-content button { min-height: 44px; }
+.repair-content code, .repair-status { overflow-wrap: anywhere; white-space: pre-wrap; }
+.repair-console { background: #10251f; color: #f5f6ef; padding: 18px; border-radius: 12px; margin: 18px 0; }
+.repair-console pre { min-height: 70px; max-height: 350px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; }
+.repair-trace-grid { display: grid; grid-template-columns: minmax(0, 2fr) minmax(160px, 1fr); gap: 16px; }
+.repair-source { background: #10251f; color: #f5f6ef; max-height: 400px; overflow: auto; padding: 8px; }
+.repair-source > div { display: flex; gap: 12px; padding: 4px; }
+.repair-source > div > span { flex: 0 0 25px; color: #b1c6ba; }
+.repair-source [data-current="true"] { background: #f2c348; color: #15271f; border-left: 4px solid #fff; }
+.repair-source [data-current="true"] > span { color: #15271f; }
+.repair-debugger label { display: flex; gap: 10px; align-items: center; min-height: 44px; }
+.repair-debugger dl { overflow-wrap: anywhere; }
+.repair-debugger dd { margin: 0 0 12px; font-family: monospace; white-space: pre-wrap; }
+@media(max-width: 650px) { .repair-trace-grid { grid-template-columns: 1fr; } .repair-content .editor-actions { flex-wrap: wrap; } }
+
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+.repair-debugger label { flex-direction: row; justify-content: flex-start; }
+.repair-debugger { scroll-margin-top: 120px; }
