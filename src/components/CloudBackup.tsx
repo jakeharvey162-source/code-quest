@@ -204,9 +204,18 @@ export default function CloudBackup({
       document.removeEventListener("visibilitychange", save);
     };
   }, [userId]);
-  return status ? (
-    <p className="cloud-backup-status" aria-live="polite">
-      {status} <a href="#account">Account</a>
-    </p>
-  ) : null;
+  // Successful autosaves should not look like a permanent error banner.
+  // Keep the announcement accessible, but show a visible link only when action is needed.
+  if (!status) return null;
+  const needsAttention = /paused|unavailable|pending|too large|saving is off/i.test(status);
+  return (
+    <>
+      <span className="sr-only" role="status" aria-live="polite">{status}</span>
+      {needsAttention && (
+        <p className="cloud-backup-status">
+          {status} <a href="#account">Manage cloud saves</a>
+        </p>
+      )}
+    </>
+  );
 }
