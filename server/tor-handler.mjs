@@ -58,7 +58,11 @@ export function createTorHandler({
         400,
         "Send a question and up to three earlier exchanges, below 30,000 characters.",
       );
-    const credential = env.AI_GATEWAY_API_KEY || env.VERCEL_OIDC_TOKEN;
+    // Vercel injects a fresh runtime identity on each function request.
+    // VERCEL_OIDC_TOKEN is principally the build/local-development fallback.
+    const credential = env.AI_GATEWAY_API_KEY ||
+      (env.VERCEL === "1" && req.headers["x-vercel-oidc-token"]) ||
+      env.VERCEL_OIDC_TOKEN;
     if (!credential)
       return fail(
         503,
