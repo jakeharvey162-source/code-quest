@@ -1546,6 +1546,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                   the Design tab to edit the form.
                 </p>
                 <CodeEditor
+                  completionContext={sourceFiles.filter(f=>f.path!==activeSource).map(f=>f.text).join("\n")+"\n"+items.map(c=>c.type+" "+c.name+";").join("\n")}
                   focusTarget={
                     activeSource === "Form1.cs" ? handlerFocus : undefined
                   }

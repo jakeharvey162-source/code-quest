@@ -1,5 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { equipmentRecovery } from "../lib/equipment-practice.mjs";
+import {
+  generatedProject,
+  readProjectSpec,
+  openGeneratedProject,
+  restoreGeneratedProject,
+} from "../lib/daily-projects.mjs";
+import { localDay } from "../lib/progress";
 import { download } from "../lib/download";
 import CodeEditor from "./CodeEditor";
 import {
@@ -32,6 +39,10 @@ export default function DebugRepairLab({
 }) {
   const [id, setId] = useState(
     () =>
+      (progress.drafts["repair-selected"] === "generated-project" &&
+      readProjectSpec(progress.drafts["repair-generated-spec"])
+        ? "generated-project"
+        : undefined) ||
       debugExercises.find((e) => e.id === initialId)?.id ||
       debugExercises.find((e) => e.id === progress.drafts["repair-selected"])
         ?.id ||
@@ -41,6 +52,10 @@ export default function DebugRepairLab({
     () => !!initialId && debugExercises.some((e) => e.id === initialId),
   );
   useEffect(() => {
+    if (initialId === "daily") {
+      openProject(localDay(), 0);
+      return;
+    }
     if (initialId && debugExercises.some((e) => e.id === initialId)) {
       generation.current++;
       if (owner.current) cancelRun();
@@ -51,7 +66,28 @@ export default function DebugRepairLab({
       clear();
     }
   }, [initialId]);
-  const exercise = debugExercises.find((e) => e.id === id)!;
+  const [today, setToday] = useState(localDay);
+  useEffect(() => {
+    const timer = setInterval(() => setToday(localDay()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+  const spec = readProjectSpec(progress.drafts["repair-generated-spec"]);
+  const exercise =
+    id === "generated-project" && spec
+      ? generatedProject(spec.day, spec.round)
+      : debugExercises.find((e) => e.id === id) || debugExercises[0];
+  function openProject(day: string, round: number) {
+    if (owner.current) return;
+    update((p) => ({
+      ...p,
+      drafts: openGeneratedProject(p.drafts, { day, round }),
+    }));
+    setId("generated-project");
+    clear();
+    setLabOpen(true);
+    setHint(false);
+  }
+
   const source = progress.drafts["repair-code-" + id] ?? exercise.starter;
   const input = progress.drafts["repair-input-" + id] ?? exercise.cases[0][0];
   const [busy, setBusy] = useState(false),
@@ -219,6 +255,68 @@ export default function DebugRepairLab({
           answers. These original exercises practise the concepts in your
           course; they are not predictions of your assessment.
         </p>
+        <div className="daily-projects">
+          <h3>Today’s project · {today}</h3>
+          <p>
+            A new repair brief each day, plus more on demand. Variations change
+            the booking rules, test data and broken code. They reuse reviewed
+            project templates; they are not official exam questions.
+          </p>
+          <div className="button-row">
+            <button disabled={busy} onClick={() => openProject(today, 0)}>
+              Open today’s repair
+            </button>
+            <button
+              disabled={busy}
+              onClick={() =>
+                openProject(
+                  today,
+                  spec?.day === today ? (spec.round + 1) % 1e9 : 1,
+                )
+              }
+            >
+              Another repair project
+            </button>
+            <button
+              disabled={
+                busy ||
+                !readProjectSpec(
+                  progress.drafts["previous-repair-generated-spec"],
+                )
+              }
+              onClick={() => {
+                update((p) => ({
+                  ...p,
+                  drafts: restoreGeneratedProject(p.drafts),
+                }));
+                setId("generated-project");
+                clear();
+                setHint(false);
+              }}
+            >
+              Restore previous project
+            </button>
+            {id === "generated-project" && (
+              <button
+                disabled={busy}
+                onClick={() =>
+                  download(
+                    "CodeQuest-" + spec?.day + "-project.cs",
+                    source,
+                    "text/plain",
+                  )
+                }
+              >
+                Export this project code
+              </button>
+            )}
+          </div>
+          <small>
+            The active generated draft and the previous one are kept. Export
+            code before cycling through more projects. Original missions keep
+            their own drafts.
+          </small>
+        </div>
         <label>
           Repair mission
           <select
@@ -227,6 +325,11 @@ export default function DebugRepairLab({
             value={id}
             onChange={(e) => select(e.target.value)}
           >
+            {spec && (
+              <option value="generated-project">
+                Daily project: {spec.day} · {spec.round + 1}
+              </option>
+            )}
             {debugExercises.map((e) => (
               <option key={e.id} value={e.id}>
                 {e.category}: {e.title}

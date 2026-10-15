@@ -10,11 +10,11 @@ export const equipmentRecovery = [
   "Test the class, loading, capture validation and statistics in that order. Confirm old saved statuses survive, Completed equipment can be booked again, and invalid capture adds nothing.",
   "Build, reopen and test the Windows form in Visual Studio. Browser checks below cover the logic model, not native event wiring or runtime disk recovery.",
 ];
-export function equipmentMission(variant = 0) {
-  const max = [7, 14, 3][variant],
-    prefix = ["EQ-", "DEV-", "KIT-"][variant],
-    code = prefix + "L014",
-    other = prefix + "C041";
+export function equipmentMission(variant = 0, config) {
+  const max = config?.maxDays ?? [7, 14, 3][variant],
+    prefix = config?.prefix ?? ["EQ-", "DEV-", "KIT-"][variant],
+    code = prefix + (config?.code ?? "L014"),
+    other = prefix + (config?.other ?? "C041");
   const sample = record(
     "225104321",
     "Ayanda Mthembu",
@@ -114,7 +114,7 @@ while ((command = Console.ReadLine()) != null)
     if (!load) Console.WriteLine("Added");
 }
 ${classCode}`;
-  const starter = solution
+  let starter = solution
     .replace(
       "this.equipmentType = equipmentType;",
       "this.equipmentType = EquipmentType;",
@@ -131,6 +131,28 @@ ${classCode}`;
       "if (load) booking.BookingStatus = f[6];",
       "// TODO: restore the saved status",
     );
+  if (config) {
+    const defects = [
+      [
+        "this.equipmentType = equipmentType;",
+        "this.equipmentType = EquipmentType;",
+      ],
+      ["set { equipmentNumber = value; }", 'set { equipmentNumber = ""; }'],
+      ['bookingStatus = "Completed";', 'bookingStatus = "Booked";'],
+      ["bookings.Count - booked", "booked - bookings.Count"],
+      ["f[1].Length >= 3 &&", "f[1].Length >= 1 &&"],
+      [`days <= ${max}`, `days < ${max}`],
+      [
+        "if (load) booking.BookingStatus = f[6];",
+        "// TODO: restore the saved status",
+      ],
+    ];
+    starter = solution;
+    for (let n = 0; n < 3 + (config.seed % 3); n++) {
+      const [from, to] = defects[(config.seed + n * 3) % defects.length];
+      starter = starter.replace(from, to);
+    }
+  }
   const add = sample.split("|").slice(0, 6).join("|");
   return {
     id: ["equipment-booking", "device-loans", "kit-hire"][variant],

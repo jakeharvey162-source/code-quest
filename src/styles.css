@@ -3393,3 +3393,11 @@ html[data-motion=reduced]{scroll-behavior:auto!important}
 .tor-study-sources { border-top:1px solid var(--line); margin:30px 0; }
 .tor-study-sources a { display:block; padding:12px 0; overflow-wrap:anywhere; }
 .tor-study-page .button-row { flex-wrap:wrap; }
+.editor-assist { display:flex; flex-wrap:wrap; align-items:center; gap:12px; padding:8px 12px; border:1px solid var(--line); background:var(--surface); }
+.editor-assist button { min-height:44px; }
+.editor-assist small { flex:1; min-width:150px; color:var(--muted); }
+.cm-tooltip-autocomplete { max-width:min(440px,calc(100vw - 24px)); background:#18372c!important; color:#f3f7f2!important; border:1px solid #80a992!important; }
+.cm-tooltip-autocomplete ul li[aria-selected] { background:#efb934!important; color:#142923!important; }
+.cm-completionDetail { font-size:12px; padding-left:12px; }
+.cm-completionInfo { max-width:min(360px,calc(100vw - 24px)); background:#18372c!important; color:#f3f7f2!important; }
+@media(max-width:650px){.cm-tooltip-autocomplete ul li {min-height:44px;display:flex;align-items:center;}.cm-completionDetail{white-space:normal;}}
