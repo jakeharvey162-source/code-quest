@@ -40,7 +40,7 @@ export default function RookieStory({ progress }: { progress: Progress }) {
         </div>
       </div>
       <div id="rookie-story-panel" hidden={!open}>
-        <div className="rookie-story-scene" aria-label="Rookie Street restoration progress">
+        <div className="rookie-story-scene" role="group" aria-label="Rookie Street restoration progress">
           <div className="rookie-story-scene-head">
             <strong>ROOKIE STREET / LAGOS</strong>
             <span>{story.districtState === "restored" ? "DISTRICT RESTORED" : "DISTRICT IN PROGRESS"}</span>
