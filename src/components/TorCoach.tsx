@@ -27,6 +27,7 @@ const tips: Record<string, string> = {
   learn:
     "Predict the output before you run the code. If your prediction differs, trace one statement at a time. Understanding the change is how you prepare for an exam.",
   home: "Pick a quest or open WinForms to build a form. I can explain controls, events, loops and validation. Open my panel for help, then minimise it to keep your workspace clear.",
+  adventure: "Welcome to Rookie Street! Each repair needs working C#. Read the mission, try a fix, and run the real tests. Ask me for a hint whenever you need one. Experiments never cost adventure XP.",
   terminal: "Pick a language, press Run, and inspect the preview and console. I can help debug your code.",
 };
 function answer(question: string, page: string, language: string, spicy: boolean, variation=0) {
@@ -50,11 +51,18 @@ export default function TorCoach({
   settings,
   onNavigate,
   lessonId,
+  adventureContext,
 }: {
   page: string;
   settings: Settings;
   onNavigate: (page: string) => void;
   lessonId?: string;
+  adventureContext?: {
+    title: string;
+    objective: string;
+    hint: string;
+    completed: number;
+  };
 }) {
   const [open, setOpen] = useState(false);
   const [presence,setPresence]=useState<"visible"|"departing"|"hidden"|"arriving">("visible");
@@ -102,6 +110,7 @@ export default function TorCoach({
   const {user}=useAuth();
   const conversation=useRef<TorMessage[]>([]);
   const [reply, setReply] = useState(tips[page] || tips.learn);
+  const adventureError = useRef("");
   const [status, setStatus] = useState("");
   const [autoSpeak, setAutoSpeak] = useState(
     () => readText("cq-tor-auto-speak", "true") === "true",
@@ -151,6 +160,25 @@ export default function TorCoach({
     pendingAction.current?.abort();
     const request = cleanCoachRequest(text);
     if (!request) return;
+    // Mission context contains authored objectives and earned progress only.
+    // Resolve these locally, including for signed-in learners when AI is offline.
+    // Never append editor contents or compiler output to an AI conversation.
+    if (page === "adventure" && adventureContext) {
+      if (/\b(hint|stuck|help me)\b/i.test(request)) {
+        respond(adventureContext.hint);
+        return;
+      }
+      if (/\b(error|compiler|compil(?:e|ation)|debug)\b/i.test(request)) {
+        respond(adventureError.current || "Read the first compiler message, check its line number, and compare the method name and return type with the mission signature. Fix one thing, then run the tests again. Your attempts never reduce adventure XP.");
+        return;
+      }
+      if (/\b(mission|objective|what.*next|summari[sz]e|summary|simpler|simply|break it down|explain this)\b/i.test(request)) {
+        respond(adventureContext.completed === 3
+          ? "Rookie Street is restored! You earned all three mission achievements. Replay any mission to practise, or open Lessons and the coding tools for your next skill."
+          : `${adventureContext.title}: ${adventureContext.objective} ${adventureContext.completed} of 3 repairs earned. Run the mission tests to prove your fix; hints are always optional.`);
+        return;
+      }
+    }
     if ((!user || !navigator.onLine) && /\b(summari[sz]e|summary|simpler|simply|break it down|what.*next)\b/i.test(request)) {
       respond(teachingLanguage !== "en-ZA" ? localizedFallback(teachingLanguage) : lessonId ? lessonSummary(lessonId) : workspaceSummary(observation, page));
       return;
@@ -225,7 +253,15 @@ export default function TorCoach({
         if(controller.signal.aborted)return;
         conversation.current=[...messages,{role:"assistant" as const,content:response}].slice(-6);
         respond(response);
-      }catch(error){if(!controller.signal.aborted){setStatus(error instanceof Error?error.message:"Tor’s AI is unavailable.");setMood("concerned");}}
+      }catch(error){if(!controller.signal.aborted){
+        setStatus(error instanceof Error?error.message:"Tor’s AI is unavailable.");
+        setMood("concerned");
+        if (page === "adventure") {
+          // navigator.onLine does not prove the provider is reachable. Keep
+          // authored teaching available after an explicit AI request fails.
+          setReply(answer(request, page, teachingLanguage, roast, ++personalityTurn.current));
+        }
+      }}
       finally{if(pendingAction.current===controller)pendingAction.current=null;}
       return;
     }
@@ -414,6 +450,38 @@ export default function TorCoach({
     previousObservation.current = null;
     setMood("ready");
   }, [page, teachingLanguage]);
+  useEffect(() => {
+    if (page !== "adventure" || !adventureContext) return;
+    adventureError.current = "";
+    setReply(`${adventureContext.title}: ${adventureContext.objective} Ask me for an optional hint, then test your fix.`);
+    setMood("ready");
+  }, [page, adventureContext?.title, adventureContext?.objective]);
+  useEffect(() => {
+    if (page !== "adventure") return;
+    const adventure = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail || typeof detail.missionId !== "string" ||
+        !["intro", "hint", "error", "success"].includes(detail.kind) ||
+        typeof detail.text !== "string" || detail.text.length > 1500) return;
+      // Keep authored debugging guidance available for a later explicit question,
+      // even when the learner disables proactive workspace reactions.
+      if (detail.kind === "error") adventureError.current = detail.text;
+      else if (detail.kind === "success" || detail.kind === "intro") adventureError.current = "";
+      if (!proactive || presence !== "visible" ||
+        listening || pendingAction.current) return;
+      const performance = chooseTorReaction(detail.kind === "success" ? "celebrate" : "wow");
+      setGestureClip(performance.clip);
+      setReactionLabel(detail.kind === "success" ? "Mission repaired!" : "Your adventure companion");
+      setGestureId(n => n + 1);
+      setMood(detail.kind === "success" ? "happy" : "ready");
+      setReply(detail.text);
+      setStatus("");
+      // Automatic mission events remain silent. Reading is available through
+      // Tor's existing explicit speech controls; no AI request is made here.
+    };
+    window.addEventListener("cq-adventure-tor", adventure);
+    return () => window.removeEventListener("cq-adventure-tor", adventure);
+  }, [page, proactive, presence, listening]);
   useEffect(() => {
     const resize = () => {
       const r = box.current?.getBoundingClientRect();
@@ -616,6 +684,8 @@ export default function TorCoach({
             <br />
             {observation
               ? describeObservation(observation)
+              : page === "adventure" && adventureContext
+                ? `${adventureContext.title} · ${adventureContext.completed}/3 Rookie Street repairs earned. Your editor stays private.`
               : `You're on ${page}. Waiting for workspace activity.`}
           </div>
           <p className="tor-reply">{message}</p>
@@ -625,13 +695,13 @@ export default function TorCoach({
               ask(question);
             }}
           >
-            <label htmlFor="tor-question">Ask about C# or your form</label>
+            <label htmlFor="tor-question">{page === "adventure" ? "Ask about your mission or C#" : "Ask about C# or your form"}</label>
             <input
               id="tor-question"
               value={question}
               maxLength={250}
               onChange={(e) => setQuestion(e.target.value)}
-              placeholder="Add a label that says Student Name"
+              placeholder={page === "adventure" ? "What is my mission? Give me a hint." : "Add a label that says Student Name"}
             />
             <button type="submit">Explain</button>
             <button

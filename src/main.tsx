@@ -38,6 +38,9 @@ import LearningPath from "./components/LearningPath";
 import ProfileAvatar from "./components/ProfileAvatar";
 import { validAvatar } from "./lib/profile";
 import CityMap from "./components/CityMap";
+import { AdventureEntry, AdventureJournal } from "./components/AdventureProgress";
+import { lagosMissions, completedMissions, unlockedMission } from "./lib/lagos-adventure.mjs";
+const LagosAdventure = lazy(() => import("./components/LagosAdventure"));
 const TorStudyDesk = lazy(() => import("./components/TorStudyDesk"));
 const TorCoach = lazy(() => import("./components/TorCoach"));
 import { VoiceControls } from "./components/VoiceControls";
@@ -59,6 +62,7 @@ const Assessment = lazy(() => import("./components/Assessment"));
 const SettingsPage = lazy(() => import("./components/Settings"));
 const navigation = [
   { id: "home", title: "World", icon: House },
+  { id: "adventure", title: "Adventure", icon: Flag },
   { id: "learn", title: "Lessons", icon: BookOpen },
   { id: "challenges", title: "Code challenges", icon: Flag },
   { id: "videos", title: "Video tutorials", icon: Clapperboard },
@@ -217,7 +221,13 @@ function App() {
     return () => window.removeEventListener("cq-quest-earned", earned);
   }, []);
   const [page, lessonId] = route.split("/");
-  const selectedLesson = lessons.find((l) => l.id === lessonId);
+  const selectedLesson = page === "learn" ? lessons.find((l) => l.id === lessonId) : undefined;
+  const adventureMission = lagosMissions.find(m => m.id === lessonId && unlockedMission(progress.steps, m.id)) || lagosMissions[completedMissions(progress.steps).length] || lagosMissions[2];
+  useEffect(() => {
+    if (page === "adventure" && lessonId !== adventureMission.id) {
+      location.replace("#adventure/" + adventureMission.id);
+    }
+  }, [page, lessonId, adventureMission.id]);
   useEffect(() => {
     const title = selectedLesson?.title || navigation.find(item => item.id === page)?.title || "Explore";
     document.title = `${title} · CodeQuest`;
@@ -293,7 +303,7 @@ function App() {
   return (
     <div
       className={
-        "app-shell " + (["community", "private-chats", "classes"].includes(page) ? "community-active " : "") +
+        "app-shell " + (page === "adventure" ? "story-active " : "") + (["community", "private-chats", "classes"].includes(page) ? "community-active " : "") +
         (progress.settings.reducedMotion ? "reduce-motion " : "") +
         (progress.settings.highContrast ? "high-contrast" : "")
       }
@@ -325,7 +335,7 @@ function App() {
         <button className="mobile-tools-toggle" aria-expanded={toolsExpanded} aria-controls="main-tools" onClick={() => setToolsExpanded(!toolsExpanded)}><Menu size={18}/>{toolsExpanded ? "Close tools" : "All tools"}</button>
         <p className="sidebar-label">YOUR ADVENTURE</p>
         <nav id="main-tools" className={toolsExpanded ? "tools-expanded" : undefined} aria-label="Main navigation">
-          {navigation.filter((item) => user || !accountOnlyPages.has(item.id)).map(({ id, title, icon: Icon }) => (
+          {navigation.filter((item) => page === "adventure" ? ["home", "adventure", "terminal", "classes", "account"].includes(item.id) : user || !accountOnlyPages.has(item.id)).map(({ id, title, icon: Icon }) => (
             <button
               key={id}
               className={page === id ? "active" : ""}
@@ -333,7 +343,7 @@ function App() {
               onClick={() => navigate(id)}
             >
               <Icon size={19} />
-              <span>{title}</span>
+              <span>{page === "adventure" ? ({ adventure: "Missions", terminal: "Code tools", classes: "Community / Classes", account: "Profile" } as Record<string, string>)[id] || title : title}</span>
               {page === id && <span className="nav-dot" />}
             </button>
           ))}
@@ -497,6 +507,7 @@ function App() {
                     <div className="hero-map">
                       <CityMap
                         onSelect={(id) => {
+                          if (id === "lagos") { navigate("adventure"); return; }
                           setFilter(id);
                           navigate("learn");
                         }}
@@ -508,6 +519,7 @@ function App() {
                       </span>
                     </div>
                   </div>
+                  <AdventureEntry progress={progress}/>
                   <LearningPath progress={progress} update={update}/>
                   <div className="world-section-heading">
                     <div>
@@ -596,6 +608,8 @@ function App() {
                     </button>
                   )}
                 </section>
+              ) : page === "adventure" ? (
+                <LagosAdventure key={workspaceVersion + ":" + (lessonId || "entry")} progress={progress} update={update} initialId={lessonId} onNavigate={navigate}/>
               ) : page === "learn" && selectedLesson ? (
                 <LessonView
                   key={selectedLesson.id}
@@ -756,6 +770,7 @@ function App() {
         <Suspense fallback={null}>
         <div className={["community", "private-chats", "classes"].includes(page) ? "community-tor-dock" : undefined}>
         {page!=="tor" && <TorCoach
+          adventureContext={page === "adventure" ? { title: adventureMission.title, objective: adventureMission.brief, hint: adventureMission.hints[0], completed: completedMissions(progress.steps).length } : undefined}
           lessonId={selectedLesson?.id}
           page={page}
           settings={{...progress.settings,name:progress.settings.nickname||progress.settings.name}}
@@ -823,6 +838,7 @@ function ProgressPage({
         errors cost nothing. You have lost {xpLost(progress.steps)} XP so far;
         your balance never drops below zero.
       </p>
+      <AdventureJournal progress={progress}/>
       <h2>Your neighbourhoods</h2>
       <div className="track-progress-list">
         {tracks.map((track) => {

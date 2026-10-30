@@ -905,3 +905,53 @@ test('signed-in student and lecturer resume the offline study guide and official
  await page.getByLabel('Tor mode',{exact:true}).selectOption('offline');await page.getByLabel('Study question').fill('hey');await page.getByRole('button',{name:'Send to Tor',exact:true}).click();await expect(page.getByLabel('Study conversation')).toContainText('Hey');
  await context.setOffline(false);
 });
+
+test('adventure achievements and private mission drafts survive cloud restore and stay account isolated', async ({page}) => {
+  test.setTimeout(120000);
+  const {lagosMissions, adventureKey, adventureDraftKey} = await import('../src/lib/lagos-adventure.mjs');
+  const cloud = await mockCloud(page);
+  await page.addInitScript(({state, accountA, accountB}) => {
+    for (const id of [accountA, accountB]) {
+      const key = 'cq-progress-v1:' + id;
+      if (!localStorage.getItem(key)) localStorage.setItem(key, JSON.stringify(state));
+      localStorage.setItem('cq-auto-backup:' + id, JSON.stringify({enabled:false}));
+    }
+    localStorage.setItem('cq-tor-auto-speak', 'false');
+  }, {state:{...freshProgress(), settings:{...freshProgress().settings, editorMode:'plain'}}, accountA:A, accountB:B});
+  await page.goto('/#account');
+  await signin(page);
+  await expect(page.getByRole('heading', {name:'a@example.com'})).toBeVisible();
+  await page.goto('/#adventure/streetlights');
+  await page.getByRole('textbox', {name:'Mission C# solution'}).fill(lagosMissions[0].solution);
+  await page.getByRole('button', {name:'Test repair', exact:true}).click();
+  await expect(page.locator('.adventure-feedback')).toContainText('Every scenario passed!', {timeout:90000});
+  await page.goto('/#account');
+  await recoveryOptions(page);
+  await page.getByRole('button', {name:'Save to cloud', exact:true}).click();
+  await expect(page.getByRole('status')).toContainText('Saved to your account');
+  expect(cloud.snapshots.get(A).snapshot.progress.steps[adventureKey]).toEqual(['streetlights']);
+  expect(cloud.snapshots.get(A).snapshot.progress.drafts[adventureDraftKey('streetlights')]).toBe(lagosMissions[0].solution);
+  // Save to cloud enables automatic backup. Pause it before deliberately
+  // diverging locally so this restore checks the selected older snapshot.
+  await page.getByRole('button', {name:'Turn off automatic backup', exact:true}).click();
+  await expect(page.getByRole('status')).toContainText('Automatic backup turned off');
+  await page.goto('/#adventure/streetlights');
+  await page.getByRole('textbox', {name:'Mission C# solution'}).fill('// Local edit to replace via explicit restore');
+  await page.goto('/#account');
+  await recoveryOptions(page);
+  await page.getByRole('button', {name:'Restore cloud save', exact:true}).click();
+  await page.getByRole('button', {name:'Replace local work with cloud save'}).click();
+  await expect(page.getByRole('status')).toContainText('Cloud save restored');
+  await page.goto('/#adventure/streetlights');
+  await expect(page.getByRole('textbox', {name:'Mission C# solution'})).toHaveValue(lagosMissions[0].solution);
+  await expect(page.getByRole('img', {name:/streetlights glowing, shop closed/})).toBeVisible();
+  await page.goto('/#account');
+  await page.getByRole('button', {name:'Sign out', exact:true}).click();
+  await signin(page, 'b@example.com');
+  await expect(page.getByRole('heading', {name:'b@example.com'})).toBeVisible();
+  await page.goto('/#adventure/network');
+  await expect(page).toHaveURL(/#adventure\/streetlights$/);
+  await expect(page.getByRole('textbox', {name:'Mission C# solution'})).toHaveValue(lagosMissions[0].starter);
+  await expect(page.getByRole('img', {name:/streetlights waiting for power, shop closed/})).toBeVisible();
+  expect(cloud.snapshots.has(B)).toBe(false);
+});
