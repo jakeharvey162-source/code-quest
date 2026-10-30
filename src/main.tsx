@@ -38,6 +38,7 @@ import LearningPath from "./components/LearningPath";
 import ProfileAvatar from "./components/ProfileAvatar";
 import { validAvatar } from "./lib/profile";
 import CityMap from "./components/CityMap";
+import RookieStory from "./components/RookieStory";
 const TorStudyDesk = lazy(() => import("./components/TorStudyDesk"));
 const TorCoach = lazy(() => import("./components/TorCoach"));
 import { VoiceControls } from "./components/VoiceControls";
@@ -508,6 +509,7 @@ function App() {
                       </span>
                     </div>
                   </div>
+                  <RookieStory progress={progress} />
                   <LearningPath progress={progress} update={update}/>
                   <div className="world-section-heading">
                     <div>
