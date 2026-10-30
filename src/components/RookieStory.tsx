@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { Progress } from "../lib/progress";
+import { writeText } from "../lib/local-data";
 import { rookieStoryState } from "../lib/story-missions.mjs";
 
 /** Optional first story slice. All success is derived from genuine completed lessons. */
@@ -104,9 +105,11 @@ export default function RookieStory({ progress }: { progress: Progress }) {
           </div>
           <div className="rookie-story-language-links">
             <a href="#learn">C# quests <span>21 lessons</span></a>
-            <a href="#terminal">Python <span>Code Terminal</span></a>
-            <a href="#terminal">JavaScript / TypeScript <span>Code Terminal</span></a>
-            <a href="#terminal">HTML / CSS <span>Code Terminal</span></a>
+            <a href="#terminal" onClick={() => writeText("cq-terminal-language", "python")}>Python <span>Runnable terminal</span></a>
+            <a href="#terminal" onClick={() => writeText("cq-terminal-language", "javascript")}>JavaScript <span>Runnable terminal</span></a>
+            <a href="#terminal" onClick={() => writeText("cq-terminal-language", "typescript")}>TypeScript <span>Runnable terminal</span></a>
+            <a href="#terminal" onClick={() => writeText("cq-terminal-language", "html")}>HTML <span>Live preview</span></a>
+            <a href="#terminal" onClick={() => writeText("cq-terminal-language", "css")}>CSS <span>Live preview</span></a>
           </div>
         </div>
       </div>
