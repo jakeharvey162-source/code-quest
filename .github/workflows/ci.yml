@@ -23,6 +23,7 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npx playwright install --with-deps chromium
+      - run: npm run test:dev
       - run: npm run test:browser
       - run: CODEQUEST_WEBGL_TEST=1 npm run test:browser -- tests/tor-model.spec.mjs
       - run: npm run test:cloud

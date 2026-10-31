@@ -94,6 +94,7 @@ Validation:
 ```sh
 npm run check
 npx playwright install --with-deps chromium
+npm run test:dev
 npm run test:browser
 ```
 

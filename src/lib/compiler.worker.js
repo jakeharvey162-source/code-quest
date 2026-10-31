@@ -3,7 +3,12 @@ self.onmessage = async (event) => {
   try {
     if (!module) {
       self.postMessage({ type: "status", text: "Loading the C# compiler…" });
-      const runtime = await import(/* @vite-ignore */ "/compiler/index.js");
+      // These prepared public assets must load unchanged in both dev and build.
+      // A fixed same-origin URL leaves their module graph to the browser rather
+      // than asking Vite to transform /public as application source.
+      const runtimeUrl = new URL("/compiler/index.js", self.location.origin)
+        .href;
+      const runtime = await import(/* @vite-ignore */ runtimeUrl);
       module = await runtime.WasmSharpModule.initializeAsync({
         disableWebWorker: false,
         onDownloadResourceProgress: (loaded, total) =>

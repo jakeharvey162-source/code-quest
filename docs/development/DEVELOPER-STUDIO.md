@@ -24,3 +24,9 @@ CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium npm run test:browser -- tests/solutio
 ```
 
 Omit `CHROMIUM_EXECUTABLE_PATH` when using Playwright's installed Chromium. The explorer suite covers real console and WinForms C# runs, nested ZIP round-trips, keyboard/focus behavior, legacy storage, rejected paths, storage errors and desktop/phone axe checks. Native Windows export compilation still runs in Windows .NET 8 CI.
+
+## Development compiler regression
+
+`npm run test:dev` starts Vite on a separate port (5182) and runs the real C# worker in development mode. It checks actual output, a genuine `CS0103` diagnostic, then successful corrected recompilation. Production preview alone cannot catch development import-analysis failures.
+
+The prepared compiler remains a fixed same-origin public asset. Its worker resolves that URL at runtime so Vite does not try to transform the runtime's public module graph as application source. No remote runtime host, verification bypass or simulated compiler was introduced.

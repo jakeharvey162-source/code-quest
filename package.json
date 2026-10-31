@@ -10,6 +10,7 @@
     "check": "npm run test && npm run typecheck && npm run build",
     "typecheck": "tsc --noEmit",
     "test:browser": "playwright test",
+    "test:dev": "playwright test --config playwright.dev.config.mjs",
     "predev": "node scripts/prepare-compiler.mjs && node scripts/prepare-terminal.mjs",
     "prebuild": "node scripts/prepare-compiler.mjs && node scripts/prepare-terminal.mjs",
     "preview": "vite preview",
