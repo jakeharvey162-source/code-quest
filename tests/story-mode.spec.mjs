@@ -15,6 +15,14 @@ test("optional Rookie Street story starts a genuine existing C# lesson", async (
   await expect(page.getByText("The price of a plan").first()).toBeVisible();
 });
 
+test("Rookie Street progress count stays legible in dark mode", async ({ page }) => {
+  await page.goto("/#home");
+  await page.getByRole("button", { name: "Switch to dark mode" }).click();
+  const count = page.getByRole("region", { name: "Optional CodeQuest story mode" })
+    .locator(".rookie-story-count strong");
+  await expect(count).toHaveCSS("color", "rgb(243, 247, 236)");
+});
+
 test("Story Mode restores landmarks only for genuine saved completions", async ({ page }) => {
   const progress = freshProgress();
   progress.completed = ["variables"];
