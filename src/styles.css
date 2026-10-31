@@ -3669,6 +3669,8 @@ html[data-motion=reduced]{scroll-behavior:auto!important}
 [data-theme="dark"] .rookie-story { background: #222a29; border-color: #58655e; }
 [data-theme="dark"] .rookie-story-intro p:not(.eyebrow),
 [data-theme="dark"] .rookie-story-count { color: #d1dcd1; }
+/* Keep the progress number legible on the dark story background. */
+[data-theme="dark"] .rookie-story-count strong { color: #f3f7ec; }
 [data-theme="dark"] #rookie-story-panel { background: #27312f; border-color: #56635d; }
 [data-theme="dark"] .rookie-mission { background: #313c37; border-color: #67736c; }
 [data-theme="dark"] .rookie-mission-complete { background: #23463c; border-color: #7cbea4; }
