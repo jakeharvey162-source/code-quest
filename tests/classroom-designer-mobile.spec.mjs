@@ -124,7 +124,17 @@ test("touch double-tap on a label opens its event code", async ({
   try {
     const page = await context.newPage();
     await page.addInitScript(
-      (controls) => localStorage.setItem("cq-form", JSON.stringify(controls)),
+      (controls) => {
+        localStorage.setItem("cq-form", JSON.stringify(controls));
+        window.__cqLabelTapTimes = [];
+        document.addEventListener("pointerup", (event) => {
+          if (
+            event.pointerType === "touch" &&
+            event.target.closest?.('[aria-label="Select label1"]')
+          )
+            window.__cqLabelTapTimes.push(Date.now());
+        }, true);
+      },
       addControl([], "Label"),
     );
     await page.goto("/#designer");
@@ -132,8 +142,18 @@ test("touch double-tap on a label opens its event code", async ({
       name: "Select label1",
       exact: true,
     });
-    await control.tap();
-    await control.tap();
+    // Locator actionability checks between taps can exceed the gesture window.
+    // Resolve its position once, then send an actual consecutive touch gesture.
+    await control.scrollIntoViewIfNeeded();
+    const bounds = await control.boundingBox();
+    expect(bounds).not.toBeNull();
+    const x = bounds.x + bounds.width / 2;
+    const y = bounds.y + bounds.height / 2;
+    await page.touchscreen.tap(x, y);
+    await page.touchscreen.tap(x, y);
+    const tapTimes = await page.evaluate(() => window.__cqLabelTapTimes);
+    expect(tapTimes).toHaveLength(2);
+    expect(tapTimes[1] - tapTimes[0]).toBeLessThan(450);
     await expect(
       page.getByRole("textbox", { name: "Form1.cs event code", exact: true }),
     ).toContainText("void label1_Click(");
