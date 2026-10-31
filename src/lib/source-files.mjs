@@ -15,7 +15,12 @@ function validFolder(folder) {
   );
 }
 export function validSourcePath(path) {
-  if (typeof path !== "string" || path.length > 240) return false;
+  if (
+    typeof path !== "string" ||
+    path.length > 240 ||
+    /[\u0000-\u0020\u007f]/.test(path)
+  )
+    return false;
   const parts = path.split("/"),
     name = parts.pop();
   return (
