@@ -39,8 +39,10 @@ export default function Playground({
       saveSourceFiles(next);
       setFiles(next);
       setFileError("");
+      return true;
     } catch (e) {
       setFileError(String(e));
+      return false;
     }
   }
   const visibleCode =
@@ -96,7 +98,9 @@ export default function Playground({
         requestQuest("first-run");
         if (
           files.some((f) =>
-            new RegExp("\\bnew\\s+" + f.path.slice(0, -3) + "\\s*\\(").test(
+            new RegExp(
+              "\\bnew\\s+" + f.path.split("/").at(-1)!.slice(0, -3) + "\\s*\\(",
+            ).test(
               code,
             ),
           )
@@ -189,9 +193,13 @@ export default function Playground({
             throw new Error(
               "Choose a console project with one Program.cs file. Native forms should be restored in the WinForms workspace.",
             );
+          const root = main[0].name.slice(0, -"Program.cs".length);
+          const sources = imported.filter(f => /\.cs$/i.test(f.name) && f !== main[0]);
+          if (sources.some(f => !f.name.startsWith(root)))
+            throw new Error("This ZIP contains C# files outside the console project. Open a single project ZIP.");
           const extras = imported
             .filter((f) => /\.cs$/i.test(f.name) && f !== main[0])
-            .map((f) => ({ path: f.name.split("/").at(-1)!, text: f.text }));
+            .map((f) => ({ path: f.name.slice(root.length), text: f.text }));
           if (!validSourceFiles(extras))
             throw new Error(
               "Use up to 20 C# item files with unique names, each smaller than 50 KB.",
