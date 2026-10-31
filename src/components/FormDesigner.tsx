@@ -1809,7 +1809,7 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
                               };
                               if (
                                 previous?.id === c.id &&
-                                Date.now() - previous.time < 450
+                                Date.now() - previous.time < 850
                               ) {
                                 lastControlTap.current = null;
                                 createDefaultHandler(c);
