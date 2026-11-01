@@ -20,13 +20,15 @@ test("Lagos keeps its 2D coding world and offers a reversible 3D preview", async
   await expect(page.getByRole("textbox", { name: "Mission C# solution" })).toBeVisible();
 });
 
-test("WebGL Lagos lets the learner walk to a real C# coding station", async ({ page }) => {
+test("WebGL Lagos lets the learner walk to a real C# coding station", async ({ page }, testInfo) => {
   test.skip(!process.env.CODEQUEST_WEBGL_TEST, "Requires opted-in software WebGL");
   await page.goto("/#adventure/streetlights");
   await page.getByRole("button", { name: "Explore in 3D (beta)" }).click();
   const game = page.getByRole("region", { name: "Playable Lagos coding district" });
   await expect(game.locator("canvas")).toBeVisible({ timeout: 30000 });
   await expect(game).toContainText("3D PREVIEW", { timeout: 30000 });
+  await game.scrollIntoViewIfNeeded();
+  await page.screenshot({ path: testInfo.outputPath("actual-lagos-3d-desktop.png"), fullPage: true });
   await game.focus();
   await page.keyboard.down("w");
   await page.waitForTimeout(1500);
