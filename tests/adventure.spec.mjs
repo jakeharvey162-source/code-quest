@@ -21,7 +21,14 @@ async function screenshot(page, path) {
   await page.screenshot({path, fullPage: true});
 }
 async function repair(page, mission) {
-  await page.getByRole('textbox', { name: 'Mission C# solution' }).fill(mission.solution);
+  const editor = page.getByRole('textbox', { name: 'Mission C# solution' });
+  await editor.fill(mission.solution);
+  // Verify the visible document really changed before evaluating any C#.
+  if (await editor.getAttribute('contenteditable') === 'true') {
+    await expect(editor).toHaveText(mission.solution);
+  } else {
+    await expect(editor).toHaveValue(mission.solution);
+  }
   await page.getByRole('button', { name: 'Test repair', exact: true }).click();
   await expect(page.locator('.adventure-feedback')).toContainText('Every scenario passed!', {timeout: 90000});
   await expect.poll(async () => (await progress(page)).steps[adventureKey] || []).toContain(mission.id);
