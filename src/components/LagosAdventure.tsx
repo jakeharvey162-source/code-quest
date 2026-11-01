@@ -295,7 +295,7 @@ export default function LagosAdventure({
           </Suspense>
         ) : (
           <LagosScene repaired={done.length} />
-        )
+        )}
         <div className="adventure-scene-caption">
           <span>
             <span className="adventure-live-dot" /> YOUR LIVING NEIGHBORHOOD
