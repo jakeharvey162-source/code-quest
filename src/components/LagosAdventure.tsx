@@ -12,6 +12,7 @@ import {
 import CodeEditor from "./CodeEditor";
 import { AdventureJournal } from "./AdventureProgress";
 import LagosScene from "./LagosScene";
+import { lagosAvatarChoices, normalizeLagosAvatar, LAGOS_AVATAR_KEY } from "../lib/lagos-game-assets.mjs";
 const Lagos3DScene = lazy(() => import("./Lagos3DScene"));
 import {
   lagosMissions,
@@ -67,6 +68,7 @@ export default function LagosAdventure({
   );
   const [celebrate, setCelebrate] = useState(false);
   const [use3D, setUse3D] = useState(false);
+  const chosenAvatar = normalizeLagosAvatar(progress.drafts[LAGOS_AVATAR_KEY]);
   const heading = useRef<HTMLHeadingElement>(null);
   const selectedId = mission.id;
   function tell(kind: string, text: string) {
@@ -265,6 +267,19 @@ export default function LagosAdventure({
           <strong>Explore Rookie Street</strong>
           <span>Real coding missions in either view. The 3D preview is optional.</span>
         </div>
+        <label className="adventure-avatar-select">
+          Choose your character
+          <select
+            aria-label="Choose your character"
+            value={chosenAvatar}
+            onChange={event => update(p => ({
+              ...p,
+              drafts: { ...p.drafts, [LAGOS_AVATAR_KEY]: normalizeLagosAvatar(event.target.value) },
+            }))}
+          >
+            {lagosAvatarChoices.map(choice => <option key={choice.id} value={choice.id}>{choice.label}</option>)}
+          </select>
+        </label>
         <button
           type="button"
           aria-pressed={use3D}
@@ -279,6 +294,7 @@ export default function LagosAdventure({
             <Lagos3DScene
               repaired={done.length}
               reducedMotion={progress.settings.reducedMotion}
+              avatarId={chosenAvatar}
               onOpenEditor={() => {
                 document.querySelector(".adventure-editor")?.scrollIntoView({
                   behavior: progress.settings.reducedMotion ? "auto" : "smooth",
