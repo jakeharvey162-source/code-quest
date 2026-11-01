@@ -49,6 +49,10 @@ export default function CodeEditor({
     editor = useRef<EditorView | null>(null),
     callback = useRef(onChange);
   callback.current = onChange;
+  // Keep CodeMirror authoritative while a user types or replaces a large draft.
+  // Echoed React props must not overwrite in-flight editor input.
+  const lastReported = useRef(value);
+  const syncingFromProps = useRef(false);
   const extra = useRef(completionContext);
   extra.current = completionContext;
   useEffect(() => {
@@ -77,8 +81,10 @@ export default function CodeEditor({
             spellcheck: "false",
           }),
           EditorView.updateListener.of((update) => {
-            if (update.docChanged)
-              callback.current(update.state.doc.toString());
+            if (!update.docChanged || syncingFromProps.current) return;
+            const current = update.state.doc.toString();
+            lastReported.current = current;
+            callback.current(current);
           }),
           Prec.highest(
             keymap.of([
@@ -195,11 +201,21 @@ export default function CodeEditor({
     };
   }, [plain, label]);
   useEffect(() => {
+    // Ordinary keystrokes already updated CodeMirror and were reported upward;
+    // only external changes (file switch/reset/restore) should replace the doc.
+    if (value === lastReported.current) return;
+    lastReported.current = value;
     const view = editor.current;
-    if (view && value !== view.state.doc.toString())
-      view.dispatch({
-        changes: { from: 0, to: view.state.doc.length, insert: value },
-      });
+    if (view && value !== view.state.doc.toString()) {
+      syncingFromProps.current = true;
+      try {
+        view.dispatch({
+          changes: { from: 0, to: view.state.doc.length, insert: value },
+        });
+      } finally {
+        syncingFromProps.current = false;
+      }
+    }
   }, [value]);
   useEffect(() => {
     if (!focusTarget) return;
