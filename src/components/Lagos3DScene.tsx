@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { LAGOS_DISTRICT_ASSET, lagosAvatarAsset } from "../lib/lagos-game-assets.mjs";
 
 /**
  * First playable 3D vertical slice. No remote asset services or unverified
@@ -10,11 +11,13 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 export default function Lagos3DScene({
   repaired,
   reducedMotion,
+  avatarId,
   onOpenEditor,
   onFallback,
 }: {
   repaired: number;
   reducedMotion: boolean;
+  avatarId: string;
   onOpenEditor: () => void;
   onFallback: () => void;
 }) {
@@ -27,6 +30,9 @@ export default function Lagos3DScene({
   const nearbyRef = useRef(false);
   const [nearby, setNearby] = useState(false);
   const [ready, setReady] = useState(false);
+  const [districtLoaded, setDistrictLoaded] = useState(false);
+  const [characterLoaded, setCharacterLoaded] = useState(false);
+  const loadAvatarRef = useRef<(id: string) => void>(() => {});
   repairedRef.current = repaired;
   reducedRef.current = reducedMotion;
   openRef.current = onOpenEditor;
@@ -97,6 +103,10 @@ export default function Lagos3DScene({
     box(6.8, 0.05, 30, 0, 0.02, 0, asphalt);
     box(1.4, 0.12, 30, -4.2, 0, 0, pavement);
     box(1.4, 0.12, 30, 4.2, 0, 0, pavement);
+    // Placeholder buildings are replaced when the curated uploaded GLB exists.
+    const placeholderDistrict = new THREE.Group();
+    scene.add(placeholderDistrict);
+    const districtBox = (w: number, h: number, d: number, x: number, y: number, z: number, paint: THREE.Material) => box(w, h, d, x, y, z, paint, placeholderDistrict);
     const obstacleBounds: { minX: number; maxX: number; minZ: number; maxZ: number }[] = [];
     const houseColors = ["#e6a17a", "#b7b1cb", "#dfa96a", "#8ba9a0", "#e0c5a2", "#93a6c3"];
     for (const side of [-1, 1]) {
@@ -105,15 +115,15 @@ export default function Lagos3DScene({
         const z = -8 + i * 8.4;
         const h = 4.1 + (i % 2) * 1.7;
         const facade = material(houseColors[i + (side > 0 ? 3 : 0)]);
-        box(3.6, h, 5.8, x, h / 2, z, facade);
-        box(3.95, 0.28, 6.1, x, h + 0.13, z, material("#253e47"));
+        districtBox(3.6, h, 5.8, x, h / 2, z, facade);
+        districtBox(3.95, 0.28, 6.1, x, h + 0.13, z, material("#253e47"));
         for (const row of [1.6, 2.8]) {
           for (const offset of [-1, 1]) {
             // Windows face the street; their illumination responds to real repairs.
-            box(0.63, 0.85, 0.08, x - side * 1.84, row, z + offset * 1.35, bright);
+            districtBox(0.63, 0.85, 0.08, x - side * 1.84, row, z + offset * 1.35, bright);
           }
         }
-        box(0.95, 1.9, 0.12, x - side * 1.86, 0.95, z, material("#29434b"));
+        districtBox(0.95, 1.9, 0.12, x - side * 1.86, 0.95, z, material("#29434b"));
         obstacleBounds.push({ minX: x - 1.95, maxX: x + 1.95, minZ: z - 3, maxZ: z + 3 });
       }
     }
@@ -131,17 +141,68 @@ export default function Lagos3DScene({
     const player = new THREE.Group();
     player.position.set(0, 0, 5.1);
     scene.add(player);
+    const avatarStandin = new THREE.Group();
+    player.add(avatarStandin);
     const shirt = material("#f1b84a");
     const face = material("#bd876b");
     const dark = material("#1d3743");
-    box(0.62, 0.96, 0.37, 0, 1.06, 0, shirt, player);
+    box(0.62, 0.96, 0.37, 0, 1.06, 0, shirt, avatarStandin);
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 10), face);
     head.position.set(0, 1.78, 0);
-    player.add(head);
-    const leftLeg = box(0.2, 0.66, 0.25, -0.19, 0.32, 0, dark, player);
-    const rightLeg = box(0.2, 0.66, 0.25, 0.19, 0.32, 0, dark, player);
-    box(0.17, 0.76, 0.24, -0.46, 1.1, 0, face, player);
-    box(0.17, 0.76, 0.24, 0.46, 1.1, 0, face, player);
+    avatarStandin.add(head);
+    const leftLeg = box(0.2, 0.66, 0.25, -0.19, 0.32, 0, dark, avatarStandin);
+    const rightLeg = box(0.2, 0.66, 0.25, 0.19, 0.32, 0, dark, avatarStandin);
+    box(0.17, 0.76, 0.24, -0.46, 1.1, 0, face, avatarStandin);
+    box(0.17, 0.76, 0.24, 0.46, 1.1, 0, face, avatarStandin);
+
+    // The uploaded district GLB is a curated pack assembled from the user's
+    // small-town model. Never load the 143 MB city archive directly at runtime.
+    const assetLoader = new GLTFLoader();
+    assetLoader.load(LAGOS_DISTRICT_ASSET, gltf => {
+      if (disposed) return;
+      scene.add(gltf.scene);
+      placeholderDistrict.visible = false;
+      setDistrictLoaded(true);
+    }, undefined, () => { if (!disposed) setDistrictLoaded(false); });
+
+    let playerModel: THREE.Object3D | null = null;
+    let playerMixer: THREE.AnimationMixer | null = null;
+    let loadSerial = 0;
+    loadAvatarRef.current = (choice: string) => {
+      const asset = lagosAvatarAsset(choice);
+      const serial = ++loadSerial;
+      if (!asset) return;
+      setCharacterLoaded(false);
+      assetLoader.load(asset.model, gltf => {
+        if (disposed || serial !== loadSerial) return;
+        if (playerModel) player.remove(playerModel);
+        const bounds = new THREE.Box3().setFromObject(gltf.scene);
+        const dimensions = bounds.getSize(new THREE.Vector3());
+        const factor = 1.72 / Math.max(dimensions.y, 0.01);
+        gltf.scene.scale.setScalar(factor);
+        gltf.scene.position.set(
+          -(bounds.min.x + bounds.max.x) * factor / 2,
+          -bounds.min.y * factor,
+          -(bounds.min.z + bounds.max.z) * factor / 2,
+        );
+        playerModel = gltf.scene;
+        player.add(playerModel);
+        avatarStandin.visible = false;
+        if (gltf.animations.length > 0) {
+          playerMixer = new THREE.AnimationMixer(gltf.scene);
+          const idle = gltf.animations.find(clip => /idle/i.test(clip.name)) ?? gltf.animations[0];
+          playerMixer.clipAction(idle).play();
+        } else playerMixer = null;
+        setCharacterLoaded(true);
+      }, undefined, () => {
+        if (disposed || serial !== loadSerial) return;
+        if (playerModel) player.remove(playerModel);
+        playerModel = null;
+        playerMixer = null;
+        avatarStandin.visible = true;
+        setCharacterLoaded(false);
+      });
+    };
 
     // Local landmarks react only to the mission progress saved by CodeQuest.
     const lamps: THREE.PointLight[] = [];
@@ -294,7 +355,7 @@ export default function Lagos3DScene({
       antennaSign.emissiveIntensity = repairedRef.current >= 3 ? 2.5 : 0;
       torSpot.position.x += (player.position.x - 1.15 - torSpot.position.x) * Math.min(1, dt * 2.2);
       torSpot.position.z += (player.position.z - 1.65 - torSpot.position.z) * Math.min(1, dt * 2.2);
-      if (!reducedRef.current) torMixer?.update(dt);
+      if (!reducedRef.current) { torMixer?.update(dt); playerMixer?.update(dt); }
       target.set(player.position.x, 1.15, player.position.z);
       destination.set(
         player.position.x + Math.sin(angle) * 7.5,
@@ -310,6 +371,7 @@ export default function Lagos3DScene({
     setReady(true);
     return () => {
       disposed = true;
+      loadAvatarRef.current = () => {};
       cancelAnimationFrame(frame);
       keys.current.clear();
       resizeObserver.disconnect();
@@ -329,6 +391,7 @@ export default function Lagos3DScene({
       renderer.domElement.remove();
     };
   }, []);
+  useEffect(() => { loadAvatarRef.current(avatarId); }, [avatarId]);
 
   const move = (direction: string, down: boolean) => {
     if (down) keys.current.add(direction);
@@ -355,6 +418,8 @@ export default function Lagos3DScene({
       <div className="lagos3d-viewport" ref={host} />
       <div className="lagos3d-overlay" role="status">
         <strong>{ready ? "LAGOS / ROOKIE STREET • 3D PREVIEW" : "Preparing the 3D district…"}</strong>
+        <span>{districtLoaded ? "Curated town models loaded" : "3D district art pack not installed — temporary buildings"}</span>
+        <span>{characterLoaded ? "Character model loaded" : "Chosen character file unavailable — temporary avatar"}</span>
         <span>{nearby ? "Coding station nearby — press E or Interact" : "Move toward the glowing coding station"}</span>
       </div>
       <div className="lagos3d-controls" aria-label="3D movement controls">
