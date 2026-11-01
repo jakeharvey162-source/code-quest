@@ -1,6 +1,7 @@
 // Asset catalog is intentionally independent of React and Three.js.
 // Supplied GLBs are installed separately after provenance/license review.
 export const LAGOS_DISTRICT_ASSET = "/models/codequest/districts/rookie-street-kit.glb";
+export const LAGOS_CODING_DESK_ASSET = "/models/codequest/props/coding-desk.glb";
 export const LAGOS_AVATAR_KEY = "lagos-avatar-choice";
 
 /**
