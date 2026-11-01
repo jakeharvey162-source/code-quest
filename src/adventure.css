@@ -780,7 +780,7 @@
   left: 16px;
   right: 16px;
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: end;
   gap: 12px;
   pointer-events: none;
@@ -808,6 +808,8 @@
 .lagos3d-pad button:nth-child(3) { grid-column: 2; grid-row: 2; }
 .lagos3d-pad button:nth-child(4) { grid-column: 3; grid-row: 2; }
 .lagos3d-interact {
+  margin-left: 8px;
+  min-width: 110px;
   background: #f4ce74;
   color: #1a372c;
   border: 1px solid #a57c30;
