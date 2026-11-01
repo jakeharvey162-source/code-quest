@@ -3401,3 +3401,22 @@ html[data-motion=reduced]{scroll-behavior:auto!important}
 .cm-completionDetail { font-size:12px; padding-left:12px; }
 .cm-completionInfo { max-width:min(360px,calc(100vw - 24px)); background:#18372c!important; color:#f3f7f2!important; }
 @media(max-width:650px){.cm-tooltip-autocomplete ul li {min-height:44px;display:flex;align-items:center;}.cm-completionDetail{white-space:normal;}}
+
+/* Local solution navigation: native focus/keyboard support, no fixed width on phones. */
+.source-explorer { min-width: 0; }
+.solution-tree { width: 100%; min-width: 0; padding: 6px 0; border: 1px solid var(--line); border-radius: 6px; }
+.solution-tree [role="treeitem"] { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 6px 8px; cursor: pointer; overflow-wrap: anywhere; }
+.solution-tree [role="treeitem"] > span:last-child { min-width: 0; }
+.solution-tree [aria-selected="true"] { background: var(--paper); box-shadow: inset 3px 0 var(--ink); font-weight: 700; }
+.solution-tree [role="treeitem"]:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }
+.solution-tree [aria-disabled="true"] { cursor: default; opacity: .65; }
+.solution-tree-icon { flex: 0 0 14px; text-align: center; }
+.source-file-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.source-explorer .source-delete-confirm { width: 100%; padding: 10px; border: 1px solid var(--line); border-radius: 6px; }
+.source-explorer .source-delete-confirm button { margin: 6px 6px 0 0; }
+.source-explorer > label, .source-explorer form label { min-width: 0; max-width: 100%; }
+.source-explorer input, .source-explorer select { min-width: 0; width: 100%; }
+@media (max-width: 600px) {
+  .source-explorer > label, .source-explorer form label, .source-file-actions { width: 100%; }
+  .solution-tree [role="treeitem"] { min-height: 44px; }
+}

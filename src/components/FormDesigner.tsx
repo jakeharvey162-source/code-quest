@@ -368,8 +368,10 @@ export default function FormDesigner({ settings }: { settings: Settings }) {
     try {
       saveSourceFiles(files);
       setSourceFiles(files);
+      return true;
     } catch (e) {
       setMessage(String(e));
+      return false;
     }
   }
 
