@@ -57,6 +57,7 @@ export default function Lagos3DScene({
     };
     mount.appendChild(renderer.domElement);
     renderer.domElement.setAttribute("aria-label", "Interactive 3D Lagos city scene");
+    renderer.domElement.tabIndex = 0;
     renderer.domElement.style.display = "block";
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(mount);
@@ -214,6 +215,7 @@ export default function Lagos3DScene({
       if (nearbyRef.current) openRef.current();
     };
     const onPointerDown = (event: PointerEvent) => {
+      renderer.domElement.focus({ preventScroll: true });
       drag = { x: event.clientX, y: event.clientY, moved: false };
       renderer.domElement.setPointerCapture(event.pointerId);
     };
