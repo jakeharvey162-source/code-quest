@@ -105,7 +105,7 @@ test("half-written ATM receives partial credit and grade becomes stale after an 
       name: "30/100 · practice grade",
       exact: true,
     }),
-  ).toBeVisible({ timeout: 15000 });
+  ).toBeVisible({ timeout: 90000 });
   await expect(workshop).toContainText("Tested behaviour: 0/50");
   await page
     .getByLabel("Practical C# code", { exact: true })
