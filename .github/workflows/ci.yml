@@ -24,7 +24,7 @@ jobs:
       - run: npm run check
       - run: npx playwright install --with-deps chromium
       - run: npm run test:browser
-      - run: CODEQUEST_WEBGL_TEST=1 npm run test:browser -- tests/tor-model.spec.mjs
+      - run: CODEQUEST_WEBGL_TEST=1 npm run test:browser -- tests/tor-model.spec.mjs tests/lagos-3d.spec.mjs
       - run: npm run test:cloud
       - run: npm run test:community
       # Cloud browser tests rebuild dist with mocked provider settings.
