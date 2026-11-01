@@ -255,7 +255,9 @@ export default function Lagos3DScene({
       if (disposed) return;
       frame = requestAnimationFrame(animate);
       if (document.hidden) return;
-      const dt = Math.min(clock.getDelta(), 0.05);
+      // Low-FPS/software WebGL must not make walking almost stop.
+      // Keep a bounded real elapsed time, independent of render frame rate.
+      const dt = Math.min(clock.getDelta(), 0.2);
       movement.set(0, 0, 0);
       forward.set(-Math.sin(angle), 0, -Math.cos(angle));
       if (keys.current.has("w") || keys.current.has("arrowup")) movement.add(forward);
