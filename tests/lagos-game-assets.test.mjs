@@ -1,10 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { LAGOS_DISTRICT_ASSET, LAGOS_AVATAR_KEY, lagosAvatarChoices,
+import { LAGOS_DISTRICT_ASSET, LAGOS_CODING_DESK_ASSET, LAGOS_AVATAR_KEY, lagosAvatarChoices,
   normalizeLagosAvatar, lagosAvatarAsset } from "../src/lib/lagos-game-assets.mjs";
 
 test("asset catalog references only versioned local GLBs, never giant remote originals", () => {
   assert.equal(LAGOS_DISTRICT_ASSET, "/models/codequest/districts/rookie-street-kit.glb");
+  assert.equal(LAGOS_CODING_DESK_ASSET, "/models/codequest/props/coding-desk.glb");
   assert.equal(LAGOS_AVATAR_KEY, "lagos-avatar-choice");
   assert.equal(lagosAvatarChoices.length, 5);
   assert.equal(new Set(lagosAvatarChoices.map(v => v.id)).size, 5);
