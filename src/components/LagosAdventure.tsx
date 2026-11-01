@@ -50,6 +50,9 @@ export default function LagosAdventure({
     () => progress.drafts[adventureDraftKey(mission.id)] ?? mission.starter,
   );
   const missionDone = done.includes(mission);
+  // Synchronous source snapshot: a fast Test click must never compile an older
+  // React render (especially after an oversized unsaved editor edit).
+  const sourceRef = useRef(source);
   const [busy, setBusy] = useState(false);
   const lock = useRef(false);
   const generation = useRef(0);
@@ -77,7 +80,9 @@ export default function LagosAdventure({
     setRows([]);
     setHintCount(0);
     setCelebrate(false);
-    setSource(progress.drafts[adventureDraftKey(selectedId)] ?? mission.starter);
+    const draft = progress.drafts[adventureDraftKey(selectedId)] ?? mission.starter;
+    sourceRef.current = draft;
+    setSource(draft);
     const greeting = missionDone ? mission.success : mission.intro;
     setDialogue(greeting);
     setStatus("Your code runs locally. Try a repair when you’re ready.");
@@ -103,6 +108,7 @@ export default function LagosAdventure({
     setCelebrate(false);
     // Keep the editor and compiler source identical, including unsaved oversized
     // edits. Refusing a persistence write must never run an older saved repair.
+    sourceRef.current = value;
     setSource(value);
     if (value.length > 50000) {
       setStatus(oversizedDraftMessage);
@@ -118,7 +124,8 @@ export default function LagosAdventure({
   }
   async function run() {
     if (lock.current) return;
-    if (source.length > 50000) {
+    const submittedSource = sourceRef.current;
+    if (submittedSource.length > 50000) {
       setStatus(oversizedDraftMessage);
       return;
     }
@@ -130,7 +137,7 @@ export default function LagosAdventure({
     const token = "CQLAGOS_" + crypto.randomUUID().replaceAll("-", "");
     try {
       const result = await runCSharp(
-        challengeProgram(mission, source, token),
+        challengeProgram(mission, submittedSource, token),
         setStatus,
       );
       if (version !== generation.current) return;
