@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { LAGOS_DISTRICT_ASSET, lagosAvatarAsset } from "../lib/lagos-game-assets.mjs";
+import { LAGOS_DISTRICT_ASSET, LAGOS_CODING_DESK_ASSET, lagosAvatarAsset } from "../lib/lagos-game-assets.mjs";
 
 /**
  * First playable 3D vertical slice. No remote asset services or unverified
@@ -31,6 +31,7 @@ export default function Lagos3DScene({
   const [nearby, setNearby] = useState(false);
   const [ready, setReady] = useState(false);
   const [districtLoaded, setDistrictLoaded] = useState(false);
+  const [deskLoaded, setDeskLoaded] = useState(false);
   const [characterLoaded, setCharacterLoaded] = useState(false);
   const loadAvatarRef = useRef<(id: string) => void>(() => {});
   repairedRef.current = repaired;
@@ -131,9 +132,11 @@ export default function Lagos3DScene({
     const station = new THREE.Group();
     station.position.set(0, 0, 0);
     scene.add(station);
-    box(2.1, 0.18, 0.9, 0, 0.95, 0, gold, station);
-    box(0.15, 1, 0.15, -0.8, 0.46, 0.2, pavement, station);
-    box(0.15, 1, 0.15, 0.8, 0.46, 0.2, pavement, station);
+    const deskStandin = new THREE.Group();
+    station.add(deskStandin);
+    box(2.1, 0.18, 0.9, 0, 0.95, 0, gold, deskStandin);
+    box(0.15, 1, 0.15, -0.8, 0.46, 0.2, pavement, deskStandin);
+    box(0.15, 1, 0.15, 0.8, 0.46, 0.2, pavement, deskStandin);
     box(1.32, 0.85, 0.14, 0, 1.55, -0.16, material("#213843"), station);
     box(1.16, 0.7, 0.035, 0, 1.55, -0.07, stationGlow, station);
     box(0.75, 0.045, 0.35, 0, 1.07, 0.23, material("#d0d6cc"), station);
@@ -158,6 +161,14 @@ export default function Lagos3DScene({
     // The uploaded district GLB is a curated pack assembled from the user's
     // small-town model. Never load the 143 MB city archive directly at runtime.
     const assetLoader = new GLTFLoader();
+    assetLoader.load(LAGOS_CODING_DESK_ASSET, gltf => {
+      if (disposed) return;
+      // The extracted desk is pre-scaled/centered to occupy the real coding station.
+      gltf.scene.position.y = 0.65;
+      station.add(gltf.scene);
+      deskStandin.visible = false;
+      setDeskLoaded(true);
+    }, undefined, () => { if (!disposed) setDeskLoaded(false); });
     assetLoader.load(LAGOS_DISTRICT_ASSET, gltf => {
       if (disposed) return;
       scene.add(gltf.scene);
@@ -419,6 +430,7 @@ export default function Lagos3DScene({
       <div className="lagos3d-overlay" role="status">
         <strong>{ready ? "LAGOS / ROOKIE STREET • 3D PREVIEW" : "Preparing the 3D district…"}</strong>
         <span>{districtLoaded ? "Curated town models loaded" : "3D district art pack not installed — temporary buildings"}</span>
+        <span>{deskLoaded ? "Real coding desk loaded" : "Desk asset not installed — basic workstation"}</span>
         <span>{characterLoaded ? "Character model loaded" : "Chosen character file unavailable — temporary avatar"}</span>
         <span>{nearby ? "Coding station nearby — press E or Interact" : "Move toward the glowing coding station"}</span>
       </div>
