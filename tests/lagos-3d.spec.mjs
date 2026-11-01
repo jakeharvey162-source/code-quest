@@ -31,9 +31,13 @@ test("WebGL Lagos lets the learner walk to a real C# coding station", async ({ p
   await page.screenshot({ path: testInfo.outputPath("actual-lagos-3d-desktop.png"), fullPage: true });
   await game.focus();
   await page.keyboard.down("w");
-  await page.waitForTimeout(1500);
-  await page.keyboard.up("w");
-  await expect(game).toHaveAttribute("data-near-station", "true", { timeout: 15000 });
+  try {
+    // Software WebGL has variable frame rates; verify actual arrival, not a
+    // fixed walking duration that may be too short on slower CI machines.
+    await expect(game).toHaveAttribute("data-near-station", "true", { timeout: 25000 });
+  } finally {
+    await page.keyboard.up("w");
+  }
   await game.getByRole("button", { name: "Interact with coding station" }).click();
   await expect(page.getByRole("textbox", { name: "Mission C# solution" })).toBeFocused();
   await page.getByRole("button", { name: "View accessible 2D map" }).click();
