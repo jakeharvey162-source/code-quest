@@ -43,3 +43,16 @@ test("WebGL Lagos lets the learner walk to a real C# coding station", async ({ p
   await page.getByRole("button", { name: "View accessible 2D map" }).click();
   await expect(page.getByRole("img", { name: /Rookie Street:/ })).toBeVisible();
 });
+
+test("character choice saves in the learner's existing progress and survives reload", async ({ page }) => {
+  await page.goto("/#adventure/streetlights");
+  const picker = page.getByRole("combobox", { name: "Choose your character" });
+  await expect(picker).toHaveValue("psx-1");
+  await picker.selectOption("psx-3");
+  await expect(picker).toHaveValue("psx-3");
+  await page.reload();
+  await expect(page.getByRole("combobox", { name: "Choose your character" })).toHaveValue("psx-3");
+  await expect.poll(() => page.evaluate(
+    () => JSON.parse(localStorage.getItem("cq-progress-v1") || "{}").drafts?.["lagos-avatar-choice"],
+  )).toBe("psx-3");
+});
