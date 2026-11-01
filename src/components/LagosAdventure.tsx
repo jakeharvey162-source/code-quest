@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import {
   ArrowRight,
   Check,
@@ -12,6 +12,7 @@ import {
 import CodeEditor from "./CodeEditor";
 import { AdventureJournal } from "./AdventureProgress";
 import LagosScene from "./LagosScene";
+const Lagos3DScene = lazy(() => import("./Lagos3DScene"));
 import {
   lagosMissions,
   completedMissions,
@@ -65,6 +66,7 @@ export default function LagosAdventure({
     missionDone ? mission.success : mission.intro,
   );
   const [celebrate, setCelebrate] = useState(false);
+  const [use3D, setUse3D] = useState(false);
   const heading = useRef<HTMLHeadingElement>(null);
   const selectedId = mission.id;
   function tell(kind: string, text: string) {
@@ -258,8 +260,42 @@ export default function LagosAdventure({
           </button>
         </aside>
       )}
+      <div className="adventure-3d-choice">
+        <div>
+          <strong>Explore Rookie Street</strong>
+          <span>Real coding missions in either view. The 3D preview is optional.</span>
+        </div>
+        <button
+          type="button"
+          aria-pressed={use3D}
+          onClick={() => setUse3D(value => !value)}
+        >
+          {use3D ? "View accessible 2D map" : "Explore in 3D (beta)"}
+        </button>
+      </div>
       <div className={"adventure-world" + (celebrate ? " is-celebrating" : "")}>
-        <LagosScene repaired={done.length} />
+        {use3D ? (
+          <Suspense fallback={<p className="adventure-3d-loading" role="status">Loading the optional 3D scene…</p>}>
+            <Lagos3DScene
+              repaired={done.length}
+              reducedMotion={progress.settings.reducedMotion}
+              onOpenEditor={() => {
+                document.querySelector(".adventure-editor")?.scrollIntoView({
+                  behavior: progress.settings.reducedMotion ? "auto" : "smooth",
+                  block: "start",
+                });
+                const editor = document.querySelector<HTMLElement>('[aria-label="Mission C# solution"]');
+                editor?.focus({ preventScroll: true });
+              }}
+              onFallback={() => {
+                setUse3D(false);
+                setStatus("3D rendering is unavailable. The accessible 2D world and coding missions still work.");
+              }}
+            />
+          </Suspense>
+        ) : (
+          <LagosScene repaired={done.length} />
+        )
         <div className="adventure-scene-caption">
           <span>
             <span className="adventure-live-dot" /> YOUR LIVING NEIGHBORHOOD
