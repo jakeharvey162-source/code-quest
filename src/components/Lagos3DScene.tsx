@@ -76,7 +76,7 @@ export default function Lagos3DScene({
     const asphalt = material("#273f4a");
     const pavement = material("#8b8f79");
     const gold = material("#e8b75c", { metalness: 0.22 });
-    const bright = material("#f4e4b0", { emissive: "#bd7d29", emissiveIntensity: 0.3 });
+    const bright = material("#f4e4b0", { emissive: "#bd7d29", emissiveIntensity: 0 });
     const unlit = material("#5d7790");
     const greenery = material("#47765a");
     const stationGlow = material("#64e8e4", { emissive: "#22ccc4", emissiveIntensity: 0.8 });
@@ -171,6 +171,7 @@ export default function Lagos3DScene({
 
     // Keep Tor's existing licensed GLB and identity. Fallback is a simple marker.
     const torSpot = new THREE.Group();
+    let torMixer: THREE.AnimationMixer | null = null;
     torSpot.position.set(-1.5, 0, -1.5);
     scene.add(torSpot);
     const torMarker = new THREE.Mesh(new THREE.SphereGeometry(0.3, 12, 10), stationGlow);
@@ -193,6 +194,9 @@ export default function Lagos3DScene({
       gltf.scene.scale.setScalar(scale);
       gltf.scene.position.y = -bounds.min.y * scale;
       torSpot.add(gltf.scene);
+      torMixer = new THREE.AnimationMixer(gltf.scene);
+      const idleClip = gltf.animations.find(clip => /idle/i.test(clip.name)) ?? gltf.animations[0];
+      if (idleClip) torMixer.clipAction(idleClip).play();
       torMarker.visible = false;
     }, undefined, () => { /* Keep the marker if offline model download fails. */ });
 
@@ -283,8 +287,12 @@ export default function Lagos3DScene({
       const lightsOn = repairedRef.current >= 1;
       lamps.forEach(l => { l.intensity = lightsOn ? 4.2 : 0; });
       lampBulbs.forEach(m => { m.emissiveIntensity = lightsOn ? 2.3 : 0; });
+      bright.emissiveIntensity = repairedRef.current >= 1 ? 0.8 : 0;
       shopSign.emissiveIntensity = repairedRef.current >= 2 ? 1.8 : 0;
       antennaSign.emissiveIntensity = repairedRef.current >= 3 ? 2.5 : 0;
+      torSpot.position.x += (player.position.x - 1.15 - torSpot.position.x) * Math.min(1, dt * 2.2);
+      torSpot.position.z += (player.position.z - 1.65 - torSpot.position.z) * Math.min(1, dt * 2.2);
+      if (!reducedRef.current) torMixer?.update(dt);
       target.set(player.position.x, 1.15, player.position.z);
       destination.set(
         player.position.x + Math.sin(angle) * 7.5,
@@ -308,7 +316,12 @@ export default function Lagos3DScene({
       renderer.domElement.removeEventListener("pointerup", onPointerUp);
       renderer.domElement.removeEventListener("pointercancel", onPointerCancel);
       renderer.domElement.removeEventListener("webglcontextlost", onContextLost);
-      scene.traverse(obj => { if (obj instanceof THREE.Mesh) obj.geometry.dispose(); });
+      scene.traverse(obj => {
+        if (!(obj instanceof THREE.Mesh)) return;
+        obj.geometry.dispose();
+        const sceneMaterials = Array.isArray(obj.material) ? obj.material : [obj.material];
+        sceneMaterials.forEach(mat => mat.dispose());
+      });
       materials.forEach(mat => mat.dispose());
       renderer.dispose();
       renderer.domElement.remove();
