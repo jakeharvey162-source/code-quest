@@ -837,3 +837,30 @@
   .lagos3d-overlay strong { font-size: 10px; }
   .lagos3d-help { font-size: 11px; padding: 10px; }
 }
+
+/* Character choices are stored per learner in the existing progress snapshot. */
+.adventure-avatar-select {
+  display: grid;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 650;
+  color: var(--ink);
+}
+.adventure-avatar-select select {
+  min-width: 155px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 7px 11px;
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+}
+.adventure-avatar-select select:focus-visible {
+  outline: 3px solid #d7a739;
+  outline-offset: 2px;
+}
+@media(max-width: 650px) {
+  .adventure-avatar-select, .adventure-avatar-select select { width: 100%; }
+  .lagos3d-overlay span { max-width: 240px; }
+}
