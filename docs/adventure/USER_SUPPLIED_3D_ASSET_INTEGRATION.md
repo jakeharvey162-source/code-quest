@@ -3,7 +3,7 @@
 ## What was implemented in CodeQuest source
 
 - `src/lib/lagos-game-assets.mjs` lists local district and avatar GLBs, with safe ID normalization and five extensible avatar slots.
-- `src/components/Lagos3DScene.tsx` loads a curated real building kit with GLTFLoader. When present, its real town meshes replace the temporary geometric building scenery, while the existing playable street, mission interaction, world-state lighting and accessible fallback continue.
+- `src/components/Lagos3DScene.tsx` loads a curated real building kit **and an office desk** with GLTFLoader. When present, its real town meshes replace the temporary geometric building scenery, while the existing playable street, mission interaction, world-state lighting and accessible fallback continue.
 - It loads and switches the five separate player meshes, grounds/scales them automatically, uses their authored clips where available and preserves the existing block avatar only if the file is missing. The five supplied PSX choices have **no armature/animations**; do not claim animated skeletons.
 - `src/components/LagosAdventure.tsx` includes a character choice UI persisted in existing per-user progress drafts; new selections take effect in the 3D view.
 - Added `tests/lagos-game-assets.test.mjs` and character-persistence coverage in `tests/lagos-3d.spec.mjs`.
@@ -15,9 +15,10 @@
 | --- | --- | --- | ---: |
 | `public/models/codequest/districts/rookie-street-kit.glb` | low-poly-small-town.zip | Real textured shop/building/utility meshes curated and arranged around a walkable corridor | ~1.80 MB |
 | `public/models/codequest/avatars/psx-choice-{1..5}.glb` | psx_characters_pack.glb | Five genuine visually distinct unrigged 3D character choices | ~0.64 MB |
+| `public/models/codequest/props/coding-desk.glb` | low_poly_office_props_pack_-_game_ready.glb | Real office table replacing the original box-built desk | ~0.58 MB |
 | `manifest.json` | local optimization | SHA-256 validation, asset provenance and source-byte manifest | metadata |
 
-Total curated GLB payload: ~2.33 MiB, down from two significantly larger source files. The city textures are downsampled to max 1024 px; avatars to max 256 px. Optimization used the source geometries, not generated building-box approximations.
+Total curated GLB payload: ~2.89 MiB, down from three significantly larger source files. The city textures are downsampled to max 1024 px; avatars to max 256 px. Optimization used the source geometries, not generated building-box approximations.
 
 **Install after rights review:** unpack the ZIP into the checkout root with the `public/models/codequest/...` hierarchy intact, verify the SHA-256 manifest, then run `npm ci && npm run check` and the WebGL Playwright tests. Do not upload the archives themselves into a production runtime; only the curated per-role GLBs should be included.
 
@@ -33,7 +34,7 @@ The game loader and UI are reviewable regardless. A missing or unapproved pack m
 | --- | --- | --- |
 | `cartoon-new-york-city-kitbash-kit-promo.zip` | ~143 MB GLB, 2.06M triangles, 70 embedded textures | Do **not** ship whole. Extract individual modular facade/vehicle props after license review and decimation |
 | `street.glb` | ~15 MB, 241K triangles, scene bounds ~7.4 km | Don't layer the entire mismatched scene over the Rookie Street street; crop/rebase only compatible street assets |
-| `low_poly_office_props_pack_-_game_ready.glb` | ~39 MB, 385K triangles | Extract selective monitors/desk props to enhance coding station; cap draw calls and texture size |
+| `low_poly_office_props_pack_-_game_ready.glb` | ~39 MB, 385K triangles | Curated and optimized actual desk now in the starter pack; additional monitors/props are optional only after performance review |
 | `night_dance_club_lowpoly.glb` | ~3.3 MB, 22K triangles | Candidate side quest venue; don't load in the first mission automatically |
 | `aetherion-nemesis-the-violet-seraphpurified.zip` | ~38 MB, 926K triangles, no rig | Future fantasy boss only if retopologized/rigged and legally cleared |
 | `protector-nemesis-the-fallen-seraph.zip` | ~34 MB, 856K triangles, no rig | Similar; defer |
