@@ -23,8 +23,9 @@ jobs:
       - run: npm ci
       - run: npm run check
       - run: npx playwright install --with-deps chromium
-      - run: npm run test:browser
+      # Capture actual WebGL gameplay evidence even when unrelated full-suite tests fail.
       - run: CODEQUEST_WEBGL_TEST=1 npm run test:browser -- tests/tor-model.spec.mjs tests/lagos-3d.spec.mjs
+      - run: npm run test:browser
       - run: npm run test:cloud
       - run: npm run test:community
       # Cloud browser tests rebuild dist with mocked provider settings.
